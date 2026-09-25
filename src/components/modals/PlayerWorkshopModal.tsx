@@ -4375,16 +4375,29 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     return groups;
   }, [linkedElements, getLinkedElementCategory]);
 
+  const allCatalogItemsPool = useMemo(() => {
+    return [
+      ...(weaponsCatalog || []),
+      ...(armorCatalog || []),
+      ...(shieldsCatalog || []),
+      ...(powers || []),
+      ...(skills || []),
+      ...(traits || []),
+      ...(functionsCatalog || []),
+    ];
+  }, [weaponsCatalog, armorCatalog, shieldsCatalog, powers, skills, traits, functionsCatalog]);
+
   const activePathSetItems = useMemo(() => {
     if (activePathSelection.type !== 'path_set' || !activePathSelection.setItem) return [];
     const setItem = activePathSelection.setItem as any;
     if (Array.isArray(setItem.items) && setItem.items.length > 0) return setItem.items;
-    const setRecord = (setsCatalog || []).find(
-      (s) => String(s.id) === String(setItem.id) || s.name === setItem.name
-    ) as any;
-    if (setRecord && Array.isArray(setRecord.items)) return setRecord.items;
-    return [];
-  }, [activePathSelection, setsCatalog]);
+    const targetName = (setItem.name || '').trim().toLowerCase();
+    if (!targetName) return [];
+    return allCatalogItemsPool.filter((item: any) => {
+      if (!Array.isArray(item?.sets)) return false;
+      return item.sets.some((s: string) => (s || '').trim().toLowerCase() === targetName);
+    });
+  }, [activePathSelection, allCatalogItemsPool]);
 
   const [pathAddSetSearch, setPathAddSetSearch] = useState('');
   const availableSetsForPathCategory = useMemo(() => {
@@ -5067,13 +5080,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               const setRec = (setsCatalog || []).find(
                                 (s) => String(s.id) === String(setItem.id) || s.name === setItem.name
                               );
-                              const itemCount =
-                                Array.isArray((setItem as any).items) && (setItem as any).items.length > 0
-                                  ? (setItem as any).items.length
-                                  : Array.isArray((setRec as any)?.items) && (setRec as any).items.length > 0
-                                  ? (setRec as any).items.length
-                                  : setRec?.items_count;
-
                               return (
                                 <div
                                   key={String(setItem.id)}
@@ -5084,19 +5090,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                       : 'bg-gradient-to-r from-slate-900/90 to-slate-950/80 border-slate-800 border-l-2 border-l-amber-500/70 hover:border-slate-700 hover:bg-slate-900'
                                   }`}
                                 >
-                                  <div className="flex items-center gap-1.5 min-w-0">
+                                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
                                     <span className="text-xs shrink-0">🗂️</span>
                                     <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 font-extrabold uppercase shrink-0">
                                       SET
                                     </span>
-                                    <span className="font-bold text-slate-200 text-xs truncate">
+                                    <span className="font-bold text-slate-200 text-xs leading-snug break-words flex-1">
                                       {setItem.name}
                                     </span>
-                                    {itemCount !== undefined && (
-                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 shrink-0">
-                                        {itemCount} items
-                                      </span>
-                                    )}
                                   </div>
 
                                   <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -5163,7 +5164,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               const isSelected =
                                 activePathSelection.type === 'path_element' &&
                                 String(activePathSelection.element?.id) === String(element.id);
-                              const stats = getElementSkillStats(element);
 
                               return (
                                 <div
@@ -5177,41 +5177,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                       : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
                                   }`}
                                 >
-                                  <div className="flex items-center gap-1.5 min-w-0">
+                                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
                                     <span className="text-xs shrink-0">{cat.icon}</span>
-                                    <span className="font-bold text-slate-200 text-xs truncate">
+                                    <span className="font-bold text-slate-200 text-xs leading-snug break-words flex-1">
                                       {element.name}
                                     </span>
-                                    {stats.req && (
-                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
-                                        {stats.req}
-                                      </span>
-                                    )}
-                                    {stats.action && (
-                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-cyan-400 font-bold shrink-0">
-                                        {stats.action}
-                                      </span>
-                                    )}
-                                    {stats.usage && (
-                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
-                                        {stats.usage}
-                                      </span>
-                                    )}
-                                    {stats.damage && (
-                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-rose-300 font-bold shrink-0">
-                                        {stats.damage}
-                                      </span>
-                                    )}
-                                    {stats.ar && (
-                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-purple-300 font-bold shrink-0">
-                                        AR {stats.ar}
-                                      </span>
-                                    )}
-                                    {stats.attribute && (
-                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-cyan-300 font-bold shrink-0">
-                                        {stats.attribute}
-                                      </span>
-                                    )}
                                   </div>
 
                                   <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -7041,62 +7011,43 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     </button>
                   </div>
 
-                  {/* Path Tag Assignment */}
-                  <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800 shrink-0">
-                    <span className="text-xs font-bold text-slate-300">Set Acquisition Tag (Applies to All Set Elements)</span>
-                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md max-w-xs">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleLinkedTag(activePathSelection.setItem.id, 'Free')}
-                        className={`flex-1 py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          activePathSelection.setItem?.tag === 'Free'
-                            ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                        title="All items in this set are Free (0 AP)"
-                      >
-                        <span>🎁</span>
-                        <span>All Free (0 AP)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleLinkedTag(activePathSelection.setItem.id, '1 AP')}
-                        className={`flex-1 py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          activePathSelection.setItem?.tag === '1 AP'
-                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                        title="All items in this set cost 1 AP each to acquire"
-                      >
-                        <span>🧩</span>
-                        <span>All 1 AP</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Set Items Inspection */}
+                  {/* Set Items Inspection - Read-Only Member List */}
                   <div className="flex-1 flex flex-col min-h-0 gap-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between pb-1 border-b border-slate-800/80">
                       <span className="text-xs font-bold text-slate-300">
                         Items in this Set ({activePathSetItems.length})
                       </span>
-                      <span className="text-[10px] text-slate-500 font-mono">Read-Only Preview</span>
+                      <span className="text-[10px] text-slate-400 font-mono uppercase tracking-wider bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                        Read-Only List
+                      </span>
                     </div>
                     <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-1.5">
                       {activePathSetItems.length === 0 ? (
-                        <p className="text-xs text-slate-500 italic p-3">No items listed in this set.</p>
+                        <div className="p-6 text-center text-slate-500 text-xs italic bg-slate-950/40 rounded-xl border border-slate-800/60">
+                          No items found belonging to this set.
+                        </div>
                       ) : (
                         activePathSetItems.map((item: any, idx: number) => (
                           <div
-                            key={idx}
-                            className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 flex flex-col gap-1 text-xs"
+                            key={item.id ? `${item.id}_${idx}` : idx}
+                            className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 hover:border-slate-700/80 transition flex flex-col gap-1 text-xs shadow-sm"
                           >
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between gap-2">
                               <span className="font-bold text-slate-200">{item.name}</span>
-                              <div className="flex items-center gap-1.5 text-[10px]">
+                              <div className="flex items-center gap-1.5 text-[10px] shrink-0 font-mono">
                                 {item.requirement && (
-                                  <span className="font-mono text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                                  <span className="text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
                                     {item.requirement}
+                                  </span>
+                                )}
+                                {(item.damage || item.dmg) && (
+                                  <span className="text-rose-300 font-bold bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                                    💥 {item.damage || item.dmg}
+                                  </span>
+                                )}
+                                {item.ar !== undefined && item.ar !== null && (
+                                  <span className="text-sky-300 font-bold bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                                    🛡️ {item.ar} AR
                                   </span>
                                 )}
                                 {item.action && (
@@ -7111,8 +7062,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                 )}
                               </div>
                             </div>
-                            {item.effect && (
-                              <p className="text-[11px] text-slate-400 font-mono whitespace-pre-wrap">{item.effect}</p>
+                            {(item.effect || item.description) && (
+                              <p className="text-[11px] text-slate-400 font-mono leading-relaxed whitespace-pre-wrap">
+                                {item.effect || item.description}
+                              </p>
                             )}
                           </div>
                         ))
@@ -8227,7 +8180,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
 
                   {/* Catalog Grid */}
-                  <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-2.5 pr-1">
+                  <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-2.5 pr-1 content-start auto-rows-min">
                     {filteredCategoryCatalog.length === 0 ? (
                       <div className="col-span-full flex flex-col items-center justify-center p-12 text-center text-slate-500 text-xs">
                         <span className="text-2xl mb-2">🔍</span>
