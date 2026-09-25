@@ -1,7 +1,7 @@
 // src/components/modals/PlayerWorkshopModal.tsx
 // Unified Player's Forge: Master Modal Blueprint 2-Pane Architecture (Live Preview + Forge Controls)
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw, Search, ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
@@ -305,16 +305,21 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [isCreatingNewChaosGem, setIsCreatingNewChaosGem] = useState<boolean>(false);
   const [isCreatingNewGear, setIsCreatingNewGear] = useState<boolean>(false);
   const [selectedPathId, setSelectedPathId] = useState<string>('');
-  const [, setActivePathSelection] = useState<{
-    type: 'path' | 'trait' | 'power' | 'skillset' | 'skill' | 'ability';
-    category?: PathElementType;
+  const [activePathSelection, setActivePathSelection] = useState<{
+    type: 'path_root' | 'path_element' | 'path_set' | 'path_add_set' | 'path_add_element' | 'path' | 'ability';
+    category?: string;
     id?: string | number;
     name?: string;
+    element?: PathLinkedElement;
+    set?: any;
+    setItem?: any;
+    setRecord?: any;
+    index?: number;
     parentSkillSet?: string;
     isNew?: boolean;
     data?: any;
     source?: 'new' | 'existing';
-  }>({ type: 'path' });
+  }>({ type: 'path_root' });
   const [unlinkWarningTarget, setUnlinkWarningTarget] = useState<{
     type: 'trait' | 'power' | 'skill';
     item: any;
@@ -349,6 +354,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [initialBaseItemIds, setInitialBaseItemIds] = useState<Set<string>>(new Set());
   const [isCreatingNewSet, setIsCreatingNewSet] = useState<boolean>(false);
   const [selectedSetId, setSelectedSetId] = useState<string>('');
+  const [activeSetSelection, setActiveSetSelection] = useState<{
+    type: 'set_root' | 'set_member' | 'set_add_member';
+    item?: SetMemberItem;
+    index?: number;
+  }>({ type: 'set_root' });
   const [setPathsIncluded, setSetPathsIncluded] = useState<string[]>([]);
   const [setsSearchQuery, setSetsSearchQuery] = useState<string>('');
   const [setsRightCatalogSearchQuery, setSetsRightCatalogSearchQuery] = useState<string>('');
@@ -358,9 +368,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [showPathsDropdown, setShowPathsDropdown] = useState<boolean>(false);
 
   // --- Paths Studio Expansion State (Phase 4) ---
-  const [pathBrowserCategory, setPathBrowserCategory] = useState<'sets' | 'traits' | 'skills' | 'powers' | 'weapons' | 'armor_shields'>('sets');
-  const [pathBrowserSearch, setPathBrowserSearch] = useState<string>('');
-  const [pathManifestFilter, setPathManifestFilter] = useState<string>('all');
   const [isAuthoringPathCustomAbility, setIsAuthoringPathCustomAbility] = useState<boolean>(false);
   const [customAbilityType, setCustomAbilityType] = useState<'trait' | 'power' | 'skill'>('power');
   const [customAbilityTag, setCustomAbilityTag] = useState<'Free' | '1 AP'>('1 AP');
@@ -435,7 +442,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [studioChassisType, setStudioChassisType] = useState<'weapon' | 'armor' | 'shield' | 'supplies'>('supplies');
   const [inherentPowers, setInherentPowers] = useState<StudioPower[]>([]);
   const [attachedMods, setAttachedMods] = useState<StudioMod[]>([]);
-  const [isTreeExpanded, setIsTreeExpanded] = useState<boolean>(true);
   const [isAuthoringNewMaster, setIsAuthoringNewMaster] = useState<boolean>(false);
   const [deletedPowerIds, setDeletedPowerIds] = useState<(string | number)[]>([]);
   const [deletedModIds, setDeletedModIds] = useState<(string | number)[]>([]);
@@ -937,7 +943,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setIsCreatingNewChaosGem(false);
     setIsCreatingNewGear(false);
     setSelectedPathId('');
-    setActivePathSelection({ type: 'path' });
+    setActivePathSelection({ type: 'path_root' });
     setActiveAbilityCategory('power');
     setAbilityFormName('');
     setAbilityFormAction('AM');
@@ -1034,7 +1040,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         setCreationType('paths_abilities');
         if (item.type === 'path') {
           setPathStudioMode('path');
-          setActivePathSelection({ type: 'path' });
+          setActivePathSelection({ type: 'path_root' });
           setIsCreatingNewPath(false);
           setSelectedPathId(`custom_${item.id}`);
         } else {
@@ -1637,7 +1643,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setPathDescription(official.description || '');
     setLinkedElements(Array.isArray(official.linked_elements) ? official.linked_elements : []);
     setSelectedGenres(official.genres && official.genres.length > 0 ? official.genres : ['Medieval']);
-    setActivePathSelection({ type: 'path' });
+    setActivePathSelection({ type: 'path_root' });
   };
 
   const handlePopulateCanonicalPower = (p: any) => {
@@ -2224,6 +2230,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setInitialBaseItemIds(new Set());
     setShowBasedOnDropdown(false);
     setShowPathsDropdown(false);
+    setActiveSetSelection({ type: 'set_root' });
     setIsLoadingSetMembers(true);
     try {
       const members = await gameApi.getSetMembers(s.name, s.category);
@@ -2249,6 +2256,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setBasedOnSourceSets([]);
     setInitialBaseItemIds(new Set());
     setIsCreatingNewSet(true);
+    setActiveSetSelection({ type: 'set_root' });
     setShowBasedOnDropdown(false);
     setShowPathsDropdown(false);
   };
@@ -2428,6 +2436,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         setStudioChassisType(gearDatabaseChassis);
       } else if (newType === 'set') {
         handleNewSet();
+      } else if (newType === 'paths_abilities' || newType === 'path') {
+        setActivePathSelection({ type: 'path_root' });
       }
     }
   };
@@ -2785,8 +2795,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       .sort((a, b) => compareMsoOptions(a[1], b[1], isGsUnlocked))
       .map((entry) => entry[1]);
   }, [skills, activeCharacter, customSkillsList, isGsUnlocked]);
-
-  if (!isOpen) return null;
 
   const insertTextAtCursor = (insertStr: string) => {
     const textarea = effectTextareaRef.current;
@@ -3757,21 +3765,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 <span>Load into Forge</span>
               </button>
             )}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsTreeExpanded(!isTreeExpanded);
-              }}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
-              title={isTreeExpanded ? 'Collapse Mods & Powers' : 'Expand Mods & Powers'}
-            >
-              <ChevronDown
-                className={`w-4 h-4 text-cyan-400 transition-transform ${
-                  isTreeExpanded ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
           </div>
         </div>
         <div className="flex items-center justify-between text-[11px] text-slate-400">
@@ -3791,8 +3784,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       </div>
 
       {/* HIERARCHICAL TREE (Matching ManageGearPowersModal) */}
-      {isTreeExpanded && (
-        <div className="ml-5 sm:ml-6 pl-3 sm:pl-4 border-l-2 border-cyan-500/40 flex flex-col gap-3 pt-1 pb-1">
+      <div className="ml-5 sm:ml-6 pl-3 sm:pl-4 border-l-2 border-cyan-500/40 flex flex-col gap-3 pt-1 pb-1">
           {!isChassisComplete && (
             <div className="px-2.5 py-1.5 rounded-lg bg-amber-950/40 border border-amber-500/40 text-[11px] text-amber-300/90 flex items-center gap-1.5 leading-snug">
               <span>🔒</span>
@@ -4016,7 +4008,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             <span>+ Add Mod</span>
           </button>
         </div>
-      )}
     </div>
   );
 
@@ -4215,115 +4206,181 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     }
   };
 
-  const currentPathBrowserCatalog = useMemo(() => {
-    switch (pathBrowserCategory) {
-      case 'sets':
-        return (setsCatalog || []).map((s) => ({
-          ...s,
-          _catalogType: 'set' as PathElementType,
-          _subtitle: `${s.category} • ${s.items_count !== undefined ? `${s.items_count} items` : 'Set'}`,
-        }));
-      case 'traits':
-        return (traits || []).map((t) => ({
-          ...t,
-          _catalogType: 'trait' as PathElementType,
-          _subtitle: t.path ? `Path: ${t.path}` : 'Trait',
-        }));
-      case 'skills':
-        return (skills || []).map((sk) => ({
-          ...sk,
-          _catalogType: 'skill' as PathElementType,
-          _subtitle: `${sk.discipline || 'General'} • ${sk.attribute || '💪'}`,
-        }));
-      case 'powers':
-        return (powers || []).map((p) => ({
-          ...p,
-          _catalogType: 'power' as PathElementType,
-          _subtitle: `${p.action || 'AM'} • ${p.usage || '1-Enc'}${p.path ? ` • ${p.path}` : ''}`,
-        }));
-      case 'weapons':
-        return (weaponsCatalog || []).map((w) => ({
-          ...w,
-          _catalogType: 'weapon' as PathElementType,
-          _subtitle: `${w.type || 'Melee'} • ${w.domain || 'Martial'} • ${w.requirement || 'Req'}`,
-        }));
-      case 'armor_shields': {
-        const armors = (armorCatalog || []).map((a) => ({
-          ...a,
-          _catalogType: 'armor' as PathElementType,
-          _subtitle: `Armor • ${a.requirement || 'Req'}${a.ar ? ` • AR ${a.ar}` : ''}`,
-        }));
-        const shields = (shieldsCatalog || []).map((s) => ({
-          ...s,
-          _catalogType: 'shield' as PathElementType,
-          _subtitle: `Shield • ${s.requirement || 'Req'}${s.max_block ? ` • Block ${s.max_block}` : ''}`,
-        }));
-        return [...armors, ...shields];
-      }
-      default:
-        return [];
+  const PATH_ABILITY_CATEGORIES = [
+    { id: 'trait', label: 'Traits', icon: '🧬', singular: 'Trait' },
+    { id: 'power', label: 'Powers', icon: '⚡', singular: 'Power' },
+    { id: 'skill', label: 'Skills', icon: '🎯', singular: 'Skill' },
+    { id: 'weapon', label: 'Weapon Sk', icon: '⚔️', singular: 'Weapon Sk' },
+    { id: 'armor_shield', label: 'Armor & Shield Sk', icon: '🛡️', singular: 'Armor & Shield Sk' },
+  ] as const;
+
+  const getLinkedElementCategory = useCallback((el: PathLinkedElement): 'trait' | 'power' | 'skill' | 'weapon' | 'armor_shield' => {
+    const elType = (el.type || el.element_type || '').toLowerCase();
+    if (elType === 'set') {
+      const setRecord = (setsCatalog || []).find(
+        (s) => String(s.id) === String(el.id) || (s.name && s.name.toLowerCase() === (el.name || '').toLowerCase())
+      );
+      const cat = (setRecord?.category || (el as any).category || el.details || '').toLowerCase();
+      if (cat.includes('weapon')) return 'weapon';
+      if (cat.includes('armor') || cat.includes('shield')) return 'armor_shield';
+      if (cat.includes('power')) return 'power';
+      if (cat.includes('skill')) return 'skill';
+      if (cat.includes('trait')) return 'trait';
+      return 'power';
     }
-  }, [pathBrowserCategory, setsCatalog, traits, skills, powers, weaponsCatalog, armorCatalog, shieldsCatalog]);
+    if (elType === 'trait') return 'trait';
+    if (elType === 'power') return 'power';
+    if (elType === 'skill' || elType === 'skillset') return 'skill';
+    if (elType === 'weapon') return 'weapon';
+    if (elType === 'armor' || elType === 'shield' || elType === 'armor_shield') return 'armor_shield';
+    return 'power';
+  }, [setsCatalog]);
 
-  const filteredPathBrowserCatalog = useMemo(() => {
-    const q = pathBrowserSearch.trim().toLowerCase();
-    if (!q) return currentPathBrowserCatalog;
-    return currentPathBrowserCatalog.filter((item: any) => {
-      const nameMatch = (item.name || '').toLowerCase().includes(q);
-      const effectMatch = (item.effect || '').toLowerCase().includes(q);
-      const descMatch = (item.description || '').toLowerCase().includes(q);
-      const notesMatch = (item.notes || '').toLowerCase().includes(q);
-      const discMatch = (item.discipline || '').toLowerCase().includes(q);
-      const subMatch = (item._subtitle || '').toLowerCase().includes(q);
-      return nameMatch || effectMatch || descMatch || notesMatch || discMatch || subMatch;
-    });
-  }, [currentPathBrowserCatalog, pathBrowserSearch]);
+  const getElementSkillStats = useCallback((el?: PathLinkedElement | null) => {
+    if (!el) return {};
+    const cat = getLinkedElementCategory(el);
+    const cleanName = (el.name || '').toLowerCase().trim();
 
-  const linkedElementsMap = useMemo(() => {
-    const map = new Map<string, { tag: 'Free' | '1 AP'; id: string | number }>();
-    linkedElements.forEach((el) => {
-      const type = (el.type || el.element_type || '').toLowerCase();
-      const key = `${type}_${(el.name || '').trim().toLowerCase()}`;
-      map.set(key, { tag: el.tag === 'Free' ? 'Free' : '1 AP', id: el.id });
-    });
-    return map;
-  }, [linkedElements]);
+    if (cat === 'weapon') {
+      const found = (weaponsCatalog || []).find(
+        (w) => (w.name || '').toLowerCase().trim() === cleanName || String(w.id) === String(el.id)
+      );
+      return {
+        req: found?.requirement || el.item_data?.requirement,
+        damage: found?.dmg || (found as any)?.damage || el.item_data?.damage || el.item_data?.dmg,
+        type: found?.type || el.item_data?.type || 'Melee',
+        action: (found as any)?.atk || (found as any)?.action || el.item_data?.action || el.item_data?.atk,
+      };
+    }
+    if (cat === 'armor_shield') {
+      const foundArmor = (armorCatalog || []).find(
+        (a) => (a.name || '').toLowerCase().trim() === cleanName || String(a.id) === String(el.id)
+      );
+      const foundShield = (shieldsCatalog || []).find(
+        (s) => (s.name || '').toLowerCase().trim() === cleanName || String(s.id) === String(el.id)
+      );
+      return {
+        req: foundArmor?.requirement || foundShield?.requirement || el.item_data?.requirement,
+        ar: foundArmor?.ar || el.item_data?.ar,
+        max_block: foundShield?.max_block || el.item_data?.max_block,
+      };
+    }
+    if (cat === 'power') {
+      const found = (powers || []).find(
+        (p) => (p.name || '').toLowerCase().trim() === cleanName || String(p.id) === String(el.id)
+      );
+      return {
+        action: found?.action || el.item_data?.action,
+        usage: found?.usage || el.item_data?.usage,
+        req: (found as any)?.requirement || el.item_data?.requirement,
+      };
+    }
+    if (cat === 'skill') {
+      const found = (skills || []).find(
+        (s) => (s.name || '').toLowerCase().trim() === cleanName || String(s.id) === String(el.id)
+      );
+      return {
+        attribute: found?.attribute || el.item_data?.attribute,
+        discipline: found?.discipline || el.item_data?.discipline,
+      };
+    }
+    return {};
+  }, [getLinkedElementCategory, weaponsCatalog, armorCatalog, shieldsCatalog, powers, skills]);
 
-  const manifestCounts = useMemo(() => {
-    const counts = {
-      all: linkedElements.length,
-      set: 0,
-      trait: 0,
-      skill: 0,
-      power: 0,
-      weapon: 0,
-      armor_shield: 0,
+  const pathCategoryMembers = useMemo(() => {
+    const groups: Record<
+      'trait' | 'power' | 'skill' | 'weapon' | 'armor_shield',
+      { sets: PathLinkedElement[]; elements: PathLinkedElement[] }
+    > = {
+      trait: { sets: [], elements: [] },
+      power: { sets: [], elements: [] },
+      skill: { sets: [], elements: [] },
+      weapon: { sets: [], elements: [] },
+      armor_shield: { sets: [], elements: [] },
     };
-    linkedElements.forEach((el) => {
-      const t = el.type || el.element_type;
-      if (t === 'set') counts.set++;
-      else if (t === 'trait') counts.trait++;
-      else if (t === 'skill' || t === 'skillset') counts.skill++;
-      else if (t === 'power') counts.power++;
-      else if (t === 'weapon') counts.weapon++;
-      else if (t === 'armor' || t === 'shield') counts.armor_shield++;
+    (linkedElements || []).forEach((el) => {
+      const cat = getLinkedElementCategory(el);
+      const isSet = (el.type || el.element_type || '').toLowerCase() === 'set';
+      if (isSet) {
+        groups[cat].sets.push(el);
+      } else {
+        groups[cat].elements.push(el);
+      }
     });
-    return counts;
-  }, [linkedElements]);
+    return groups;
+  }, [linkedElements, getLinkedElementCategory]);
 
-  const filteredManifestElements = useMemo(() => {
-    if (pathManifestFilter === 'all') return linkedElements;
-    return linkedElements.filter((el) => {
-      const t = el.type || el.element_type;
-      if (pathManifestFilter === 'set') return t === 'set';
-      if (pathManifestFilter === 'trait') return t === 'trait';
-      if (pathManifestFilter === 'skill') return t === 'skill' || t === 'skillset';
-      if (pathManifestFilter === 'power') return t === 'power';
-      if (pathManifestFilter === 'weapon') return t === 'weapon';
-      if (pathManifestFilter === 'armor_shield') return t === 'armor' || t === 'shield';
+  const activePathSetItems = useMemo(() => {
+    if (activePathSelection.type !== 'path_set' || !activePathSelection.setItem) return [];
+    const setItem = activePathSelection.setItem as any;
+    if (Array.isArray(setItem.items) && setItem.items.length > 0) return setItem.items;
+    const setRecord = (setsCatalog || []).find(
+      (s) => String(s.id) === String(setItem.id) || s.name === setItem.name
+    ) as any;
+    if (setRecord && Array.isArray(setRecord.items)) return setRecord.items;
+    return [];
+  }, [activePathSelection, setsCatalog]);
+
+  const [pathAddSetSearch, setPathAddSetSearch] = useState('');
+  const availableSetsForPathCategory = useMemo(() => {
+    if (activePathSelection.type !== 'path_add_set' || !activePathSelection.category) return [];
+    const cat = activePathSelection.category;
+    return (setsCatalog || []).filter((s) => {
+      const c = (s.category || '').toLowerCase();
+      if (cat === 'weapon') return c.includes('weapon');
+      if (cat === 'armor_shield') return c.includes('armor') || c.includes('shield');
+      if (cat === 'power') return c.includes('power');
+      if (cat === 'skill') return c.includes('skill');
+      if (cat === 'trait') return c.includes('trait');
       return true;
     });
-  }, [linkedElements, pathManifestFilter]);
+  }, [activePathSelection, setsCatalog]);
+
+  const filteredSetsForPathCategory = useMemo(() => {
+    const q = pathAddSetSearch.trim().toLowerCase();
+    if (!q) return availableSetsForPathCategory;
+    return availableSetsForPathCategory.filter(
+      (s) => (s.name || '').toLowerCase().includes(q) || (s.description || '').toLowerCase().includes(q)
+    );
+  }, [availableSetsForPathCategory, pathAddSetSearch]);
+
+  const [pathAddElementSearch, setPathAddElementSearch] = useState('');
+  const availableElementsForPathCategory = useMemo(() => {
+    if (activePathSelection.type !== 'path_add_element' || !activePathSelection.category) return [];
+    const cat = activePathSelection.category;
+    if (cat === 'trait') {
+      return (traits || []).map((t) => ({ ...t, _catalogType: 'trait' as PathElementType }));
+    }
+    if (cat === 'power') {
+      return (powers || []).map((p) => ({ ...p, _catalogType: 'power' as PathElementType }));
+    }
+    if (cat === 'skill') {
+      return (skills || []).map((s) => ({ ...s, _catalogType: 'skill' as PathElementType }));
+    }
+    if (cat === 'weapon') {
+      return (weaponsCatalog || []).map((w) => ({ ...w, _catalogType: 'weapon' as PathElementType }));
+    }
+    if (cat === 'armor_shield') {
+      const a = (armorCatalog || []).map((item) => ({ ...item, _catalogType: 'armor' as PathElementType }));
+      const sh = (shieldsCatalog || []).map((item) => ({ ...item, _catalogType: 'shield' as PathElementType }));
+      return [...a, ...sh];
+    }
+    return [];
+  }, [activePathSelection, traits, powers, skills, weaponsCatalog, armorCatalog, shieldsCatalog]);
+
+  const filteredElementsForPathCategory = useMemo(() => {
+    const q = pathAddElementSearch.trim().toLowerCase();
+    if (!q) return availableElementsForPathCategory;
+    return availableElementsForPathCategory.filter((item: any) => {
+      const n = (item.name || '').toLowerCase();
+      const e = (item.effect || '').toLowerCase();
+      const d = (item.description || '').toLowerCase();
+      const req = (item.requirement || '').toLowerCase();
+      return n.includes(q) || e.includes(q) || d.includes(q) || req.includes(q);
+    });
+  }, [availableElementsForPathCategory, pathAddElementSearch]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn font-outfit">
@@ -4782,7 +4839,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     setIsCreatingNewPath(true);
                     setCanonicalSelectedId('');
                     setSelectedPathId('');
-                    setActivePathSelection({ type: 'path' });
+                    setActivePathSelection({ type: 'path_root' });
                   }}
                   className={`text-[10px] font-bold px-2 py-1 rounded-lg transition cursor-pointer shrink-0 ${
                     workshopMode === 'designer'
@@ -4814,7 +4871,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     const p = (paths || []).find((item) => String(item.id) === val || item.name === val);
                     if (p) {
                       handlePopulateOfficialPath(p);
-                      setActivePathSelection({ type: 'path' });
+                      setActivePathSelection({ type: 'path_root' });
                     }
                   } else {
                     const found = myPathsList.find((p) => p.id === val || String(p.rawItem?.id) === val || p.name === val);
@@ -4824,7 +4881,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       } else {
                         handlePopulateOfficialPath(found.rawItem);
                       }
-                      setActivePathSelection({ type: 'path' });
+                      setActivePathSelection({ type: 'path_root' });
                     }
                   }
                 }}
@@ -4855,350 +4912,309 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     ))}
               </select>
 
-              {/* Active Draft Path Editor & Live Linked Manifest Table */}
+              {/* Active Draft Path Tree View (Always 100% Expanded, 0 Save Buttons) */}
               {isPathActive ? (
                 <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto pr-1">
-                  {/* Row 1: Path Name & Collision Badge */}
-                  <div className="flex flex-col gap-1 shrink-0">
+                  {/* Tier 1: Path Root Card */}
+                  <div
+                    onClick={() => setActivePathSelection({ type: 'path_root' })}
+                    className={`p-3 rounded-xl border transition flex flex-col gap-1.5 cursor-pointer shadow-sm ${
+                      activePathSelection.type === 'path_root'
+                        ? 'bg-blue-950/40 border-blue-500/80 ring-1 ring-blue-500/40'
+                        : 'bg-slate-900/80 border-slate-800 hover:border-blue-500/40 hover:bg-slate-900'
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-300 text-xs">Path Name</span>
-                        <GuardrailBadge isValid={isNameValid} />
-                        <InfoTooltip text="Unique archetype name for this Path (e.g. Shadowblade, Chronomancer)." />
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-base shrink-0">🧭</span>
+                        <span className="font-bold text-slate-100 text-xs truncate">
+                          {name || 'Unnamed Path'}
+                        </span>
                       </div>
-                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
-                    </div>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      disabled={isUniversalPath && workshopMode !== 'designer'}
-                      placeholder="e.g. Voidstalker, Iron Sentinel, Starweaver..."
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner disabled:opacity-60 disabled:cursor-not-allowed"
-                      required
-                    />
-                    {topLevelCollision.isCollision && (
-                      <div className="flex items-center justify-between p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs">
-                        <div className="flex items-center gap-1.5 text-amber-300 min-w-0">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">
-                            '{topLevelCollision.existingItemName}' already exists in {workshopMode === 'designer' ? 'Master Canon' : 'My Creations'}.
+                      <div className="flex items-center gap-1.5">
+                        {canonicalSelectedId && (
+                          <span className="text-[10px] text-amber-400 font-mono font-bold bg-amber-950/70 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                            {workshopMode === 'designer' ? '👑 ID: ' : 'ID: '}{canonicalSelectedId}
                           </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setName(getAutoVersionedName(name, currentActiveCatalog))}
-                          className="px-2 py-0.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 border border-amber-500/60 text-amber-100 font-bold text-[10px] transition cursor-pointer shrink-0"
-                        >
-                          ⚡ Auto-Add (v2)
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Row 2: Category & Based-On Template Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 shrink-0">
-                    {/* Path Category */}
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-slate-300 text-xs">Category</span>
-                          <GuardrailBadge isValid={isPathCategoryValid} />
-                        </div>
-                      </div>
-                      <select
-                        value={pathCategory}
-                        onChange={(e) => setPathCategory(e.target.value)}
-                        disabled={isUniversalPath && workshopMode !== 'designer'}
-                        className="bg-slate-950 border border-slate-700 text-slate-200 text-xs px-2.5 py-1.5 rounded-xl outline-none focus:border-blue-400 font-medium disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        {availablePathCategories.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                        <option value="CUSTOM_NEW">+ Custom Category...</option>
-                      </select>
-                      {pathCategory === 'CUSTOM_NEW' && (
-                        <input
-                          type="text"
-                          value={pathCategoryNewText}
-                          onChange={(e) => setPathCategoryNewText(e.target.value)}
-                          disabled={isUniversalPath && workshopMode !== 'designer'}
-                          placeholder="Type custom category name..."
-                          className="bg-slate-950 text-slate-100 text-xs px-2.5 py-1 rounded-xl border border-blue-500/60 outline-none"
-                        />
-                      )}
-                    </div>
-
-                    {/* Based-On Path Template */}
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-slate-300 text-xs">Based-On Template</span>
-                          <InfoTooltip text="Clone metadata and all linked elements from an existing Path." />
-                        </div>
-                      </div>
-                      <select
-                        onChange={(e) => {
-                          const p = (paths || []).find((it) => String(it.id) === e.target.value || it.name === e.target.value);
-                          if (p) handleSelectBasedOnPath(p);
-                          e.target.value = '';
-                        }}
-                        defaultValue=""
-                        className="bg-slate-950 border border-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-xl outline-none focus:border-blue-400 font-medium cursor-pointer"
-                      >
-                        <option value="" disabled>-- Clone from Path... --</option>
-                        {(paths || []).map((p) => (
-                          <option key={p.id || p.name} value={p.id || p.name}>
-                            🧭 {p.name} ({p.category || 'General'}{Array.isArray(p.linked_elements) ? ` • ${p.linked_elements.length}` : ''})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Row 3: Description & Lore */}
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-300 text-xs">Description & Lore</span>
-                        <GuardrailBadge isValid={pathDescription.trim().length > 0} />
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
-                    </div>
-                    <textarea
-                      value={pathDescription}
-                      onChange={(e) => setPathDescription(e.target.value)}
-                      disabled={isUniversalPath && workshopMode !== 'designer'}
-                      rows={2}
-                      placeholder="Flavor text describing this path's training, role, and key abilities..."
-                      className="bg-slate-950 text-slate-100 text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner resize-y min-h-[50px] leading-relaxed disabled:opacity-60 disabled:cursor-not-allowed"
-                      required
-                    />
-                  </div>
-
-                  {/* Row 4: Genres */}
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-300 text-xs">Permitted Genres</span>
-                        <GuardrailBadge isValid={isGenresValid} />
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
-                    </div>
-                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
-                      {GENRE_OPTIONS.map((g) => {
-                        const isSelected = selectedGenres.includes(g.id);
-                        return (
+                        )}
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-950/80 text-blue-300 border border-blue-500/40">
+                          {finalPathCat}
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                          1 AP
+                        </span>
+                        {/* Delete Path trashcan if saved */}
+                        {((canonicalSelectedId && workshopMode === 'designer' && !isUniversalPath) ||
+                          (workshopMode === 'player' && (editingItem || canonicalSelectedId))) && (
                           <button
-                            key={g.id}
                             type="button"
-                            disabled={isUniversalPath && workshopMode !== 'designer'}
-                            onClick={() => handleToggleGenre(g.id)}
-                            className={`flex-1 py-1 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer disabled:cursor-not-allowed ${
-                              isSelected
-                                ? 'bg-blue-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirmTarget({
+                                type: 'path',
+                                id: (editingItem ? editingItem.id : canonicalSelectedId) as string | number,
+                                name: editingItem ? editingItem.name : (originalCanonicalName || name.trim()),
+                              });
+                            }}
+                            className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/50 border border-transparent hover:border-rose-500/40 transition cursor-pointer"
+                            title="Delete this Path"
                           >
-                            <span>{g.icon}</span>
-                            <span>{g.label}</span>
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
-                        );
-                      })}
+                        )}
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Row 5: Live Linked Elements & Sets Manifest */}
-                  <div className="flex-1 min-h-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
-                    <div className="flex items-center justify-between shrink-0">
-                      <span className="text-xs font-extrabold text-blue-300 flex items-center gap-1.5">
-                        <span>🧭</span>
-                        <span>Linked Elements & Sets ({linkedElements.length})</span>
-                      </span>
-                      {linkedElements.length === 0 && (
-                        <span className="text-[10px] text-amber-400 font-semibold animate-pulse">
-                          0 Linked (Browse Right Pane)
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Filter Pills */}
-                    <div className="flex items-center gap-1 overflow-x-auto pb-1 shrink-0 scrollbar-none">
-                      {[
-                        { id: 'all', label: 'All', count: manifestCounts.all, icon: '📋' },
-                        { id: 'set', label: 'Sets', count: manifestCounts.set, icon: '🗂️' },
-                        { id: 'trait', label: 'Traits', count: manifestCounts.trait, icon: '🧬' },
-                        { id: 'skill', label: 'Skills', count: manifestCounts.skill, icon: '🎯' },
-                        { id: 'power', label: 'Powers', count: manifestCounts.power, icon: '⚡' },
-                        { id: 'weapon', label: 'Weapons', count: manifestCounts.weapon, icon: '⚔️' },
-                        { id: 'armor_shield', label: 'Armor', count: manifestCounts.armor_shield, icon: '🛡️' },
-                      ].map((tab) => (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          onClick={() => setPathManifestFilter(tab.id)}
-                          className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer shrink-0 ${
-                            pathManifestFilter === tab.id
-                              ? 'bg-blue-600 text-white shadow-sm font-extrabold'
-                              : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                          }`}
-                        >
-                          <span>{tab.icon}</span>
-                          <span>{tab.label}</span>
-                          <span className="text-[9px] opacity-80 font-mono">({tab.count})</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Manifest Scrollable List */}
-                    <div className="flex-1 min-h-[140px] overflow-y-auto pr-1 flex flex-col gap-1.5">
-                      {filteredManifestElements.length === 0 ? (
-                        <div className="p-4 rounded-xl bg-slate-950/60 border border-dashed border-slate-800 text-center flex flex-col items-center justify-center gap-1">
-                          <span className="text-xl">📦</span>
-                          <p className="text-slate-400 font-semibold text-xs">No elements linked in this category</p>
-                          <p className="text-slate-500 text-[10px] max-w-xs">
-                            Use the Right Pane catalog browser to add Sets, Traits, Skills, Powers, Weapons, or Armor with [ + Free ] or [ + 1 AP ].
-                          </p>
-                        </div>
-                      ) : (
-                        filteredManifestElements.map((el) => {
-                          const elType = el.type || el.element_type || 'ability';
-                          return (
-                            <div
-                              key={String(el.id)}
-                              className="p-2 rounded-xl bg-slate-950/90 border border-slate-800/90 hover:border-slate-700/80 flex items-center justify-between gap-2 shadow-sm transition"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-sm shrink-0">{getCategoryEmoji(elType)}</span>
-                                <div className="flex flex-col min-w-0">
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="font-bold text-slate-100 text-xs truncate">{el.name}</span>
-                                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-slate-400 capitalize shrink-0">
-                                      {elType}
-                                    </span>
-                                  </div>
-                                  {el.details && (
-                                    <span className="text-[10px] text-slate-500 truncate max-w-xs">{el.details}</span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                {/* KISS Multi-Option Pill Switch for Tag Assignment */}
-                                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-0.5 shadow-inner backdrop-blur-md">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleLinkedTag(el.id, 'Free')}
-                                    className={`py-0.5 px-2 text-[10px] font-bold rounded transition-all flex items-center gap-1 cursor-pointer ${
-                                      el.tag === 'Free'
-                                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                                    }`}
-                                    title="Auto-grant for 0 AP"
-                                  >
-                                    <span>🎁</span>
-                                    <span>Free</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleLinkedTag(el.id, '1 AP')}
-                                    className={`py-0.5 px-2 text-[10px] font-bold rounded transition-all flex items-center gap-1 cursor-pointer ${
-                                      el.tag === '1 AP'
-                                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                                    }`}
-                                    title="Discount to 1 AP In-Path advancement"
-                                  >
-                                    <span>⚡</span>
-                                    <span>1 AP</span>
-                                  </button>
-                                </div>
-
-                                {/* Quick Remove Button */}
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveLinkedElement(el.id)}
-                                  className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 transition cursor-pointer"
-                                  title={`Remove ${el.name} from path`}
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Row 6: Footer Actions / Save */}
-                  <div className="shrink-0 flex flex-col gap-2 pt-2 border-t border-slate-800/80">
                     <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span>Status:</span>
-                      <span className={`text-[10px] font-mono font-bold ${isPathReadyForAbilities ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {isPathReadyForAbilities ? 'Ready to Save' : 'Incomplete Requirements'}
+                      <span className="capitalize">
+                        Archetype: {finalPathCat} Path
+                      </span>
+                      <span className={`text-[10px] font-mono font-bold ${activePathSelection.type === 'path_root' ? 'text-amber-400' : 'text-slate-500'}`}>
+                        {activePathSelection.type === 'path_root' ? '● Active in Editor' : 'Click to Edit'}
                       </span>
                     </div>
+                  </div>
 
-                    <div className="flex items-center gap-2">
-                      {((canonicalSelectedId && workshopMode === 'designer' && !isUniversalPath) ||
-                        (workshopMode === 'player' && (editingItem || canonicalSelectedId))) && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setDeleteConfirmTarget({
-                              type: 'path',
-                              id: (editingItem ? editingItem.id : canonicalSelectedId) as string | number,
-                              name: editingItem ? editingItem.name : (originalCanonicalName || name.trim()),
-                            })
-                          }
-                          className="px-3 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0"
-                          title="Delete this Path"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete</span>
-                        </button>
-                      )}
+                  {/* Tier 2 & 3: The 5 Always-Present Ability Categories Tree (Permanently Expanded) */}
+                  <div className="ml-4 pl-3 border-l-2 border-blue-500/40 flex flex-col gap-3 pt-1 pb-1">
+                    {PATH_ABILITY_CATEGORIES.map((cat) => {
+                      const catData = pathCategoryMembers[cat.id];
+                      const setsCount = catData.sets.length;
+                      const indCount = catData.elements.length;
 
-                      <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={!isPathReadyForAbilities || isSubmitting || (isUniversalPath && workshopMode !== 'designer')}
-                        className={`flex-1 py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
-                          isPathReadyForAbilities && !isSubmitting && (!isUniversalPath || workshopMode === 'designer')
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-900/40 cursor-pointer font-extrabold'
-                            : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
-                        }`}
-                        title={
-                          isUniversalPath && workshopMode !== 'designer'
-                            ? 'Universal Path is read-only in Player mode'
-                            : !isPathReadyForAbilities
-                            ? 'Fill in Path Name, Category, Description, and Genre before saving'
-                            : workshopMode === 'designer'
-                            ? canonicalSelectedId
-                              ? 'Update Master Path in Supabase'
-                              : 'Create Master Path in Supabase'
-                            : editingItem || canonicalSelectedId
-                            ? 'Update Path Archetype'
-                            : 'Forge Path to My Creations'
-                        }
-                      >
-                        <AnvilIcon className="w-4 h-4" />
-                        <span>
-                          {isSubmitting
-                            ? 'Forging...'
-                            : workshopMode === 'designer'
-                            ? canonicalSelectedId
-                              ? 'Update Master Path 👑'
-                              : 'Create Master Path 👑'
-                            : editingItem || canonicalSelectedId
-                            ? 'Update Path Archetype'
-                            : 'Forge Path to My Creations'}
-                        </span>
-                      </button>
-                    </div>
+                      return (
+                        <div key={cat.id} className="flex flex-col gap-1.5">
+                          {/* Category Header */}
+                          <div className="flex items-center justify-between px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-slate-300">
+                            <span className="font-bold flex items-center gap-1.5 text-slate-200">
+                              <span>{cat.icon}</span>
+                              <span>{cat.label}</span>
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">
+                              ({setsCount} {setsCount === 1 ? 'Set' : 'Sets'}, {indCount} {indCount === 1 ? 'Individual' : 'Individuals'})
+                            </span>
+                          </div>
+
+                          {/* Indented Tier 3: Sets & Individuals & Add Buttons */}
+                          <div className="ml-3 pl-2.5 border-l border-slate-800/80 flex flex-col gap-1.5">
+                            {/* Linked Sets in this category */}
+                            {catData.sets.map((setItem) => {
+                              const isSelected =
+                                activePathSelection.type === 'path_set' &&
+                                String(activePathSelection.setItem?.id) === String(setItem.id);
+                              const setRec = (setsCatalog || []).find(
+                                (s) => String(s.id) === String(setItem.id) || s.name === setItem.name
+                              );
+                              return (
+                                <div
+                                  key={String(setItem.id)}
+                                  onClick={() => setActivePathSelection({ type: 'path_set', setItem, setRecord: setRec })}
+                                  className={`p-2 rounded-lg border transition flex items-center justify-between gap-2 cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-blue-950/40 border-blue-500/80 ring-1 ring-blue-500/40'
+                                      : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-xs shrink-0">🗂️</span>
+                                    <span className="font-bold text-slate-200 text-xs truncate">
+                                      {setItem.name}
+                                    </span>
+                                    {setRec?.items_count !== undefined && (
+                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 shrink-0">
+                                        {setRec.items_count} items
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                    {/* KISS Pill Switch for Free vs 1 AP */}
+                                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-0.5 shadow-inner backdrop-blur-md">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleLinkedTag(setItem.id, 'Free')}
+                                        className={`py-0.5 px-2 text-[10px] font-bold rounded transition-all flex items-center gap-1 cursor-pointer ${
+                                          setItem.tag === 'Free'
+                                            ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                        }`}
+                                        title="Free (0 AP)"
+                                      >
+                                        <span>🎁</span>
+                                        <span>Free</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleLinkedTag(setItem.id, '1 AP')}
+                                        className={`py-0.5 px-2 text-[10px] font-bold rounded transition-all flex items-center gap-1 cursor-pointer ${
+                                          setItem.tag === '1 AP'
+                                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                        }`}
+                                        title="1 AP advancement"
+                                      >
+                                        <span>⚡</span>
+                                        <span>1 AP</span>
+                                      </button>
+                                    </div>
+
+                                    {/* Trashcan Icon */}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleRemoveLinkedElement(setItem.id);
+                                        if (
+                                          activePathSelection.type === 'path_set' &&
+                                          String(activePathSelection.setItem?.id) === String(setItem.id)
+                                        ) {
+                                          setActivePathSelection({ type: 'path_root' });
+                                        }
+                                      }}
+                                      className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 transition cursor-pointer"
+                                      title={`Remove ${setItem.name} from path`}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {/* Linked Individuals in this category */}
+                            {catData.elements.map((element) => {
+                              const isSelected =
+                                activePathSelection.type === 'path_element' &&
+                                String(activePathSelection.element?.id) === String(element.id);
+                              const stats = getElementSkillStats(element);
+
+                              return (
+                                <div
+                                  key={String(element.id)}
+                                  onClick={() =>
+                                    setActivePathSelection({ type: 'path_element', element, category: cat.id })
+                                  }
+                                  className={`p-2 rounded-lg border transition flex items-center justify-between gap-2 cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-blue-950/40 border-blue-500/80 ring-1 ring-blue-500/40'
+                                      : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-xs shrink-0">{cat.icon}</span>
+                                    <span className="font-bold text-slate-200 text-xs truncate">
+                                      {element.name}
+                                    </span>
+                                    {stats.req && (
+                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
+                                        {stats.req}
+                                      </span>
+                                    )}
+                                    {stats.action && (
+                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-cyan-400 font-bold shrink-0">
+                                        {stats.action}
+                                      </span>
+                                    )}
+                                    {stats.usage && (
+                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
+                                        {stats.usage}
+                                      </span>
+                                    )}
+                                    {stats.damage && (
+                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-rose-300 font-bold shrink-0">
+                                        {stats.damage}
+                                      </span>
+                                    )}
+                                    {stats.ar && (
+                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-purple-300 font-bold shrink-0">
+                                        AR {stats.ar}
+                                      </span>
+                                    )}
+                                    {stats.attribute && (
+                                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-cyan-300 font-bold shrink-0">
+                                        {stats.attribute}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                    {/* KISS Pill Switch for Free vs 1 AP */}
+                                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-0.5 shadow-inner backdrop-blur-md">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleLinkedTag(element.id, 'Free')}
+                                        className={`py-0.5 px-2 text-[10px] font-bold rounded transition-all flex items-center gap-1 cursor-pointer ${
+                                          element.tag === 'Free'
+                                            ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                        }`}
+                                        title="Free (0 AP)"
+                                      >
+                                        <span>🎁</span>
+                                        <span>Free</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleLinkedTag(element.id, '1 AP')}
+                                        className={`py-0.5 px-2 text-[10px] font-bold rounded transition-all flex items-center gap-1 cursor-pointer ${
+                                          element.tag === '1 AP'
+                                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                        }`}
+                                        title="1 AP advancement"
+                                      >
+                                        <span>⚡</span>
+                                        <span>1 AP</span>
+                                      </button>
+                                    </div>
+
+                                    {/* Trashcan Icon */}
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        handleRemoveLinkedElement(element.id);
+                                        if (
+                                          activePathSelection.type === 'path_element' &&
+                                          String(activePathSelection.element?.id) === String(element.id)
+                                        ) {
+                                          setActivePathSelection({ type: 'path_root' });
+                                        }
+                                      }}
+                                      className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 transition cursor-pointer"
+                                      title={`Remove ${element.name} from path`}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {/* Action Buttons for this category */}
+                            <div className="flex items-center gap-2 pt-0.5">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActivePathSelection({ type: 'path_add_set', category: cat.id })
+                                }
+                                className="flex-1 py-1 px-2 rounded-lg border border-dashed border-slate-700 hover:border-blue-500/60 bg-slate-950/60 hover:bg-slate-900 text-[11px] font-bold text-slate-400 hover:text-blue-300 transition flex items-center justify-center gap-1 cursor-pointer select-none"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>+ Add {cat.singular} Set</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActivePathSelection({ type: 'path_add_element', category: cat.id })
+                                }
+                                className="flex-1 py-1 px-2 rounded-lg border border-dashed border-slate-700 hover:border-blue-500/60 bg-slate-950/60 hover:bg-slate-900 text-[11px] font-bold text-slate-400 hover:text-blue-300 transition flex items-center justify-center gap-1 cursor-pointer select-none"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>+ Add {cat.singular}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
@@ -5408,29 +5424,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </button>
                       </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={handleSubmit}
-                      disabled={!isFormValid || isSubmitting}
-                      className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
-                        isFormValid && !isSubmitting
-                          ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-violet-900/40 cursor-pointer'
-                          : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
-                      }`}
-                    >
-                      <AnvilIcon className="w-4 h-4" />
-                      <span>
-                        {isSubmitting
-                          ? 'Forging...'
-                          : workshopMode === 'designer'
-                          ? canonicalSelectedId
-                            ? 'Save Master Chaos Gem'
-                            : 'Create Master Chaos Gem'
-                          : editingItem || canonicalSelectedId
-                          ? 'Update Chaos Gem'
-                          : 'Forge Chaos Gem to My Creations'}
-                      </span>
-                    </button>
                   </div>
                 </>
               ) : null}
@@ -5504,373 +5497,139 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               {/* Main Content Area */}
               {isSetActive ? (
                 <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-0.5">
-                  {/* Row 1: Name & Collision Badge */}
-                  <div className="flex flex-col gap-1 shrink-0">
+                  {/* 1. SET ROOT NODE CARD */}
+                  <div
+                    onClick={() => setActiveSetSelection({ type: 'set_root' })}
+                    className={`p-3 rounded-xl border transition flex flex-col gap-1.5 cursor-pointer shadow-sm ${
+                      activeSetSelection.type === 'set_root'
+                        ? 'bg-indigo-950/40 border-indigo-500/80 ring-1 ring-indigo-500/40'
+                        : 'bg-slate-900/80 border-slate-800 hover:border-indigo-500/40 hover:bg-slate-900'
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-300 text-xs">Set Name</span>
-                        <GuardrailBadge isValid={isNameValid} />
-                        <InfoTooltip text="Unique name for this set collection." />
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
-                    </div>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Masterwork Blades, Dragon Knight Armory, Elemental Evocations..."
-                      className={`w-full bg-slate-900 border rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none transition shadow-inner font-semibold ${
-                        topLevelCollision.isCollision
-                          ? 'border-rose-500/80 focus:border-rose-400'
-                          : 'border-slate-700/80 focus:border-indigo-500'
-                      }`}
-                    />
-                    {topLevelCollision.isCollision && (
-                      <p className="text-[10px] text-rose-400 font-medium">
-                        ⚠️ A {topLevelCollision.isCanonMatch ? 'canonical' : 'custom'} entry named "{topLevelCollision.existingItemName}" already exists.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Row 2: Category Multi-Option Pill Switch */}
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-300 text-xs">Category</span>
-                      <span className="text-[10px] text-slate-500 font-mono">Homogeneous Domain</span>
-                    </div>
-                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md overflow-x-auto">
-                      {SET_CATEGORIES.map((cat) => {
-                        const isCatActive = selectedSetCategory === cat.id;
-                        return (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            onClick={() => handleSwitchSetCategory(cat.id)}
-                            className={`flex-1 py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                              isCatActive
-                                ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                          >
-                            <span>{cat.icon}</span>
-                            <span>{cat.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Row 3: Based-On Multi-Merge Selector */}
-                  <div className="relative flex flex-col gap-1.5 bg-slate-900/70 border border-slate-800/90 rounded-xl p-2.5 shrink-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-slate-300">Based On (Multi-Merge Clone)</span>
-                        <InfoTooltip text="Select 1 or more existing sets in this category to aggregate all their items into this draft." />
-                      </div>
-                      {basedOnSourceSets.length > 0 && (
-                        <span className="px-2 py-0.2 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">
-                          {basedOnSourceSets.length} Set(s) Selected
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-base shrink-0">🗂️</span>
+                        <span className="font-bold text-slate-100 text-xs truncate">
+                          {name || 'Unnamed Set'}
                         </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowBasedOnDropdown(!showBasedOnDropdown)}
-                        className="flex-1 py-1.5 px-3 bg-slate-950 border border-slate-700/80 rounded-lg text-xs text-left text-slate-300 flex items-center justify-between hover:border-slate-600 transition"
-                      >
-                        <span className="truncate">
-                          {basedOnSourceSets.length === 0
-                            ? 'Choose base set(s) to merge...'
-                            : basedOnSourceSets.join(', ')}
-                        </span>
-                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleExecuteMultiMerge}
-                        disabled={basedOnSourceSets.length === 0 || isLoadingSetMembers}
-                        className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
-                          basedOnSourceSets.length > 0 && !isLoadingSetMembers
-                            ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm font-extrabold cursor-pointer'
-                            : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
-                        }`}
-                        title="Merge selected sets into draft"
-                      >
-                        <span>⚡</span>
-                        <span>Merge</span>
-                      </button>
-                    </div>
-
-                    {showBasedOnDropdown && (
-                      <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 max-h-52 overflow-y-auto flex flex-col gap-1 backdrop-blur-md">
-                        {availableBasedOnSets.length === 0 ? (
-                          <div className="p-3 text-center text-xs text-slate-500">
-                            No other {selectedSetCategory} sets found to merge.
-                          </div>
-                        ) : (
-                          availableBasedOnSets.map((bs) => {
-                            const isChecked = basedOnSourceSets.includes(bs.name);
-                            return (
-                              <label
-                                key={bs.id || bs.name}
-                                className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-800/80 cursor-pointer text-xs text-slate-300 transition"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => handleToggleBasedOnSet(bs.name)}
-                                    className="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-0 cursor-pointer"
-                                  />
-                                  <span className="font-semibold text-slate-200">{bs.name}</span>
-                                  {bs.owner === 'Designer' && (
-                                    <span className="text-[10px] text-amber-400 font-mono">👑 Canon</span>
-                                  )}
-                                </div>
-                                <span className="text-[10px] text-slate-500 font-mono">
-                                  {bs.items_count !== undefined ? `${bs.items_count} items` : ''}
-                                </span>
-                              </label>
-                            );
-                          })
-                        )}
                       </div>
-                    )}
-                  </div>
-
-                  {/* Row 4: Description */}
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <span className="font-bold text-slate-300 text-xs">Description & Lore</span>
-                    <textarea
-                      value={setDescription}
-                      onChange={(e) => setSetDescription(e.target.value)}
-                      rows={2}
-                      placeholder="Theme, history, or tactical doctrine for this set..."
-                      className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition shadow-inner font-mono leading-relaxed"
-                    />
-                  </div>
-
-                  {/* Row 5: Genres & Paths */}
-                  <div className="grid grid-cols-2 gap-2 shrink-0">
-                    {/* Genres */}
-                    <div className="flex flex-col gap-1">
-                      <span className="font-bold text-slate-300 text-xs">Genres</span>
-                      <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5">
-                        {GENRE_OPTIONS.map((g) => {
-                          const isSelected = selectedGenres.includes(g.id);
-                          return (
-                            <button
-                              key={g.id}
-                              type="button"
-                              onClick={() => handleToggleGenre(g.id)}
-                              className={`flex-1 py-1 px-1.5 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                isSelected
-                                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                            >
-                              <span>{g.icon}</span>
-                              <span className="truncate">{g.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Paths Included */}
-                    <div className="relative flex flex-col gap-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-300 text-xs">Paths Included</span>
-                        {setPathsIncluded.length > 0 && (
-                          <span className="text-[10px] text-blue-400 font-mono">
-                            {setPathsIncluded.length}
+                      <div className="flex items-center gap-1.5">
+                        {selectedSetId && (
+                          <span className="text-[10px] text-amber-400 font-mono font-bold bg-amber-950/70 border border-amber-500/30 px-1.5 py-0.5 rounded">
+                            {workshopMode === 'designer' ? '👑 ID: ' : 'ID: '}{selectedSetId}
                           </span>
                         )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowPathsDropdown(!showPathsDropdown)}
-                        className="py-1.5 px-2.5 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-left text-slate-300 flex items-center justify-between hover:border-slate-600 transition"
-                      >
-                        <span className="truncate text-[11px]">
-                          {setPathsIncluded.length === 0
-                            ? 'Tag Paths...'
-                            : setPathsIncluded.join(', ')}
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-500/40">
+                          {selectedSetCategory}
                         </span>
-                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      </button>
-
-                      {showPathsDropdown && (
-                        <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 max-h-48 overflow-y-auto flex flex-col gap-1 backdrop-blur-md">
-                          {(paths || []).map((p) => {
-                            const isChecked = setPathsIncluded.includes(p.name);
-                            return (
-                              <label
-                                key={p.id || p.name}
-                                className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer text-xs text-slate-300 transition"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => handleTogglePathIncluded(p.name)}
-                                    className="rounded border-slate-700 bg-slate-950 text-blue-500 focus:ring-0 cursor-pointer"
-                                  />
-                                  <span className="font-semibold text-slate-200">{p.name}</span>
-                                </div>
-                                <span className="text-[10px] text-slate-500">{p.category}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      )}
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                          {draftSetItems.length} {draftSetItems.length === 1 ? 'item' : 'items'}
+                        </span>
+                        {selectedSetId && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCurrentSet();
+                            }}
+                            className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/50 border border-transparent hover:border-rose-500/40 transition cursor-pointer"
+                            title="Delete Set"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <span className="capitalize">
+                        Category: {selectedSetCategory}
+                      </span>
+                      <span className={`text-[10px] font-mono font-bold ${activeSetSelection.type === 'set_root' ? 'text-amber-400' : 'text-slate-500'}`}>
+                        {activeSetSelection.type === 'set_root' ? '● Active in Editor' : 'Click to Edit'}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Row 6: Live Draft Items Table */}
-                  <div className="flex flex-col gap-1.5 flex-1 min-h-[160px] bg-slate-900/60 border border-slate-800/80 rounded-xl p-2.5 overflow-hidden">
-                    <div className="flex items-center justify-between pb-1 border-b border-slate-800 shrink-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-slate-200">Draft Set Items</span>
-                        <span className="px-2 py-0.2 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 text-[10px] font-bold">
-                          {draftSetItems.length}
-                        </span>
-                      </div>
-                      {draftSetItems.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setDraftSetItems([])}
-                          className="text-[10px] text-rose-400 hover:text-rose-300 transition font-bold cursor-pointer"
-                        >
-                          Clear All
-                        </button>
-                      )}
-                    </div>
-
-                    {isLoadingSetMembers ? (
-                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-slate-500 text-xs">
-                        <RefreshCw className="w-5 h-5 animate-spin text-indigo-400 mb-2" />
-                        <span>Loading set items...</span>
-                      </div>
-                    ) : draftSetItems.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center p-4 text-center text-slate-500 text-xs gap-1">
-                        <span className="text-xl">📥</span>
-                        <p className="font-bold text-slate-400">Draft is Empty</p>
-                        <p className="text-[10px] text-slate-600 max-w-xs">
-                          Use "Based On" above or click "+ Add to Set" on abilities in the right catalog.
-                        </p>
+                  {/* 2. HIERARCHICAL TREE (PERMANENTLY EXPANDED) */}
+                  <div className="ml-5 sm:ml-6 pl-3 sm:pl-4 border-l-2 border-indigo-500/40 flex flex-col gap-2 pt-1 pb-1">
+                    {draftSetItems.length === 0 ? (
+                      <div className="p-3 rounded-lg bg-slate-950/60 border border-dashed border-slate-800 text-center text-xs text-slate-500">
+                        Set is empty. Click "+ Add Item" below to browse catalog.
                       </div>
                     ) : (
-                      <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-1">
-                        {draftSetItems.map((item, idx) => (
+                      draftSetItems.map((item, idx) => {
+                        const isItemSelected =
+                          activeSetSelection.type === 'set_member' && activeSetSelection.index === idx;
+                        return (
                           <div
                             key={`${item.id}_${idx}`}
-                            className="flex items-center justify-between p-2 rounded-lg bg-slate-950/80 border border-slate-800/80 text-xs hover:border-slate-700 transition"
+                            onClick={() => setActiveSetSelection({ type: 'set_member', item, index: idx })}
+                            className={`p-2 rounded-lg border transition flex items-center justify-between gap-2 cursor-pointer ${
+                              isItemSelected
+                                ? 'bg-indigo-950/40 border-indigo-500/80 ring-1 ring-indigo-500/40'
+                                : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
+                            }`}
                           >
-                            <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex items-center gap-1.5 min-w-0">
                               <span className="text-xs shrink-0">
-                                {item.element_type === 'weapon'
+                                {item.element_type === 'weapon' || item.table === 'weapons'
                                   ? '⚔️'
-                                  : item.element_type === 'armor' || item.element_type === 'shield'
+                                  : item.element_type === 'armor' || item.table === 'armor' || item.element_type === 'shield' || item.table === 'shields'
                                   ? '🛡️'
-                                  : item.element_type === 'power'
+                                  : item.element_type === 'power' || item.table === 'powers'
                                   ? '⚡'
-                                  : item.element_type === 'skill'
+                                  : item.element_type === 'skill' || item.table === 'skills'
                                   ? '🎯'
                                   : '🧬'}
                               </span>
-                              <div className="flex flex-col min-w-0">
-                                <span className="font-bold text-slate-200 truncate">{item.name}</span>
-                                <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-                                  {item.requirement && (
-                                    <span className="font-mono text-slate-500">{item.requirement}</span>
-                                  )}
-                                  {item.action && (
-                                    <span className="text-cyan-400 font-bold">{item.action}</span>
-                                  )}
-                                  {item.cost && (
-                                    <span className="text-amber-400 font-bold">{item.cost}</span>
-                                  )}
-                                </div>
-                              </div>
+                              <span className="font-bold text-slate-200 text-xs truncate">
+                                {item.name}
+                              </span>
+                              {item.requirement && (
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
+                                  {item.requirement}
+                                </span>
+                              )}
+                              {item.action && (
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-cyan-400 font-bold shrink-0">
+                                  {item.action}
+                                </span>
+                              )}
+                              {item.usage && (
+                                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-amber-300 font-bold shrink-0">
+                                  {item.usage}
+                                </span>
+                              )}
                             </div>
-
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveItemFromDraft(String(item.id))}
-                              className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-slate-900 transition cursor-pointer shrink-0"
-                              title="Remove from set"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveItemFromDraft(String(item.id));
+                                  if (activeSetSelection.type === 'set_member' && activeSetSelection.index === idx) {
+                                    setActiveSetSelection({ type: 'set_root' });
+                                  }
+                                }}
+                                className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 transition cursor-pointer"
+                                title={`Remove ${item.name} from set`}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Anti-Duplicate-Clone Alert Banner */}
-                  {isDuplicateClone && (
-                    <div className="p-2.5 rounded-xl bg-amber-950/70 border border-amber-500/60 text-amber-200 text-xs flex items-center gap-2 animate-fadeIn shrink-0">
-                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span className="leading-snug text-[11px]">
-                        <strong>Duplicate Set Detected:</strong> An identical set already exists with these exact items. Please add, remove, or modify items before forging this set.
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2 pt-1 border-t border-slate-800 shrink-0">
-                    {selectedSetId && (
-                      <button
-                        type="button"
-                        onClick={handleDeleteCurrentSet}
-                        disabled={isSavingSet}
-                        className="py-2.5 px-3 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0"
-                        title="Delete this set"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Delete</span>
-                      </button>
+                        );
+                      })
                     )}
 
+                    {/* + Add Item to Set Dashed Button */}
                     <button
                       type="button"
-                      onClick={handleSaveSet}
-                      disabled={!isNameValid || isDuplicateClone || isSavingSet}
-                      className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg ${
-                        isNameValid && !isDuplicateClone && !isSavingSet
-                          ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-400 text-white font-extrabold shadow-indigo-950/50 cursor-pointer active:scale-[0.98]'
-                          : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                      }`}
+                      onClick={() => setActiveSetSelection({ type: 'set_add_member' })}
+                      className="py-1 px-2.5 rounded-lg border border-dashed border-slate-700 hover:border-indigo-500/60 bg-slate-950/60 hover:bg-slate-900 text-xs font-bold text-slate-400 hover:text-indigo-300 transition flex items-center justify-center gap-1.5 cursor-pointer select-none"
                     >
-                      {isSavingSet ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          <span>Saving Set...</span>
-                        </>
-                      ) : selectedSetId && !isCreatingNewSet ? (
-                        <>
-                          <Check className="w-4 h-4" />
-                          <span>Update Set</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4" />
-                          <span>Forge Set</span>
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleNewSet}
-                      className="py-2.5 px-3 bg-slate-950 border border-slate-700 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition cursor-pointer shrink-0"
-                    >
-                      Clear
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Add {selectedSetCategory} Item</span>
                     </button>
                   </div>
                 </div>
@@ -7009,128 +6768,750 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     Select a Path from the left pane or click "+ New Path" to inspect, link elements, or author custom abilities.
                   </p>
                 </div>
-              ) : (
-                <>
-                  {/* Category Multi-Option Pill Switch (6 Categories) */}
-                  <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md overflow-x-auto shrink-0">
+              ) : activePathSelection.type === 'path_root' || activePathSelection.type === 'path' ? (
+                /* ROUTE 1: PATH METADATA EDITOR & PERSISTENCE */
+                <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
+                  {/* Header */}
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🧭</span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                          {selectedPathId || editingItem ? `Edit Path: ${name || 'Unnamed Path'}` : 'New Path Archetype'}
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          Configure path archetype metadata, category form, lore, and permitted genres.
+                        </p>
+                      </div>
+                    </div>
+                    {canonicalSelectedId && (
+                      <span className="px-2 py-0.5 rounded bg-blue-950 border border-blue-700/60 text-blue-300 font-mono text-[10px] font-bold">
+                        {workshopMode === 'designer' ? '👑 Master Path' : 'Archetype'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Row 1: Path Name & Collision Badge */}
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300 text-xs">Path Name</span>
+                        <GuardrailBadge isValid={isNameValid} />
+                        <InfoTooltip text="Unique archetype name for this Path (e.g. Voidstalker, Iron Sentinel)." />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      disabled={isUniversalPath && workshopMode !== 'designer'}
+                      placeholder="e.g. Voidstalker, Iron Sentinel, Starweaver..."
+                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner disabled:opacity-60 disabled:cursor-not-allowed"
+                      required
+                    />
+                    {topLevelCollision.isCollision && (
+                      <div className="flex items-center justify-between p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs">
+                        <div className="flex items-center gap-1.5 text-amber-300 min-w-0">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">
+                            '{topLevelCollision.existingItemName}' already exists in {workshopMode === 'designer' ? 'Master Canon' : 'My Creations'}.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setName(getAutoVersionedName(name, currentActiveCatalog))}
+                          className="px-2 py-0.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 border border-amber-500/60 text-amber-100 font-bold text-[10px] transition cursor-pointer shrink-0"
+                        >
+                          ⚡ Auto-Add (v2)
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Row 2: Category & Based-On Template Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 shrink-0">
+                    {/* Path Category */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-300 text-xs">Category</span>
+                          <GuardrailBadge isValid={isPathCategoryValid} />
+                        </div>
+                      </div>
+                      <select
+                        value={pathCategory}
+                        onChange={(e) => setPathCategory(e.target.value)}
+                        disabled={isUniversalPath && workshopMode !== 'designer'}
+                        className="bg-slate-950 border border-slate-700 text-slate-200 text-xs px-2.5 py-1.5 rounded-xl outline-none focus:border-blue-400 font-medium disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        {availablePathCategories.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                        <option value="CUSTOM_NEW">+ Custom Category...</option>
+                      </select>
+                      {pathCategory === 'CUSTOM_NEW' && (
+                        <input
+                          type="text"
+                          value={pathCategoryNewText}
+                          onChange={(e) => setPathCategoryNewText(e.target.value)}
+                          disabled={isUniversalPath && workshopMode !== 'designer'}
+                          placeholder="Type custom category name..."
+                          className="bg-slate-950 text-slate-100 text-xs px-2.5 py-1 rounded-xl border border-blue-500/60 outline-none"
+                        />
+                      )}
+                    </div>
+
+                    {/* Based-On Path Template */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-300 text-xs">Based-On Template</span>
+                          <InfoTooltip text="Clone metadata and all linked elements from an existing Path." />
+                        </div>
+                      </div>
+                      <select
+                        onChange={(e) => {
+                          const p = (paths || []).find((it) => String(it.id) === e.target.value || it.name === e.target.value);
+                          if (p) handleSelectBasedOnPath(p);
+                          e.target.value = '';
+                        }}
+                        defaultValue=""
+                        className="bg-slate-950 border border-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-xl outline-none focus:border-blue-400 font-medium cursor-pointer"
+                      >
+                        <option value="" disabled>-- Clone from Path... --</option>
+                        {(paths || []).map((p) => (
+                          <option key={p.id || p.name} value={p.id || p.name}>
+                            🧭 {p.name} ({p.category || 'General'}{Array.isArray(p.linked_elements) ? ` • ${p.linked_elements.length}` : ''})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Row 3: Description & Lore */}
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300 text-xs">Description & Lore</span>
+                        <GuardrailBadge isValid={pathDescription.trim().length > 0} />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                    </div>
+                    <textarea
+                      value={pathDescription}
+                      onChange={(e) => setPathDescription(e.target.value)}
+                      disabled={isUniversalPath && workshopMode !== 'designer'}
+                      rows={3}
+                      placeholder="Flavor text describing this path's training, role, and key abilities..."
+                      className="bg-slate-950 text-slate-100 text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner resize-y min-h-[60px] leading-relaxed disabled:opacity-60 disabled:cursor-not-allowed"
+                      required
+                    />
+                  </div>
+
+                  {/* Row 4: Genres */}
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300 text-xs">Permitted Genres</span>
+                        <GuardrailBadge isValid={isGenresValid} />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                    </div>
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
+                      {GENRE_OPTIONS.map((g) => {
+                        const isSelected = selectedGenres.includes(g.id);
+                        return (
+                          <button
+                            key={g.id}
+                            type="button"
+                            disabled={isUniversalPath && workshopMode !== 'designer'}
+                            onClick={() => handleToggleGenre(g.id)}
+                            className={`flex-1 py-1 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer disabled:cursor-not-allowed ${
+                              isSelected
+                                ? 'bg-blue-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            <span>{g.icon}</span>
+                            <span>{g.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Row 5: Action / Save Path Button (Sole domain of Path Persistence) */}
+                  <div className="shrink-0 flex flex-col gap-2 pt-3 border-t border-slate-800/80 mt-auto">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <span>Status:</span>
+                      <span className={`text-[10px] font-mono font-bold ${isPathReadyForAbilities ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {isPathReadyForAbilities ? 'Ready to Save' : 'Incomplete Requirements'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={!isPathReadyForAbilities || isSubmitting || (isUniversalPath && workshopMode !== 'designer')}
+                        className={`flex-1 py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+                          isPathReadyForAbilities && !isSubmitting && (!isUniversalPath || workshopMode === 'designer')
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-900/40 cursor-pointer font-extrabold'
+                            : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                        }`}
+                        title={
+                          isUniversalPath && workshopMode !== 'designer'
+                            ? 'Universal Path is read-only in Player mode'
+                            : !isPathReadyForAbilities
+                            ? 'Fill in Path Name, Category, Description, and Genre before saving'
+                            : workshopMode === 'designer'
+                            ? canonicalSelectedId
+                              ? 'Update Master Path in Supabase'
+                              : 'Create Master Path in Supabase'
+                            : editingItem || canonicalSelectedId
+                            ? 'Update Path Archetype'
+                            : 'Forge Path to My Creations'
+                        }
+                      >
+                        <AnvilIcon className="w-4 h-4" />
+                        <span>
+                          {isSubmitting
+                            ? 'Forging...'
+                            : workshopMode === 'designer'
+                            ? canonicalSelectedId
+                              ? 'Update Master Path 👑'
+                              : 'Create Master Path 👑'
+                            : editingItem || canonicalSelectedId
+                            ? 'Update Path Archetype'
+                            : 'Forge Path to My Creations'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : activePathSelection.type === 'path_set' ? (
+                /* ROUTE 2: LINKED SET INSPECTOR & REDIRECT NOTICE */
+                <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
+                  {/* Header */}
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🗂️</span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                          Linked Set: {activePathSelection.setItem?.name || 'Unnamed Set'}
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          Inspect set composition and adjust acquisition tag in this path.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-indigo-950 border border-indigo-700/60 text-indigo-300 font-mono text-[10px] font-bold">
+                      Linked Set
+                    </span>
+                  </div>
+
+                  {/* Prominent Redirect Notice Banner (Blake's Mandate) */}
+                  <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-lg">ℹ️</span>
+                      <div>
+                        <h4 className="text-xs font-bold text-indigo-200">
+                          To edit a Set, use the Sets tab at the top of this screen.
+                        </h4>
+                        <p className="text-[10px] text-indigo-300/80">
+                          Sets are modular collections. You can manage the items within this set in the Sets Studio.
+                        </p>
+                      </div>
+                    </div>
                     <button
                       type="button"
-                      onClick={() => setPathBrowserCategory('sets')}
-                      className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                        pathBrowserCategory === 'sets'
-                          ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
+                      onClick={() => {
+                        handleSwitchTab('set');
+                        const targetSet = (setsCatalog || []).find(
+                          (s) =>
+                            String(s.id) === String(activePathSelection.setItem?.id) ||
+                            s.name === activePathSelection.setItem?.name
+                        );
+                        if (targetSet) {
+                          handleSelectSet(targetSet);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer shrink-0"
                     >
-                      🗂️ Sets
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPathBrowserCategory('traits')}
-                      className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                        pathBrowserCategory === 'traits'
-                          ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🧬 Traits
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPathBrowserCategory('skills')}
-                      className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                        pathBrowserCategory === 'skills'
-                          ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🎯 Skills
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPathBrowserCategory('powers')}
-                      className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                        pathBrowserCategory === 'powers'
-                          ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      ⚡ Powers
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPathBrowserCategory('weapons')}
-                      className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                        pathBrowserCategory === 'weapons'
-                          ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      ⚔️ Weapons
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPathBrowserCategory('armor_shields')}
-                      className={`flex-1 py-1.5 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                        pathBrowserCategory === 'armor_shields'
-                          ? 'bg-purple-600 text-white shadow-sm font-extrabold'
-                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                      }`}
-                    >
-                      🛡️ Armor &amp; Shields
+                      <span>🗂️</span>
+                      <span>Open in Sets Studio</span>
                     </button>
                   </div>
 
-                  {/* Sub-bar: Search, Count, and Author Ability Button */}
+                  {/* Path Tag Assignment */}
+                  <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800 shrink-0">
+                    <span className="text-xs font-bold text-slate-300">Path Acquisition Tag</span>
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md max-w-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleLinkedTag(activePathSelection.setItem.id, 'Free')}
+                        className={`flex-1 py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          activePathSelection.setItem?.tag === 'Free'
+                            ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>🎁</span>
+                        <span>Free (0 AP)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleLinkedTag(activePathSelection.setItem.id, '1 AP')}
+                        className={`flex-1 py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          activePathSelection.setItem?.tag === '1 AP'
+                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>⚡</span>
+                        <span>1 AP</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Set Items Inspection */}
+                  <div className="flex-1 flex flex-col min-h-0 gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-300">
+                        Items in this Set ({activePathSetItems.length})
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-mono">Read-Only Preview</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-1.5">
+                      {activePathSetItems.length === 0 ? (
+                        <p className="text-xs text-slate-500 italic p-3">No items listed in this set.</p>
+                      ) : (
+                        activePathSetItems.map((item: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 flex flex-col gap-1 text-xs"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-slate-200">{item.name}</span>
+                              <div className="flex items-center gap-1.5 text-[10px]">
+                                {item.requirement && (
+                                  <span className="font-mono text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                                    {item.requirement}
+                                  </span>
+                                )}
+                                {item.action && (
+                                  <span className="text-cyan-400 font-bold bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                                    {item.action}
+                                  </span>
+                                )}
+                                {item.usage && (
+                                  <span className="text-amber-300 font-bold bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                                    {item.usage}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            {item.effect && (
+                              <p className="text-[11px] text-slate-400 font-mono whitespace-pre-wrap">{item.effect}</p>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="shrink-0 flex items-center justify-between pt-2 border-t border-slate-800/80 mt-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleRemoveLinkedElement(activePathSelection.setItem.id);
+                        setActivePathSelection({ type: 'path_root' });
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove from Path</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActivePathSelection({ type: 'path_root' })}
+                      className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
+                    >
+                      Done Inspecting
+                    </button>
+                  </div>
+                </div>
+              ) : activePathSelection.type === 'path_element' ? (
+                /* ROUTE 3: ABILITY INSPECTOR & PERMISSIONED EDIT */
+                <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
+                  {/* Header */}
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{getCategoryEmoji(activePathSelection.element?.type)}</span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                          {activePathSelection.element?.name || 'Linked Ability'}
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          Inspect ability mechanics, requirements, and rules text.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px] font-bold capitalize">
+                      {activePathSelection.element?.type || 'Ability'}
+                    </span>
+                  </div>
+
+                  {/* Path Tag Assignment */}
+                  <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800 shrink-0">
+                    <span className="text-xs font-bold text-slate-300">Path Acquisition Tag</span>
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md max-w-xs">
+                      <button
+                        type="button"
+                        onClick={() => activePathSelection.element && handleToggleLinkedTag(activePathSelection.element.id, 'Free')}
+                        className={`flex-1 py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          activePathSelection.element?.tag === 'Free'
+                            ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>🎁</span>
+                        <span>Free (0 AP)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => activePathSelection.element && handleToggleLinkedTag(activePathSelection.element.id, '1 AP')}
+                        className={`flex-1 py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          activePathSelection.element?.tag === '1 AP'
+                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>⚡</span>
+                        <span>1 AP</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Full Mechanics Inspection Card */}
+                  {(() => {
+                    const stats = getElementSkillStats(activePathSelection.element);
+                    return (
+                      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                          <span className="font-bold text-slate-200 text-sm">{activePathSelection.element?.name}</span>
+                          <span className="text-[10px] font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+                            🔒 Canonical Record (Read-Only)
+                          </span>
+                        </div>
+
+                        {/* Stats Badges Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                          {stats.req && (
+                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                              <span className="text-[10px] text-slate-500 block">Requirement</span>
+                              <span className="font-bold text-slate-300 font-mono">{stats.req}</span>
+                            </div>
+                          )}
+                          {stats.action && (
+                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                              <span className="text-[10px] text-slate-500 block">Action</span>
+                              <span className="font-bold text-cyan-400">{stats.action}</span>
+                            </div>
+                          )}
+                          {stats.usage && (
+                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                              <span className="text-[10px] text-slate-500 block">Usage</span>
+                              <span className="font-bold text-amber-300">{stats.usage}</span>
+                            </div>
+                          )}
+                          {stats.damage && (
+                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                              <span className="text-[10px] text-slate-500 block">Damage</span>
+                              <span className="font-bold text-rose-300 font-mono">{stats.damage}</span>
+                            </div>
+                          )}
+                          {stats.ar && (
+                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                              <span className="text-[10px] text-slate-500 block">AR Rating</span>
+                              <span className="font-bold text-purple-300 font-mono">{stats.ar}</span>
+                            </div>
+                          )}
+                          {stats.attribute && (
+                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                              <span className="text-[10px] text-slate-500 block">Attribute</span>
+                              <span className="font-bold text-cyan-300">{stats.attribute}</span>
+                            </div>
+                          )}
+                          {stats.discipline && (
+                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                              <span className="text-[10px] text-slate-500 block">Discipline</span>
+                              <span className="font-bold text-indigo-300">{stats.discipline}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Rules Effect */}
+                        {(activePathSelection.element?.details || activePathSelection.element?.item_data?.effect) && (
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rules Effect</span>
+                            <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 text-xs font-mono text-slate-200 whitespace-pre-wrap leading-relaxed">
+                              {activePathSelection.element?.item_data?.effect || activePathSelection.element?.details}
+                            </div>
+                          </div>
+                        )}
+
+                        {activePathSelection.element?.item_data?.notes && (
+                          <p className="text-[11px] text-slate-500 italic">
+                            "{activePathSelection.element?.item_data?.notes}"
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Footer Actions */}
+                  <div className="shrink-0 flex items-center justify-between pt-2 border-t border-slate-800/80 mt-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (activePathSelection.element) {
+                          handleRemoveLinkedElement(activePathSelection.element.id);
+                        }
+                        setActivePathSelection({ type: 'path_root' });
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove from Path</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActivePathSelection({ type: 'path_root' })}
+                      className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
+                    >
+                      Done Inspecting
+                    </button>
+                  </div>
+                </div>
+              ) : activePathSelection.type === 'path_add_set' ? (
+                /* ROUTE 4: FILTERED SET PICKER */
+                <div className="flex-1 flex flex-col min-h-0 gap-3">
+                  {/* Header */}
                   <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-800 shrink-0">
                     <div className="flex items-center gap-2">
-                      <div className="relative w-56 sm:w-64">
+                      <span className="text-base">🗂️</span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100 capitalize">
+                          Add {activePathSelection.category === 'armor_shield' ? 'Armor & Shield' : activePathSelection.category} Set to Path
+                        </h3>
+                        <p className="text-[10px] text-slate-400">
+                          Showing {filteredSetsForPathCategory.length} of {availableSetsForPathCategory.length} sets
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="relative w-56">
+                      <input
+                        type="text"
+                        value={pathAddSetSearch}
+                        onChange={(e) => setPathAddSetSearch(e.target.value)}
+                        placeholder="Search sets..."
+                        className="w-full bg-slate-950 border border-slate-700/80 rounded-lg pl-8 pr-3 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition shadow-inner"
+                      />
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2 pointer-events-none" />
+                      {pathAddSetSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setPathAddSetSearch('')}
+                          className="absolute right-2.5 top-1.5 text-slate-500 hover:text-slate-300 cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Sets List */}
+                  <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 min-h-0">
+                    {filteredSetsForPathCategory.length === 0 ? (
+                      <div className="p-8 text-center text-slate-500 font-mono text-xs">
+                        No sets found in this category. Author one in the Sets tab!
+                      </div>
+                    ) : (
+                      filteredSetsForPathCategory.map((set) => {
+                        const linkedInfo = (linkedElements || []).find(
+                          (el) =>
+                            (el.type === 'set' || el.element_type === 'set') &&
+                            (String(el.id) === String(set.id) || el.name === set.name)
+                        );
+                        const isLinked = !!linkedInfo;
+
+                        return (
+                          <div
+                            key={String(set.id)}
+                            className={`p-3 rounded-xl border transition flex flex-col gap-2 ${
+                              isLinked
+                                ? 'bg-slate-950/90 border-blue-500/60 ring-1 ring-blue-500/30'
+                                : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">🗂️</span>
+                                <span className="font-bold text-slate-100 text-xs">{set.name}</span>
+                                {set.items_count !== undefined && (
+                                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-slate-400">
+                                    {set.items_count} items
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-bold text-indigo-300 bg-indigo-950/80 border border-indigo-500/30 px-2 py-0.5 rounded">
+                                {set.category}
+                              </span>
+                            </div>
+
+                            {set.description && (
+                              <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                                {set.description}
+                              </p>
+                            )}
+
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                              <span className="text-[10px] text-slate-500">
+                                {isLinked ? `Currently Linked as ${linkedInfo.tag}` : 'Not linked to Path'}
+                              </span>
+
+                              {isLinked ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveLinkedElement(linkedInfo.id)}
+                                  className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[10px] font-bold transition cursor-pointer flex items-center gap-1"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Remove from Path</span>
+                                </button>
+                              ) : (
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleLinkElement(set, 'set', 'Free')}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-950/70 hover:bg-emerald-900/90 border border-emerald-500/40 hover:border-emerald-400 text-emerald-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    <span>🎁 Free</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleLinkElement(set, 'set', '1 AP')}
+                                    className="px-2.5 py-1 rounded-lg bg-amber-950/70 hover:bg-amber-900/90 border border-amber-500/40 hover:border-amber-400 text-amber-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    <span>⚡ 1 AP</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="shrink-0 flex items-center justify-end pt-2 border-t border-slate-800/80">
+                    <button
+                      type="button"
+                      onClick={() => setActivePathSelection({ type: 'path_root' })}
+                      className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              ) : activePathSelection.type === 'path_add_element' ? (
+                /* ROUTE 5: FILTERED ABILITY PICKER & IN-PLACE AUTHOR FORM */
+                <div className="flex-1 flex flex-col min-h-0 gap-3">
+                  {/* Header */}
+                  <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-800 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">
+                        {activePathSelection.category === 'trait'
+                          ? '🧬'
+                          : activePathSelection.category === 'power'
+                          ? '⚡'
+                          : activePathSelection.category === 'skill'
+                          ? '🎯'
+                          : activePathSelection.category === 'weapon'
+                          ? '⚔️'
+                          : '🛡️'}
+                      </span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100 capitalize">
+                          Add {activePathSelection.category === 'armor_shield' ? 'Armor & Shield Sk' : activePathSelection.category} to Path
+                        </h3>
+                        <p className="text-[10px] text-slate-400">
+                          Showing {filteredElementsForPathCategory.length} of {availableElementsForPathCategory.length} abilities
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative w-48 sm:w-56">
                         <input
                           type="text"
-                          value={pathBrowserSearch}
-                          onChange={(e) => setPathBrowserSearch(e.target.value)}
-                          placeholder={`Search ${
-                            pathBrowserCategory === 'armor_shields' ? 'armor & shields' : pathBrowserCategory
-                          }...`}
-                          className="w-full bg-slate-950 border border-slate-700/80 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition shadow-inner"
+                          value={pathAddElementSearch}
+                          onChange={(e) => setPathAddElementSearch(e.target.value)}
+                          placeholder="Search abilities..."
+                          className="w-full bg-slate-950 border border-slate-700/80 rounded-lg pl-8 pr-3 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition shadow-inner"
                         />
-                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
-                        {pathBrowserSearch && (
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2 pointer-events-none" />
+                        {pathAddElementSearch && (
                           <button
                             type="button"
-                            onClick={() => setPathBrowserSearch('')}
-                            className="absolute right-2.5 top-2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                            onClick={() => setPathAddElementSearch('')}
+                            className="absolute right-2.5 top-1.5 text-slate-500 hover:text-slate-300 cursor-pointer"
                           >
                             <X className="w-3 h-3" />
                           </button>
                         )}
                       </div>
-                      <span className="text-[11px] text-slate-400 font-mono">
-                        {filteredPathBrowserCatalog.length} / {currentPathBrowserCatalog.length}
-                      </span>
-                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setIsAuthoringPathCustomAbility(!isAuthoringPathCustomAbility)}
-                      className={`py-1.5 px-3 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border ${
-                        isAuthoringPathCustomAbility
-                          ? 'bg-rose-950/80 border-rose-500/50 text-rose-300'
-                          : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-amber-300 hover:text-amber-200'
-                      }`}
-                    >
-                      {isAuthoringPathCustomAbility ? (
-                        <>
-                          <X className="w-3.5 h-3.5" />
-                          <span>Close Form</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3.5 h-3.5 text-amber-400" />
-                          <span>✍️ Author Ability</span>
-                        </>
+                      {(activePathSelection.category === 'trait' ||
+                        activePathSelection.category === 'power' ||
+                        activePathSelection.category === 'skill') && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!isAuthoringPathCustomAbility) {
+                              setCustomAbilityType(activePathSelection.category as any);
+                            }
+                            setIsAuthoringPathCustomAbility(!isAuthoringPathCustomAbility);
+                          }}
+                          className={`py-1 px-2.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer border shrink-0 ${
+                            isAuthoringPathCustomAbility
+                              ? 'bg-rose-950/80 border-rose-500/50 text-rose-300'
+                              : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-amber-300 hover:text-amber-200'
+                          }`}
+                        >
+                          {isAuthoringPathCustomAbility ? (
+                            <>
+                              <X className="w-3.5 h-3.5" />
+                              <span>Close</span>
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-3.5 h-3.5 text-amber-400" />
+                              <span>✍️ Author</span>
+                            </>
+                          )}
+                        </button>
                       )}
-                    </button>
+                    </div>
                   </div>
 
                   {/* In-Place Custom Ability Drawer */}
@@ -7139,8 +7520,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-base">✍️</span>
-                          <h4 className="font-outfit font-extrabold text-xs text-amber-300">
-                            Author Custom Ability &amp; Link to Path
+                          <h4 className="font-outfit font-extrabold text-xs text-amber-300 capitalize">
+                            Author Custom {customAbilityType} & Link to Path
                           </h4>
                         </div>
                         <span className="text-[10px] text-slate-400">
@@ -7148,77 +7529,38 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </span>
                       </div>
 
-                      {/* Row 1: Ability Category & Acquisition Tag KISS Switches */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="flex flex-col gap-1">
-                          <span className="font-bold text-slate-300 text-[11px]">Ability Type</span>
-                          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                            <button
-                              type="button"
-                              onClick={() => setCustomAbilityType('trait')}
-                              className={`flex-1 py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                customAbilityType === 'trait'
-                                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                            >
-                              🧬 Trait
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setCustomAbilityType('power')}
-                              className={`flex-1 py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                customAbilityType === 'power'
-                                  ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                            >
-                              ⚡ Power
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setCustomAbilityType('skill')}
-                              className={`flex-1 py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                customAbilityType === 'skill'
-                                  ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                            >
-                              🎯 Skill
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-1">
-                          <span className="font-bold text-slate-300 text-[11px]">Path Link Tag</span>
-                          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                            <button
-                              type="button"
-                              onClick={() => setCustomAbilityTag('Free')}
-                              className={`flex-1 py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                customAbilityTag === 'Free'
-                                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                            >
-                              🎁 Free
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setCustomAbilityTag('1 AP')}
-                              className={`flex-1 py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                customAbilityTag === '1 AP'
-                                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
-                            >
-                              ⚡ 1 AP
-                            </button>
-                          </div>
+                      {/* Tag Switch: Free vs 1 AP */}
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-slate-300 text-[11px]">Path Link Tag</span>
+                        <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md max-w-xs">
+                          <button
+                            type="button"
+                            onClick={() => setCustomAbilityTag('Free')}
+                            className={`flex-1 py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                              customAbilityTag === 'Free'
+                                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            <span>🎁</span>
+                            <span>Free</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCustomAbilityTag('1 AP')}
+                            className={`flex-1 py-1 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                              customAbilityTag === '1 AP'
+                                ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            <span>⚡</span>
+                            <span>1 AP</span>
+                          </button>
                         </div>
                       </div>
 
-                      {/* Row 2: Ability Name */}
+                      {/* Ability Name */}
                       <div className="flex flex-col gap-1">
                         <span className="font-bold text-slate-300 text-[11px]">Ability Name</span>
                         <input
@@ -7299,7 +7641,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </div>
                       )}
 
-                      {/* Effect (for Trait or Power) */}
+                      {/* Effect */}
                       {(customAbilityType === 'power' || customAbilityType === 'trait') && (
                         <div className="flex flex-col gap-1">
                           <span className="font-bold text-slate-300 text-[11px]">Rules Effect</span>
@@ -7313,7 +7655,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </div>
                       )}
 
-                      {/* Notes / Lore */}
+                      {/* Notes */}
                       <div className="flex flex-col gap-1">
                         <span className="font-bold text-slate-300 text-[11px]">Notes (Optional)</span>
                         <input
@@ -7325,7 +7667,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         />
                       </div>
 
-                      {/* Author Drawer Action Buttons */}
+                      {/* Drawer Actions */}
                       <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
                         <button
                           type="button"
@@ -7350,133 +7692,122 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       </div>
                     </div>
                   ) : (
-                    /* Catalog Item List */
+                    /* Catalog List */
                     <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2 min-h-0">
-                      {filteredPathBrowserCatalog.length === 0 ? (
+                      {filteredElementsForPathCategory.length === 0 ? (
                         <div className="p-8 text-center text-slate-500 font-mono text-xs">
-                          No items match your search in {pathBrowserCategory}.
+                          No items match your search.
                         </div>
                       ) : (
-                        filteredPathBrowserCatalog.map((item: any) => {
-                          const itemKey = `${item._catalogType}_${(item.name || '').trim().toLowerCase()}`;
-                          const linkInfo = linkedElementsMap.get(itemKey);
-                          const isLinked = !!linkInfo;
+                        filteredElementsForPathCategory.map((item: any) => {
+                          const linkedInfo = (linkedElements || []).find(
+                            (el) =>
+                              (el.name || '').toLowerCase().trim() === (item.name || '').toLowerCase().trim() &&
+                              el.type !== 'set' &&
+                              el.element_type !== 'set'
+                          );
+                          const isLinked = !!linkedInfo;
+                          const stats = {
+                            req: item.requirement,
+                            action: item.action,
+                            usage: item.usage,
+                            damage: item.damage,
+                            ar: item.ar,
+                            attribute: item.attribute,
+                            discipline: item.discipline,
+                          };
 
                           return (
                             <div
-                              key={`${item._catalogType}_${item.id || item.name}`}
-                              className={`p-2.5 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                              key={String(item.id || item.name)}
+                              className={`p-3 rounded-xl border transition flex flex-col gap-1.5 ${
                                 isLinked
-                                  ? 'bg-slate-950/90 border-amber-500/60 shadow-sm'
-                                  : 'bg-slate-950/50 border-slate-800 hover:border-slate-700'
+                                  ? 'bg-slate-950/90 border-blue-500/60 ring-1 ring-blue-500/30'
+                                  : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
                               }`}
                             >
-                              {/* Left: Metadata & Preview */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-extrabold text-slate-100 text-xs truncate">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className="font-bold text-slate-100 text-xs truncate">
                                     {item.name}
                                   </span>
-                                  <span className="px-1.5 py-0.2 rounded bg-slate-800 text-[10px] font-mono text-slate-400 border border-slate-700/60">
-                                    {item._subtitle}
-                                  </span>
-                                  {item.genres && Array.isArray(item.genres) && item.genres.length > 0 && (
-                                    <span className="text-[10px] text-slate-500">
-                                      ({item.genres.join(', ')})
+                                  {stats.req && (
+                                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-slate-300 font-bold shrink-0">
+                                      {stats.req}
+                                    </span>
+                                  )}
+                                  {stats.action && (
+                                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-cyan-400 font-bold shrink-0">
+                                      {stats.action}
+                                    </span>
+                                  )}
+                                  {stats.usage && (
+                                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-amber-300 font-bold shrink-0">
+                                      {stats.usage}
+                                    </span>
+                                  )}
+                                  {stats.damage && (
+                                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-rose-300 font-bold shrink-0">
+                                      {stats.damage}
+                                    </span>
+                                  )}
+                                  {stats.ar && (
+                                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-purple-300 font-bold shrink-0">
+                                      AR {stats.ar}
+                                    </span>
+                                  )}
+                                  {stats.attribute && (
+                                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-cyan-300 font-bold shrink-0">
+                                      {stats.attribute}
                                     </span>
                                   )}
                                 </div>
-                                {item.effect && (
-                                  <p className="text-[11px] text-slate-300 font-serif italic mt-0.5 line-clamp-2">
-                                    {item.effect}
-                                  </p>
-                                )}
-                                {item.description && !item.effect && (
-                                  <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">
-                                    {item.description}
-                                  </p>
-                                )}
-                                {item.notes && !item.effect && !item.description && (
-                                  <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">
-                                    {item.notes}
-                                  </p>
-                                )}
-                                {item._catalogType === 'weapon' && (
-                                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400 font-mono">
-                                    <span>Atk: {item.atk || '—'}</span>
-                                    <span>•</span>
-                                    <span>Dmg: {item.dmg || '—'}</span>
-                                    <span>•</span>
-                                    <span>Block: {item.max_block || '—'}</span>
-                                  </div>
-                                )}
-                                {item._catalogType === 'armor' && (
-                                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400 font-mono">
-                                    <span>AR: {item.ar || '—'}</span>
-                                    <span>•</span>
-                                    <span>MR: {item.mr || '—'}</span>
-                                  </div>
-                                )}
-                                {item._catalogType === 'shield' && (
-                                  <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400 font-mono">
-                                    <span>Block: {item.max_block || '—'}</span>
-                                    <span>•</span>
-                                    <span>MR: {item.mr || '—'}</span>
-                                  </div>
-                                )}
+
+                                <span className="text-[10px] font-mono text-slate-500 capitalize shrink-0">
+                                  {item._catalogType}
+                                </span>
                               </div>
 
-                              {/* Right: Dual-Link Action Buttons */}
-                              <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                              {item.effect && (
+                                <p className="text-[11px] text-slate-400 font-mono line-clamp-2 leading-relaxed">
+                                  {item.effect}
+                                </p>
+                              )}
+
+                              {item.description && !item.effect && (
+                                <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                                  {item.description}
+                                </p>
+                              )}
+
+                              <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/80">
+                                <span className="text-[10px] text-slate-500">
+                                  {isLinked ? `Currently Linked as ${linkedInfo.tag}` : 'Not linked to Path'}
+                                </span>
+
                                 {isLinked ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveLinkedElement(linkedInfo.id)}
+                                    className="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[10px] font-bold transition cursor-pointer flex items-center gap-1"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Remove from Path</span>
+                                  </button>
+                                ) : (
                                   <div className="flex items-center gap-1.5">
                                     <button
                                       type="button"
-                                      onClick={() =>
-                                        handleToggleLinkedTag(
-                                          linkInfo.id,
-                                          linkInfo.tag === 'Free' ? '1 AP' : 'Free'
-                                        )
-                                      }
-                                      className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold flex items-center gap-1 cursor-pointer transition shadow-sm ${
-                                        linkInfo.tag === 'Free'
-                                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                                          : 'bg-amber-600 hover:bg-amber-500 text-white'
-                                      }`}
-                                      title="Click to toggle between Free and 1 AP"
-                                    >
-                                      {linkInfo.tag === 'Free' ? '✓ 🎁 Free' : '✓ ⚡ 1 AP'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleRemoveLinkedElement(linkInfo.id)}
-                                      className="p-1 px-2 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
-                                      title="Remove from Path"
-                                    >
-                                      <X className="w-3 h-3" />
-                                      <span>Unlink</span>
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleToggleLinkElement(item, item._catalogType, 'Free')
-                                      }
-                                      className="py-1 px-2.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900/90 border border-emerald-500/40 hover:border-emerald-400 text-emerald-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
-                                      title="Link to Path as Free (0 AP)"
+                                      onClick={() => handleToggleLinkElement(item, item._catalogType, 'Free')}
+                                      className="px-2.5 py-1 rounded-lg bg-emerald-950/70 hover:bg-emerald-900/90 border border-emerald-500/40 hover:border-emerald-400 text-emerald-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                                     >
                                       <Plus className="w-3 h-3" />
                                       <span>🎁 Free</span>
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() =>
-                                        handleToggleLinkElement(item, item._catalogType, '1 AP')
-                                      }
-                                      className="py-1 px-2.5 rounded-lg bg-amber-950/70 hover:bg-amber-900/90 border border-amber-500/40 hover:border-amber-400 text-amber-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
-                                      title="Link to Path as 1 AP"
+                                      onClick={() => handleToggleLinkElement(item, item._catalogType, '1 AP')}
+                                      className="px-2.5 py-1 rounded-lg bg-amber-950/70 hover:bg-amber-900/90 border border-amber-500/40 hover:border-amber-400 text-amber-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                                     >
                                       <Plus className="w-3 h-3" />
                                       <span>⚡ 1 AP</span>
@@ -7490,8 +7821,20 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       )}
                     </div>
                   )}
-                </>
-              )}
+
+                  {/* Footer */}
+                  <div className="shrink-0 flex items-center justify-end pt-2 border-t border-slate-800/80">
+                    <button
+                      type="button"
+                      onClick={() => setActivePathSelection({ type: 'path_root' })}
+                      className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
             </div>
           ) : creationType === 'set' ? (
             <div className="lg:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-4 overflow-hidden gap-3 text-xs">
@@ -7513,143 +7856,556 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
               )}
 
-              {/* Header: Category Title, Counter, and Search */}
-              <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-800 shrink-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">
-                    {selectedSetCategory === 'Weapons'
-                      ? '⚔️'
-                      : selectedSetCategory === 'Armor & Shields'
-                      ? '🛡️'
-                      : selectedSetCategory === 'Powers'
-                      ? '⚡'
-                      : selectedSetCategory === 'Skills'
-                      ? '🎯'
-                      : '🧬'}
-                  </span>
-                  <div>
-                    <h3 className="font-outfit font-extrabold text-sm text-slate-100">
-                      {selectedSetCategory} Catalog
-                    </h3>
-                    <p className="text-[10px] text-slate-400">
-                      Showing {filteredCategoryCatalog.length} of {categoryCatalogItems.length} items
-                    </p>
+              {/* ROUTE 1: SET ROOT METADATA EDITOR & SAVE BUTTON */}
+              {activeSetSelection.type === 'set_root' && (
+                <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">🗂️</span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                          {selectedSetId ? `Edit Set: ${name || 'Unnamed Set'}` : 'New Set Collection'}
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          Configure collection metadata, homogeneous domain category, and lore.
+                        </p>
+                      </div>
+                    </div>
+                    {selectedSetId && (
+                      <span className="px-2 py-0.5 rounded bg-amber-950 border border-amber-700/60 text-amber-300 font-mono text-[10px] font-bold">
+                        {workshopMode === 'designer' ? '👑 Canon Set' : 'Custom Set'}
+                      </span>
+                    )}
                   </div>
-                </div>
 
-                {/* Search Input */}
-                <div className="relative w-64">
-                  <input
-                    type="text"
-                    value={setsRightCatalogSearchQuery}
-                    onChange={(e) => setSetsRightCatalogSearchQuery(e.target.value)}
-                    placeholder={`Search ${selectedSetCategory.toLowerCase()}...`}
-                    className="w-full bg-slate-950 border border-slate-700/80 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition shadow-inner"
-                  />
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
-                  {setsRightCatalogSearchQuery && (
+                  {/* Row 1: Name & Collision Badge */}
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300 text-xs">Set Name</span>
+                        <GuardrailBadge isValid={isNameValid} />
+                        <InfoTooltip text="Unique name for this set collection." />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Masterwork Blades, Dragon Knight Armory, Elemental Evocations..."
+                      className={`w-full bg-slate-950 border rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-600 focus:outline-none transition shadow-inner font-semibold ${
+                        topLevelCollision.isCollision
+                          ? 'border-rose-500/80 focus:border-rose-400'
+                          : 'border-slate-700/80 focus:border-indigo-500'
+                      }`}
+                    />
+                    {topLevelCollision.isCollision && (
+                      <p className="text-[10px] text-rose-400 font-medium">
+                        ⚠️ A {topLevelCollision.isCanonMatch ? 'canonical' : 'custom'} entry named "{topLevelCollision.existingItemName}" already exists.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Row 2: Category Multi-Option Pill Switch */}
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-300 text-xs">Category</span>
+                      <span className="text-[10px] text-slate-500 font-mono">Homogeneous Domain</span>
+                    </div>
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md overflow-x-auto">
+                      {SET_CATEGORIES.map((cat) => {
+                        const isCatActive = selectedSetCategory === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => handleSwitchSetCategory(cat.id)}
+                            className={`flex-1 py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
+                              isCatActive
+                                ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            <span>{cat.icon}</span>
+                            <span>{cat.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Row 3: Based-On Multi-Merge Selector */}
+                  <div className="relative flex flex-col gap-1.5 bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-300">Based On (Multi-Merge Clone)</span>
+                        <InfoTooltip text="Select 1 or more existing sets in this category to aggregate all their items into this draft." />
+                      </div>
+                      {basedOnSourceSets.length > 0 && (
+                        <span className="px-2 py-0.2 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">
+                          {basedOnSourceSets.length} Set(s) Selected
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowBasedOnDropdown(!showBasedOnDropdown)}
+                        className="flex-1 py-1.5 px-3 bg-slate-900 border border-slate-700/80 rounded-lg text-xs text-left text-slate-300 flex items-center justify-between hover:border-slate-600 transition cursor-pointer"
+                      >
+                        <span className="truncate">
+                          {basedOnSourceSets.length === 0
+                            ? 'Choose base set(s) to merge...'
+                            : basedOnSourceSets.join(', ')}
+                        </span>
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleExecuteMultiMerge}
+                        disabled={basedOnSourceSets.length === 0 || isLoadingSetMembers}
+                        className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                          basedOnSourceSets.length > 0 && !isLoadingSetMembers
+                            ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm font-extrabold cursor-pointer'
+                            : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                        }`}
+                        title="Merge selected sets into draft"
+                      >
+                        <span>⚡</span>
+                        <span>Merge</span>
+                      </button>
+                    </div>
+
+                    {showBasedOnDropdown && (
+                      <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 max-h-52 overflow-y-auto flex flex-col gap-1 backdrop-blur-md">
+                        {availableBasedOnSets.length === 0 ? (
+                          <div className="p-3 text-center text-xs text-slate-500">
+                            No other {selectedSetCategory} sets found to merge.
+                          </div>
+                        ) : (
+                          availableBasedOnSets.map((bs) => {
+                            const isChecked = basedOnSourceSets.includes(bs.name);
+                            return (
+                              <label
+                                key={bs.id || bs.name}
+                                className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-800/80 cursor-pointer text-xs text-slate-300 transition"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => handleToggleBasedOnSet(bs.name)}
+                                    className="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-0 cursor-pointer"
+                                  />
+                                  <span className="font-semibold text-slate-200">{bs.name}</span>
+                                  {bs.owner === 'Designer' && (
+                                    <span className="text-[10px] text-amber-400 font-mono">👑 Canon</span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-slate-500 font-mono">
+                                  {bs.items_count !== undefined ? `${bs.items_count} items` : ''}
+                                </span>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Row 4: Description */}
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <span className="font-bold text-slate-300 text-xs">Description & Lore</span>
+                    <textarea
+                      value={setDescription}
+                      onChange={(e) => setSetDescription(e.target.value)}
+                      rows={2}
+                      placeholder="Theme, history, or tactical doctrine for this set..."
+                      className="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition shadow-inner font-mono leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Row 5: Genres & Paths */}
+                  <div className="grid grid-cols-2 gap-2 shrink-0">
+                    {/* Genres */}
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-slate-300 text-xs">Genres</span>
+                      <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5">
+                        {GENRE_OPTIONS.map((g) => {
+                          const isSelected = selectedGenres.includes(g.id);
+                          return (
+                            <button
+                              key={g.id}
+                              type="button"
+                              onClick={() => handleToggleGenre(g.id)}
+                              className={`flex-1 py-1 px-1.5 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                isSelected
+                                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                            >
+                              <span>{g.icon}</span>
+                              <span className="truncate">{g.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Paths Included */}
+                    <div className="relative flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-300 text-xs">Paths Included</span>
+                        {setPathsIncluded.length > 0 && (
+                          <span className="text-[10px] text-blue-400 font-mono">
+                            {setPathsIncluded.length}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowPathsDropdown(!showPathsDropdown)}
+                        className="py-1.5 px-2.5 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-left text-slate-300 flex items-center justify-between hover:border-slate-600 transition cursor-pointer"
+                      >
+                        <span className="truncate text-[11px]">
+                          {setPathsIncluded.length === 0
+                            ? 'Tag Paths...'
+                            : setPathsIncluded.join(', ')}
+                        </span>
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      </button>
+
+                      {showPathsDropdown && (
+                        <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 max-h-48 overflow-y-auto flex flex-col gap-1 backdrop-blur-md">
+                          {(paths || []).map((p) => {
+                            const isChecked = setPathsIncluded.includes(p.name);
+                            return (
+                              <label
+                                key={p.id || p.name}
+                                className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer text-xs text-slate-300 transition"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => handleTogglePathIncluded(p.name)}
+                                    className="rounded border-slate-700 bg-slate-950 text-blue-500 focus:ring-0 cursor-pointer"
+                                  />
+                                  <span className="font-semibold text-slate-200">{p.name}</span>
+                                </div>
+                                <span className="text-[10px] text-slate-500">{p.category}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Anti-Duplicate-Clone Alert Banner */}
+                  {isDuplicateClone && (
+                    <div className="p-2.5 rounded-xl bg-amber-950/70 border border-amber-500/60 text-amber-200 text-xs flex items-center gap-2 animate-fadeIn shrink-0">
+                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="leading-snug text-[11px]">
+                        <strong>Duplicate Set Detected:</strong> An identical set already exists with these exact items. Please add, remove, or modify items before forging this set.
+                      </span>
+                    </div>
+                  )}
+
+                  {/* SAVE SET ACTION BAR - EXCLUSIVELY IN RIGHT PANE */}
+                  <div className="mt-auto pt-3 border-t border-slate-800 flex items-center justify-between gap-3 shrink-0">
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      {draftSetItems.length} {draftSetItems.length === 1 ? 'item' : 'items'} in set
+                    </span>
                     <button
                       type="button"
-                      onClick={() => setSetsRightCatalogSearchQuery('')}
-                      className="absolute right-2.5 top-2 text-slate-500 hover:text-slate-300"
+                      onClick={handleSaveSet}
+                      disabled={!isNameValid || isDuplicateClone || isSavingSet}
+                      className={`py-2 px-6 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center gap-2 select-none shadow-md ${
+                        isNameValid && !isDuplicateClone && !isSavingSet
+                          ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-400 text-white shadow-indigo-950/50 cursor-pointer active:scale-[0.98]'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                      }`}
                     >
-                      <X className="w-3 h-3" />
+                      {isSavingSet ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Saving Set...</span>
+                        </>
+                      ) : selectedSetId && !isCreatingNewSet ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>{workshopMode === 'designer' ? '👑 Update Master Set' : 'Update Set'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          <span>{workshopMode === 'designer' ? '👑 Forge Master Set' : 'Forge Set to My Creations'}</span>
+                        </>
+                      )}
                     </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Catalog Grid */}
-              <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-2.5 pr-1">
-                {filteredCategoryCatalog.length === 0 ? (
-                  <div className="col-span-full flex flex-col items-center justify-center p-12 text-center text-slate-500 text-xs">
-                    <span className="text-2xl mb-2">🔍</span>
-                    <p className="font-bold text-slate-400">No matching items found</p>
-                    <p className="text-[10px] text-slate-600 mt-1">
-                      Try adjusting your search filter or switch set category.
-                    </p>
                   </div>
-                ) : (
-                  filteredCategoryCatalog.map((item) => {
-                    const inDraft = draftSetItemIdSet.has(String(item.id));
-                    const member = convertCatalogItemToSetMember(item, selectedSetCategory);
-                    return (
-                      <div
-                        key={String(item.id)}
-                        className={`p-3 rounded-xl border flex flex-col justify-between gap-2 transition ${
-                          inDraft
-                            ? 'bg-slate-950/90 border-indigo-500/50 shadow-sm shadow-indigo-950/30'
-                            : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700'
-                        }`}
-                      >
-                        {/* Top: Name & Badges */}
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-bold text-slate-200 text-xs truncate">
-                              {item.name}
-                            </span>
-                            {item.cost && (
-                              <span className="px-1.5 py-0.2 rounded bg-amber-950/80 border border-amber-500/40 text-amber-300 font-mono text-[10px] shrink-0">
-                                {item.cost}
-                              </span>
-                            )}
-                          </div>
+                </div>
+              )}
 
-                          {/* Chips row */}
-                          <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
-                            {member.requirement && (
-                              <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-slate-400">
-                                {member.requirement}
-                              </span>
-                            )}
-                            {member.action && (
-                              <span className="px-1.5 py-0.2 rounded bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 font-bold">
-                                {member.action}
-                              </span>
-                            )}
-                            {item.tier && (
-                              <span className="px-1.5 py-0.2 rounded bg-purple-950/80 border border-purple-500/30 text-purple-300 font-bold">
-                                Tier {item.tier}
-                              </span>
-                            )}
-                          </div>
+              {/* ROUTE 2: SET MEMBER INSPECTOR / EDITOR */}
+              {activeSetSelection.type === 'set_member' && activeSetSelection.item && (
+                <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">
+                        {activeSetSelection.item.element_type === 'weapon' || activeSetSelection.item.table === 'weapons'
+                          ? '⚔️'
+                          : activeSetSelection.item.element_type === 'armor' || activeSetSelection.item.table === 'armor' || activeSetSelection.item.element_type === 'shield' || activeSetSelection.item.table === 'shields'
+                          ? '🛡️'
+                          : activeSetSelection.item.element_type === 'power' || activeSetSelection.item.table === 'powers'
+                          ? '⚡'
+                          : activeSetSelection.item.element_type === 'skill' || activeSetSelection.item.table === 'skills'
+                          ? '🎯'
+                          : '🧬'}
+                      </span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                          {activeSetSelection.item.name}
+                        </h3>
+                        <p className="text-[11px] text-slate-400">
+                          Member of <strong className="text-indigo-300">{name || 'Current Set'}</strong>
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSetSelection({ type: 'set_root' })}
+                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
+                    >
+                      ← Back to Set Details
+                    </button>
+                  </div>
+
+                  {/* Read-Only / Universal Mechanical Card */}
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-bold text-indigo-400 uppercase tracking-wider">
+                        {activeSetSelection.item.table || selectedSetCategory} Element
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
+                        🔒 Canonical Record (Read-Only)
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {activeSetSelection.item.requirement && (
+                        <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                          <span className="text-[10px] text-slate-500 block">Requirement</span>
+                          <span className="font-bold text-slate-200">{activeSetSelection.item.requirement}</span>
                         </div>
+                      )}
+                      {activeSetSelection.item.action && (
+                        <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                          <span className="text-[10px] text-slate-500 block">Action</span>
+                          <span className="font-bold text-cyan-400">{activeSetSelection.item.action}</span>
+                        </div>
+                      )}
+                      {activeSetSelection.item.usage && (
+                        <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                          <span className="text-[10px] text-slate-500 block">Usage</span>
+                          <span className="font-bold text-amber-300">{activeSetSelection.item.usage}</span>
+                        </div>
+                      )}
+                      {activeSetSelection.item.discipline && (
+                        <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
+                          <span className="text-[10px] text-slate-500 block">Discipline</span>
+                          <span className="font-bold text-purple-300">{activeSetSelection.item.discipline}</span>
+                        </div>
+                      )}
+                    </div>
 
-                        {/* Middle: Effect / Stats */}
-                        {member.effect && (
-                          <p className="text-[11px] text-slate-400 font-mono line-clamp-2 leading-relaxed bg-slate-900/50 p-1.5 rounded border border-slate-800/60">
-                            {member.effect}
-                          </p>
-                        )}
-
-                        {/* Bottom: Action Button */}
-                        <div className="pt-1 flex items-center justify-end">
-                          {inDraft ? (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveItemFromDraft(String(item.id))}
-                              className="py-1 px-3 rounded-lg bg-emerald-950/80 hover:bg-rose-950/80 border border-emerald-500/40 hover:border-rose-500/40 text-emerald-300 hover:text-rose-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer group"
-                              title="Click to remove from set"
-                            >
-                              <span className="group-hover:hidden">✓ In Set</span>
-                              <span className="hidden group-hover:inline">✕ Remove</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleAddItemToDraft(item)}
-                              className="py-1 px-3 rounded-lg bg-slate-800 hover:bg-indigo-600 border border-slate-700 hover:border-indigo-500 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              <span>Add to Set</span>
-                            </button>
-                          )}
+                    {activeSetSelection.item.effect && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Effect</span>
+                        <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800/80 text-xs font-mono text-slate-200 whitespace-pre-wrap leading-relaxed">
+                          {activeSetSelection.item.effect}
                         </div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
+                    )}
+
+                    {activeSetSelection.item.notes && (
+                      <p className="text-[11px] text-slate-500 italic">
+                        "{activeSetSelection.item.notes}"
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="mt-auto pt-3 border-t border-slate-800 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleRemoveItemFromDraft(String(activeSetSelection.item?.id));
+                        setActiveSetSelection({ type: 'set_root' });
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove from Set</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSetSelection({ type: 'set_root' })}
+                      className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
+                    >
+                      Done Inspecting
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ROUTE 3: CATEGORY CATALOG BROWSER (ADD TO SET) */}
+              {activeSetSelection.type === 'set_add_member' && (
+                <div className="flex-1 flex flex-col min-h-0 gap-3">
+                  {/* Header: Category Title, Counter, and Search */}
+                  <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-800 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">
+                        {selectedSetCategory === 'Weapons'
+                          ? '⚔️'
+                          : selectedSetCategory === 'Armor & Shields'
+                          ? '🛡️'
+                          : selectedSetCategory === 'Powers'
+                          ? '⚡'
+                          : selectedSetCategory === 'Skills'
+                          ? '🎯'
+                          : '🧬'}
+                      </span>
+                      <div>
+                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                          Add {selectedSetCategory} to Set
+                        </h3>
+                        <p className="text-[10px] text-slate-400">
+                          Showing {filteredCategoryCatalog.length} of {categoryCatalogItems.length} items
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {/* Search Input */}
+                      <div className="relative w-56">
+                        <input
+                          type="text"
+                          value={setsRightCatalogSearchQuery}
+                          onChange={(e) => setSetsRightCatalogSearchQuery(e.target.value)}
+                          placeholder={`Search ${selectedSetCategory.toLowerCase()}...`}
+                          className="w-full bg-slate-950 border border-slate-700/80 rounded-lg pl-8 pr-3 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition shadow-inner"
+                        />
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2 pointer-events-none" />
+                        {setsRightCatalogSearchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setSetsRightCatalogSearchQuery('')}
+                            className="absolute right-2 top-1.5 text-slate-500 hover:text-slate-300"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveSetSelection({ type: 'set_root' })}
+                        className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer shrink-0"
+                      >
+                        Back
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Catalog Grid */}
+                  <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-2.5 pr-1">
+                    {filteredCategoryCatalog.length === 0 ? (
+                      <div className="col-span-full flex flex-col items-center justify-center p-12 text-center text-slate-500 text-xs">
+                        <span className="text-2xl mb-2">🔍</span>
+                        <p className="font-bold text-slate-400">No matching items found</p>
+                        <p className="text-[10px] text-slate-600 mt-1">
+                          Try adjusting your search filter or switch set category.
+                        </p>
+                      </div>
+                    ) : (
+                      filteredCategoryCatalog.map((item) => {
+                        const inDraft = draftSetItemIdSet.has(String(item.id));
+                        const member = convertCatalogItemToSetMember(item, selectedSetCategory);
+                        return (
+                          <div
+                            key={String(item.id)}
+                            className={`p-3 rounded-xl border flex flex-col justify-between gap-2 transition ${
+                              inDraft
+                                ? 'bg-slate-950/90 border-indigo-500/50 shadow-sm shadow-indigo-950/30'
+                                : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="flex flex-col gap-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="font-bold text-slate-100 text-xs truncate">
+                                  {item.name}
+                                </span>
+                                {item.owner === 'Designer' && (
+                                  <span className="text-[9px] text-amber-400 font-mono px-1.5 py-0.2 rounded bg-amber-950/60 border border-amber-500/30 shrink-0">
+                                    👑 Canon
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                                {item.requirement && (
+                                  <span className="font-mono text-slate-500">{item.requirement}</span>
+                                )}
+                                {item.action && (
+                                  <span className="text-cyan-400 font-bold">{item.action}</span>
+                                )}
+                                {item.usage && (
+                                  <span className="text-amber-300 font-bold">{item.usage}</span>
+                                )}
+                              </div>
+
+                              {item.effect && (
+                                <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed font-mono">
+                                  {item.effect}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                              <span className="text-[9px] font-mono text-slate-500">
+                                {member.table}
+                              </span>
+                              {inDraft ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveItemFromDraft(String(item.id))}
+                                  className="px-2 py-0.5 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[10px] font-bold transition cursor-pointer flex items-center gap-1"
+                                >
+                                  <Check className="w-3 h-3" />
+                                  <span>In Set (Remove)</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddItemToDraft(item)}
+                                  className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold transition cursor-pointer flex items-center gap-1 shadow-sm"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  <span>Add to Set</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="lg:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-5 overflow-y-auto gap-4 text-xs">
