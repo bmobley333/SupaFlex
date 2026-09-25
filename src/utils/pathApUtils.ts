@@ -2,7 +2,7 @@
 // Universal Path & AP Cost Evaluation Engine for SupaFlex
 // Implements the 4-tier AP Cost Vector (1, 2, 3, 4 AP) and In-Path / Out-of-Path Resolution
 
-import { Character, SupabaseSet, SupabasePath } from '../types/game';
+import { Character, SupabaseSet, SupabasePath, PathLinkedElement } from '../types/game';
 import { cleanPathName } from './kitUtils';
 
 export type ApCostCategory = 'all' | '1AP' | '2AP' | '3AP' | '3AP_Universal' | '4AP';
@@ -547,3 +547,236 @@ export const getCharacterMatchingPath = (
   // Fallback to first entry
   return cleanEntryStr(entries[0]);
 };
+
+/**
+ * Parses raw path values (string, comma-separated, or JSON array string)
+ * preserving each entry's {Free} / {Trait} / {Perk} status and base clean path.
+ */
+export const extractPathEntriesWithTags = (
+  raw?: string | string[] | null
+): { rawEntry: string; cleanPath: string; isFree: boolean }[] => {
+  if (!raw) return [];
+  let list: string[] = [];
+  if (Array.isArray(raw)) {
+    list = raw.map((r) => String(r)).filter(Boolean);
+  } else {
+    const s = String(raw).trim();
+    if (s.startsWith('[') && s.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(s);
+        if (Array.isArray(parsed)) {
+          list = parsed.map((p) => String(p)).filter(Boolean);
+        }
+      } catch (_) {}
+    }
+    if (list.length === 0) {
+      list = s.split(/[,;]/).map((p) => p.trim()).filter(Boolean);
+    }
+  }
+
+  return list.map((item) => {
+    const isFree = /\{(?:free|free\d+|trait|innate)\}/i.test(item);
+    const clean = cleanPathName(item).trim();
+    return { rawEntry: item, cleanPath: clean, isFree };
+  });
+};
+
+export interface PathCatalogsBundle {
+  setsCatalog?: SupabaseSet[];
+  powers?: any[];
+  skills?: any[];
+  traits?: any[];
+  weaponsCatalog?: any[];
+  armorCatalog?: any[];
+  shieldsCatalog?: any[];
+}
+
+/**
+ * Dynamically harvests and builds the full PathLinkedElement array for any given path
+ * by scanning all loaded catalogs (Sets, Powers, Skills, Traits, Weapons, Armor, Shields).
+ * Used as an instantaneous fallback and hydration engine whenever path.linked_elements is empty.
+ */
+export const resolvePathElementsFromCatalogs = (
+  pathName: string,
+  catalogs: PathCatalogsBundle
+): PathLinkedElement[] => {
+  if (!pathName || !pathName.trim()) return [];
+  const cleanTarget = cleanPathName(pathName).trim().toLowerCase();
+  const results: PathLinkedElement[] = [];
+  const seenIds = new Set<string>();
+
+  // 1. Sets
+  (catalogs.setsCatalog || []).forEach((s) => {
+    if (!s || !s.name) return;
+    const entries = extractPathEntriesWithTags(s.paths);
+    const match = entries.find((e) => isPathStringMatch(e.cleanPath, cleanTarget));
+    if (match) {
+      const elId = `set_${s.id || s.name}`;
+      if (!seenIds.has(elId)) {
+        seenIds.add(elId);
+        results.push({
+          id: s.id,
+          name: s.name,
+          type: 'set',
+          element_type: 'set',
+          tag: match.isFree ? 'Free' : '1 AP',
+          isFree: match.isFree,
+          is_free: match.isFree,
+          details: s.category || (s.items_count !== undefined ? `${s.items_count} items` : 'Set'),
+        });
+      }
+    }
+  });
+
+  // 2. Powers
+  (catalogs.powers || []).forEach((p) => {
+    if (!p || !p.name) return;
+    const raw = p.path || p.kit || p.table_group;
+    const entries = extractPathEntriesWithTags(raw);
+    const match = entries.find((e) => isPathStringMatch(e.cleanPath, cleanTarget));
+    if (match) {
+      const elId = `power_${p.id || p.name}`;
+      if (!seenIds.has(elId)) {
+        seenIds.add(elId);
+        results.push({
+          id: p.id,
+          name: p.name,
+          type: 'power',
+          element_type: 'power',
+          tag: match.isFree ? 'Free' : '1 AP',
+          isFree: match.isFree,
+          is_free: match.isFree,
+          action: p.action || 'AM',
+          usage: p.usage || '1-Enc',
+          effect: p.effect || '',
+          details: p.effect || p.notes || '',
+        });
+      }
+    }
+  });
+
+  // 3. Skills
+  (catalogs.skills || []).forEach((sk) => {
+    if (!sk || !sk.name) return;
+    const raw = sk.path || sk.kit || sk.table_group;
+    const entries = extractPathEntriesWithTags(raw);
+    const match = entries.find((e) => isPathStringMatch(e.cleanPath, cleanTarget));
+    if (match) {
+      const elId = `skill_${sk.id || sk.name}`;
+      if (!seenIds.has(elId)) {
+        seenIds.add(elId);
+        results.push({
+          id: sk.id,
+          name: sk.name,
+          type: 'skill',
+          element_type: 'skill',
+          tag: match.isFree ? 'Free' : '1 AP',
+          isFree: match.isFree,
+          is_free: match.isFree,
+          attribute: sk.attribute || 'Moxie',
+          discipline: sk.discipline || 'General',
+          effect: sk.notes || '',
+          details: sk.notes || '',
+        });
+      }
+    }
+  });
+
+  // 4. Traits
+  (catalogs.traits || []).forEach((t) => {
+    if (!t || !t.name) return;
+    const raw = t.path || t.kit || t.table_group;
+    const entries = extractPathEntriesWithTags(raw);
+    const match = entries.find((e) => isPathStringMatch(e.cleanPath, cleanTarget));
+    if (match) {
+      const elId = `trait_${t.id || t.name}`;
+      if (!seenIds.has(elId)) {
+        seenIds.add(elId);
+        results.push({
+          id: t.id,
+          name: t.name,
+          type: 'trait',
+          element_type: 'trait',
+          tag: match.isFree ? 'Free' : '1 AP',
+          isFree: match.isFree,
+          is_free: match.isFree,
+          effect: t.effect || '',
+          details: t.effect || t.notes || '',
+        });
+      }
+    }
+  });
+
+  // 5. Weapons
+  (catalogs.weaponsCatalog || []).forEach((w) => {
+    if (!w || !w.name) return;
+    const raw = w.path || w.kit;
+    const entries = extractPathEntriesWithTags(raw);
+    const match = entries.find((e) => isPathStringMatch(e.cleanPath, cleanTarget));
+    if (match) {
+      const elId = `weapon_${w.id || w.name}`;
+      if (!seenIds.has(elId)) {
+        seenIds.add(elId);
+        results.push({
+          id: w.id,
+          name: w.name,
+          type: 'weapon',
+          element_type: 'weapon',
+          tag: match.isFree ? 'Free' : '1 AP',
+          isFree: match.isFree,
+          is_free: match.isFree,
+          details: `${w.dmg || ''} ${w.type || ''}`.trim(),
+        });
+      }
+    }
+  });
+
+  // 6. Armor
+  (catalogs.armorCatalog || []).forEach((a) => {
+    if (!a || !a.name) return;
+    const entries = extractPathEntriesWithTags(a.path);
+    const match = entries.find((e) => isPathStringMatch(e.cleanPath, cleanTarget));
+    if (match) {
+      const elId = `armor_${a.id || a.name}`;
+      if (!seenIds.has(elId)) {
+        seenIds.add(elId);
+        results.push({
+          id: a.id,
+          name: a.name,
+          type: 'armor',
+          element_type: 'armor',
+          tag: match.isFree ? 'Free' : '1 AP',
+          isFree: match.isFree,
+          is_free: match.isFree,
+          details: `AR ${a.ar || 0}`,
+        });
+      }
+    }
+  });
+
+  // 7. Shields
+  (catalogs.shieldsCatalog || []).forEach((sh) => {
+    if (!sh || !sh.name) return;
+    const entries = extractPathEntriesWithTags(sh.path);
+    const match = entries.find((e) => isPathStringMatch(e.cleanPath, cleanTarget));
+    if (match) {
+      const elId = `shield_${sh.id || sh.name}`;
+      if (!seenIds.has(elId)) {
+        seenIds.add(elId);
+        results.push({
+          id: sh.id,
+          name: sh.name,
+          type: 'shield',
+          element_type: 'shield',
+          tag: match.isFree ? 'Free' : '1 AP',
+          isFree: match.isFree,
+          is_free: match.isFree,
+          details: `AR ${sh.ar || 0}`,
+        });
+      }
+    }
+  });
+
+  return results;
+};
+

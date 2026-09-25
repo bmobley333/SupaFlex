@@ -38,6 +38,7 @@ import { resolveExoticCatalog, CatalogExotic, ExoticTier } from '../utils/exotic
 import { updateCharacterSheetCanonicalItem, removeCharacterSheetCanonicalItem, CanonicalPropagationParams, CanonicalEntityType } from '../utils/canonicalPropagation';
 import { isBelongsToMatch, splitBelongsToTargets, cleanBelongsToName } from '../utils/gearFunctionSync';
 import { parseItemPaths, isPathStringMatch } from '../utils/pathApUtils';
+import { cleanPathName } from '../utils/kitUtils';
 
 export interface CatalogScope {
   userEmail?: string;
@@ -2954,6 +2955,139 @@ export const gameApi = {
     }
   },
 
+  async syncPathLinkedIndividuals(
+    pathName: string,
+    currentElements: PathLinkedElement[],
+    previousElements?: PathLinkedElement[]
+  ): Promise<boolean> {
+    if (!pathName || !pathName.trim()) return false;
+    const cleanPath = cleanPathName(pathName).trim();
+
+    try {
+      // 1. Group current individual elements by table
+      const currentByTable: Record<string, Map<string, { name: string; tag: string }>> = {
+        powers: new Map(),
+        skills: new Map(),
+        traits: new Map(),
+        weapons: new Map(),
+        armor: new Map(),
+        shields: new Map(),
+      };
+
+      (currentElements || [])
+        .filter((el) => (el.type || el.element_type) !== 'set')
+        .forEach((el) => {
+          const rawType = (el.type || el.element_type || '').toLowerCase();
+          let table = '';
+          if (rawType === 'power') table = 'powers';
+          else if (rawType === 'skill') table = 'skills';
+          else if (rawType === 'trait') table = 'traits';
+          else if (rawType === 'weapon') table = 'weapons';
+          else if (rawType === 'armor') table = 'armor';
+          else if (rawType === 'shield') table = 'shields';
+
+          if (table && el.id) {
+            currentByTable[table].set(String(el.id), {
+              name: (el.name || '').trim(),
+              tag: el.tag === 'Free' ? 'Free' : '1 AP',
+            });
+          }
+        });
+
+      // 2. Group previous individual elements by table
+      const prevByTable: Record<string, Map<string, string>> = {
+        powers: new Map(),
+        skills: new Map(),
+        traits: new Map(),
+        weapons: new Map(),
+        armor: new Map(),
+        shields: new Map(),
+      };
+
+      if (previousElements && previousElements.length > 0) {
+        previousElements
+          .filter((el) => (el.type || el.element_type) !== 'set')
+          .forEach((el) => {
+            const rawType = (el.type || el.element_type || '').toLowerCase();
+            let table = '';
+            if (rawType === 'power') table = 'powers';
+            else if (rawType === 'skill') table = 'skills';
+            else if (rawType === 'trait') table = 'traits';
+            else if (rawType === 'weapon') table = 'weapons';
+            else if (rawType === 'armor') table = 'armor';
+            else if (rawType === 'shield') table = 'shields';
+
+            if (table && el.id) {
+              prevByTable[table].set(String(el.id), (el.name || '').trim());
+            }
+          });
+      }
+
+      // 3. For any items that were unlinked: remove this path from item.path
+      for (const [table, prevMap] of Object.entries(prevByTable)) {
+        for (const [itemId] of prevMap.entries()) {
+          if (!currentByTable[table].has(itemId)) {
+            const { data: item, error: fetchErr } = await supabase
+              .from(table)
+              .select('id, path')
+              .eq('id', itemId)
+              .maybeSingle();
+
+            if (!fetchErr && item && item.path) {
+              const itemPaths = parseItemPaths(item.path);
+              const nextPaths = itemPaths.filter((p) => !isPathStringMatch(p, cleanPath));
+              const newPathVal =
+                nextPaths.length === 0
+                  ? table === 'powers' ? 'General' : ''
+                  : nextPaths.length === 1
+                  ? nextPaths[0]
+                  : JSON.stringify(nextPaths);
+              await supabase.from(table).update({ path: newPathVal }).eq('id', item.id);
+            }
+          }
+        }
+      }
+
+      // 4. For currently linked items: ensure pathName (with or without {Free}) is present in item.path
+      for (const [table, currMap] of Object.entries(currentByTable)) {
+        for (const [itemId, info] of currMap.entries()) {
+          const { data: item, error: fetchErr } = await supabase
+            .from(table)
+            .select('id, path')
+            .eq('id', itemId)
+            .maybeSingle();
+
+          if (!fetchErr && item) {
+            const existingRaw = item.path || '';
+            const existingPaths = parseItemPaths(existingRaw);
+            const targetEntry = info.tag === 'Free' ? `${cleanPath} {Free}` : cleanPath;
+
+            const alreadyHasExact = existingPaths.some((p) => {
+              if (!isPathStringMatch(p, cleanPath)) return false;
+              const hasFree =
+                p.toLowerCase().includes('{free}') ||
+                p.toLowerCase().includes('{free1}') ||
+                p.toLowerCase().includes('{trait}');
+              return (info.tag === 'Free') === hasFree;
+            });
+
+            if (!alreadyHasExact) {
+              const nextPaths = existingPaths.filter((p) => !isPathStringMatch(p, cleanPath));
+              nextPaths.push(targetEntry);
+              const newPathVal = nextPaths.length === 1 ? nextPaths[0] : JSON.stringify(nextPaths);
+              await supabase.from(table).update({ path: newPathVal }).eq('id', item.id);
+            }
+          }
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error(`[syncPathLinkedIndividuals] Error synchronizing items for path '${cleanPath}':`, err);
+      return false;
+    }
+  },
+
   async saveCanonicalPath(payload: any): Promise<any> {
     const { data, error } = await supabase
       .from('paths')
@@ -2963,7 +3097,10 @@ export const gameApi = {
     if (error) throw error;
 
     if (data && Array.isArray(payload.linked_elements)) {
-      await this.syncPathLinkedSets(data.name, payload.linked_elements);
+      await Promise.all([
+        this.syncPathLinkedSets(data.name, payload.linked_elements),
+        this.syncPathLinkedIndividuals(data.name, payload.linked_elements),
+      ]);
     }
     return data;
   },
@@ -2978,18 +3115,26 @@ export const gameApi = {
 
     const { data, error } = await supabase
       .from('paths')
-      .update({ ...payload, updated_at: new Date().toISOString() })
+      .update(payload)
       .eq('id', id)
       .select('*')
       .single();
     if (error) throw error;
 
     if (data && Array.isArray(payload.linked_elements)) {
-      await this.syncPathLinkedSets(
-        data.name || (existing ? existing.name : ''),
-        payload.linked_elements,
-        existing ? existing.linked_elements : undefined
-      );
+      const prevElements = existing ? existing.linked_elements : undefined;
+      await Promise.all([
+        this.syncPathLinkedSets(
+          data.name || (existing ? existing.name : ''),
+          payload.linked_elements,
+          prevElements
+        ),
+        this.syncPathLinkedIndividuals(
+          data.name || (existing ? existing.name : ''),
+          payload.linked_elements,
+          prevElements
+        ),
+      ]);
     }
     return data;
   },
@@ -3005,7 +3150,10 @@ export const gameApi = {
     if (error) throw error;
 
     if (existing && existing.name) {
-      await this.syncPathLinkedSets(existing.name, [], existing.linked_elements);
+      await Promise.all([
+        this.syncPathLinkedSets(existing.name, [], existing.linked_elements),
+        this.syncPathLinkedIndividuals(existing.name, [], existing.linked_elements),
+      ]);
     }
     return true;
   },

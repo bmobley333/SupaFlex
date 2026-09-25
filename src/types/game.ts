@@ -1368,6 +1368,12 @@ export interface PathLinkedElement {
   is_free?: boolean;
   details?: string;
   item_data?: any;
+  action?: string;
+  usage?: string;
+  effect?: string;
+  attribute?: string;
+  discipline?: string;
+  [key: string]: any;
 }
 
 export interface StudioPower {

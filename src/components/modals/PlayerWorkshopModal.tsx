@@ -10,6 +10,7 @@ import { InfoTooltip } from '../common/InfoTooltip';
 import { compareMsoOptions } from '../../utils/kitUtils';
 import { parseCostToSilver } from '../../utils/moneyUtils';
 import { isBelongsToMatch } from '../../utils/gearFunctionSync';
+import { resolvePathElementsFromCatalogs } from '../../utils/pathApUtils';
 
 interface PlayerWorkshopModalProps {
   isOpen: boolean;
@@ -1097,7 +1098,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         setPathCategoryNewText(cat);
       }
       setPathDescription(item.item_data?.description || '');
-      setLinkedElements(item.item_data?.linked_elements || []);
+      const existingLinked = item.item_data?.linked_elements;
+      const resolved = Array.isArray(existingLinked) && existingLinked.length > 0
+        ? existingLinked
+        : resolvePathElementsFromCatalogs(item.name || '', {
+            setsCatalog,
+            powers,
+            skills,
+            traits,
+            weaponsCatalog,
+            armorCatalog,
+            shieldsCatalog,
+          });
+      setLinkedElements(resolved);
     } else if (item.type === 'skill') {
       setSkillAttribute(item.item_data?.attribute || '💪');
       const disc = item.item_data?.discipline || 'General';
@@ -1641,7 +1654,18 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setPathCategory(official.category || 'General');
     setPathCategoryNewText('');
     setPathDescription(official.description || '');
-    setLinkedElements(Array.isArray(official.linked_elements) ? official.linked_elements : []);
+    const resolvedElements = Array.isArray(official.linked_elements) && official.linked_elements.length > 0
+      ? official.linked_elements
+      : resolvePathElementsFromCatalogs(official.name, {
+          setsCatalog,
+          powers,
+          skills,
+          traits,
+          weaponsCatalog,
+          armorCatalog,
+          shieldsCatalog,
+        });
+    setLinkedElements(resolvedElements);
     setSelectedGenres(official.genres && official.genres.length > 0 ? official.genres : ['Medieval']);
     setActivePathSelection({ type: 'path_root' });
   };
@@ -4091,10 +4115,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (Array.isArray(sourcePath.genres) && sourcePath.genres.length > 0) {
       setSelectedGenres(sourcePath.genres);
     }
-    if (Array.isArray(sourcePath.linked_elements)) {
+    if (Array.isArray(sourcePath.linked_elements) && sourcePath.linked_elements.length > 0) {
       setLinkedElements(JSON.parse(JSON.stringify(sourcePath.linked_elements)));
     } else {
-      setLinkedElements([]);
+      const resolved = resolvePathElementsFromCatalogs(sourcePath.name, {
+        setsCatalog,
+        powers,
+        skills,
+        traits,
+        weaponsCatalog,
+        armorCatalog,
+        shieldsCatalog,
+      });
+      setLinkedElements(resolved);
     }
   };
 
