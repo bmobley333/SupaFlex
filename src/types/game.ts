@@ -80,6 +80,7 @@ export interface SupabaseSet {
   description?: string;
   paths?: string[];
   genres?: string[];
+  items_count?: number;
   owner?: string;
   created_at?: string;
   updated_at?: string;

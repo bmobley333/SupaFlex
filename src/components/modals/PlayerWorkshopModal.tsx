@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw, Search, ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { CustomCreationType, CustomCreationItem, CustomCreationData, PathElementType, PathLinkedElement, StudioPower, StudioMod, SupabaseChaosGem } from '../../types/game';
+import { CustomCreationType, CustomCreationItem, CustomCreationData, PathElementType, PathLinkedElement, StudioPower, StudioMod, SupabaseChaosGem, SetCategory, SupabaseSet, SetMemberItem } from '../../types/game';
 import { InfoTooltip } from '../common/InfoTooltip';
 import { compareMsoOptions } from '../../utils/kitUtils';
 import { parseCostToSilver } from '../../utils/moneyUtils';
@@ -269,6 +269,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const chaosGemsCatalog = useCharacterStore((state) => state.chaosGemsCatalog);
   const functionsCatalog = useCharacterStore((state) => state.functionsCatalog);
   const modsCatalog = useCharacterStore((state) => state.modsCatalog);
+  const setsCatalog = useCharacterStore((state) => state.setsCatalog);
   const refreshCatalogs = useCharacterStore((state) => state.refreshCatalogs);
 
   const isMasterAccount = (playerEmail || '').toLowerCase().trim() === 'metascapegame@gmail.com';
@@ -342,6 +343,22 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setPathStudioMode('path');
     }
   }, [isMetaScapeDesigner, pathStudioMode]);
+
+  // --- Sets Studio State ---
+  const [selectedSetCategory, setSelectedSetCategory] = useState<SetCategory>('Weapons');
+  const [setDescription, setSetDescription] = useState<string>('');
+  const [draftSetItems, setDraftSetItems] = useState<SetMemberItem[]>([]);
+  const [basedOnSourceSets, setBasedOnSourceSets] = useState<string[]>([]);
+  const [initialBaseItemIds, setInitialBaseItemIds] = useState<Set<string>>(new Set());
+  const [isCreatingNewSet, setIsCreatingNewSet] = useState<boolean>(false);
+  const [selectedSetId, setSelectedSetId] = useState<string>('');
+  const [setPathsIncluded, setSetPathsIncluded] = useState<string[]>([]);
+  const [setsSearchQuery, setSetsSearchQuery] = useState<string>('');
+  const [setsRightCatalogSearchQuery, setSetsRightCatalogSearchQuery] = useState<string>('');
+  const [isLoadingSetMembers, setIsLoadingSetMembers] = useState<boolean>(false);
+  const [isSavingSet, setIsSavingSet] = useState<boolean>(false);
+  const [showBasedOnDropdown, setShowBasedOnDropdown] = useState<boolean>(false);
+  const [showPathsDropdown, setShowPathsDropdown] = useState<boolean>(false);
 
   // Skillset State (2+ selected existing skill strings)
   const [selectedSkillsetSkills, setSelectedSkillsetSkills] = useState<string[]>(['', '']);
@@ -933,6 +950,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setIsAuthoringNewMaster(false);
     setDeletedPowerIds([]);
     setDeletedModIds([]);
+    setIsCreatingNewSet(false);
+    setSelectedSetId('');
+    setSetDescription('');
+    setDraftSetItems([]);
+    setBasedOnSourceSets([]);
+    setInitialBaseItemIds(new Set());
+    setSetPathsIncluded([]);
+    setSetsSearchQuery('');
+    setSetsRightCatalogSearchQuery('');
+    setShowBasedOnDropdown(false);
+    setShowPathsDropdown(false);
     setFeedback(null);
   };
 
@@ -2452,6 +2480,360 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     }
   }, [isOpen, initialItem, playerEmail]);
 
+  // --- Sets Studio Constants & Helpers ---
+  const SET_CATEGORIES: { id: SetCategory; label: string; icon: string }[] = [
+    { id: 'Traits', label: 'Traits', icon: '🧬' },
+    { id: 'Skills', label: 'Skills', icon: '🎯' },
+    { id: 'Powers', label: 'Powers', icon: '⚡' },
+    { id: 'Weapons', label: 'Weapons', icon: '⚔️' },
+    { id: 'Armor & Shields', label: 'Armor & Shields', icon: '🛡️' },
+  ];
+
+  const convertCatalogItemToSetMember = (item: any, category: SetCategory): SetMemberItem => {
+    if (category === 'Weapons') {
+      return {
+        id: String(item.id),
+        name: item.name || '',
+        category: 'Weapons',
+        table: 'weapons',
+        element_type: 'weapon',
+        source_table: 'weapons',
+        requirement: item.requirement || (item.hands ? `${item.hands}H` : ''),
+        cost: item.cost || '',
+        action: item.type || '',
+        effect: item.mso ? `MSO: ${item.mso}` : (item.effect || ''),
+        item_data: item,
+      };
+    } else if (category === 'Armor & Shields') {
+      const isArmor = Boolean(item.armor_type || item.dr !== undefined);
+      return {
+        id: String(item.id),
+        name: item.name || '',
+        category: 'Armor & Shields',
+        table: isArmor ? 'armor' : 'shields',
+        element_type: isArmor ? 'armor' : 'shield',
+        source_table: isArmor ? 'armor' : 'shields',
+        requirement: item.requirement || item.armor_type || '',
+        cost: item.cost || '',
+        action: isArmor ? (item.armor_type || 'Armor') : 'Shield',
+        effect: isArmor ? `DR: ${item.dr ?? 0}, Mob: ${item.mobility ?? 0}` : `Parry: ${item.parry ?? 0}`,
+        item_data: item,
+      };
+    } else if (category === 'Powers') {
+      return {
+        id: String(item.id),
+        name: item.name || '',
+        category: 'Powers',
+        table: 'powers',
+        element_type: 'power',
+        source_table: 'powers',
+        action: item.action || '',
+        usage: item.usage || '',
+        requirement: item.tier ? `Tier ${item.tier}` : '',
+        effect: item.effect || '',
+        item_data: item,
+      };
+    } else if (category === 'Skills') {
+      return {
+        id: String(item.id),
+        name: item.name || '',
+        category: 'Skills',
+        table: 'skills',
+        element_type: 'skill',
+        source_table: 'skills',
+        action: item.attribute || '',
+        requirement: item.discipline || '',
+        effect: item.description || item.effect || '',
+        item_data: item,
+      };
+    } else {
+      // Traits
+      return {
+        id: String(item.id),
+        name: item.name || '',
+        category: 'Traits',
+        table: 'traits',
+        element_type: 'trait',
+        source_table: 'traits',
+        cost: item.cost || '',
+        effect: item.effect || '',
+        item_data: item,
+      };
+    }
+  };
+
+  const availableSetsForLeftPane = useMemo<SupabaseSet[]>(() => {
+    if (!setsCatalog) return [];
+    const query = setsSearchQuery.trim().toLowerCase();
+    return setsCatalog.filter((s) => {
+      const owner = (s.owner || 'Designer').toLowerCase();
+      if (workshopMode === 'designer') {
+        if (owner !== 'designer') return false;
+      } else {
+        const userClean = (playerEmail || 'guest@metascape.com').toLowerCase();
+        if (owner !== userClean) return false;
+      }
+      if (query) {
+        const matchesName = s.name.toLowerCase().includes(query);
+        const matchesCat = (s.category || '').toLowerCase().includes(query);
+        if (!matchesName && !matchesCat) return false;
+      }
+      return true;
+    });
+  }, [setsCatalog, setsSearchQuery, workshopMode, playerEmail]);
+
+  const availableBasedOnSets = useMemo<SupabaseSet[]>(() => {
+    if (!setsCatalog) return [];
+    return setsCatalog.filter((s) => {
+      if (s.category !== selectedSetCategory) return false;
+      if (selectedSetId && String(s.id) === String(selectedSetId)) return false;
+      return true;
+    });
+  }, [setsCatalog, selectedSetCategory, selectedSetId]);
+
+  const draftSetItemIdSet = useMemo<Set<string>>(() => {
+    return new Set(draftSetItems.map((m) => String(m.id)));
+  }, [draftSetItems]);
+
+  const isDuplicateClone = useMemo<boolean>(() => {
+    if (basedOnSourceSets.length === 0 || initialBaseItemIds.size === 0) return false;
+    if (draftSetItems.length !== initialBaseItemIds.size) return false;
+    return draftSetItems.every((item) => initialBaseItemIds.has(String(item.id)));
+  }, [basedOnSourceSets, initialBaseItemIds, draftSetItems]);
+
+  const categoryCatalogItems = useMemo<any[]>(() => {
+    if (selectedSetCategory === 'Weapons') {
+      return weaponsCatalog || [];
+    } else if (selectedSetCategory === 'Armor & Shields') {
+      const armors = armorCatalog || [];
+      const shields = shieldsCatalog || [];
+      return [...armors, ...shields];
+    } else if (selectedSetCategory === 'Powers') {
+      return powers || [];
+    } else if (selectedSetCategory === 'Skills') {
+      return skills || [];
+    } else if (selectedSetCategory === 'Traits') {
+      return traits || [];
+    }
+    return [];
+  }, [selectedSetCategory, weaponsCatalog, armorCatalog, shieldsCatalog, powers, skills, traits]);
+
+  const filteredCategoryCatalog = useMemo<any[]>(() => {
+    const query = setsRightCatalogSearchQuery.trim().toLowerCase();
+    if (!query) return categoryCatalogItems;
+    return categoryCatalogItems.filter((item) => {
+      const nameMatch = (item.name || '').toLowerCase().includes(query);
+      const effectMatch = (item.effect || item.description || '').toLowerCase().includes(query);
+      const discMatch = (item.discipline || item.attribute || item.requirement || '').toLowerCase().includes(query);
+      return nameMatch || effectMatch || discMatch;
+    });
+  }, [categoryCatalogItems, setsRightCatalogSearchQuery]);
+
+  const handleSelectSet = async (s: SupabaseSet) => {
+    setSelectedSetId(s.id ? String(s.id) : '');
+    setName(s.name || '');
+    setSelectedSetCategory(s.category || 'Weapons');
+    setSetDescription(s.description || '');
+    setSelectedGenres(Array.isArray(s.genres) && s.genres.length > 0 ? s.genres : ['Medieval']);
+    setSetPathsIncluded(Array.isArray(s.paths) ? s.paths : []);
+    setIsCreatingNewSet(false);
+    setBasedOnSourceSets([]);
+    setInitialBaseItemIds(new Set());
+    setShowBasedOnDropdown(false);
+    setShowPathsDropdown(false);
+    setIsLoadingSetMembers(true);
+    try {
+      const members = await gameApi.getSetMembers(s.name, s.category);
+      setDraftSetItems(members);
+    } catch (err: any) {
+      console.error('[PlayerWorkshopModal] Failed to load set members:', err);
+      setFeedback({
+        type: 'error',
+        message: `Failed to load set items: ${err.message || 'Unknown error'}`,
+      });
+    } finally {
+      setIsLoadingSetMembers(false);
+    }
+  };
+
+  const handleNewSet = () => {
+    setSelectedSetId('');
+    setName('');
+    setSetDescription('');
+    setSelectedGenres(['Medieval']);
+    setSetPathsIncluded([]);
+    setDraftSetItems([]);
+    setBasedOnSourceSets([]);
+    setInitialBaseItemIds(new Set());
+    setIsCreatingNewSet(true);
+    setShowBasedOnDropdown(false);
+    setShowPathsDropdown(false);
+  };
+
+  const handleSwitchSetCategory = (newCat: SetCategory) => {
+    if (newCat === selectedSetCategory) return;
+    if (draftSetItems.length > 0) {
+      const ok = window.confirm(
+        `Changing category to '${newCat}' will clear the ${draftSetItems.length} current draft item(s). Continue?`
+      );
+      if (!ok) return;
+    }
+    setSelectedSetCategory(newCat);
+    setDraftSetItems([]);
+    setBasedOnSourceSets([]);
+    setInitialBaseItemIds(new Set());
+    setShowBasedOnDropdown(false);
+  };
+
+  const handleToggleBasedOnSet = (sourceSetName: string) => {
+    setBasedOnSourceSets((prev) =>
+      prev.includes(sourceSetName) ? prev.filter((s) => s !== sourceSetName) : [...prev, sourceSetName]
+    );
+  };
+
+  const handleExecuteMultiMerge = async () => {
+    if (basedOnSourceSets.length === 0) return;
+    setIsLoadingSetMembers(true);
+    try {
+      const mergedMembers = await gameApi.mergeMultipleSets(basedOnSourceSets, selectedSetCategory);
+      const existingIds = new Set(draftSetItems.map((m) => String(m.id)));
+      const newItems = mergedMembers.filter((m) => !existingIds.has(String(m.id)));
+      const combined = [...draftSetItems, ...newItems];
+      setDraftSetItems(combined);
+
+      const baseIds = new Set(combined.map((m) => String(m.id)));
+      setInitialBaseItemIds(baseIds);
+
+      if (!name.trim()) {
+        if (basedOnSourceSets.length === 1) {
+          setName(`${basedOnSourceSets[0]} (Custom)`);
+        } else {
+          setName(`${basedOnSourceSets.join(' + ')}`);
+        }
+      }
+
+      setFeedback({
+        type: 'success',
+        message: `⚡ Merged ${newItems.length} item(s) from ${basedOnSourceSets.length} set(s) into draft.`,
+      });
+      setShowBasedOnDropdown(false);
+    } catch (err: any) {
+      console.error('[PlayerWorkshopModal] Multi-merge error:', err);
+      setFeedback({
+        type: 'error',
+        message: `Failed to merge sets: ${err.message || 'Unknown error'}`,
+      });
+    } finally {
+      setIsLoadingSetMembers(false);
+    }
+  };
+
+  const handleAddItemToDraft = (catalogItem: any) => {
+    const member = convertCatalogItemToSetMember(catalogItem, selectedSetCategory);
+    if (draftSetItems.some((m) => String(m.id) === String(member.id))) return;
+    setDraftSetItems((prev) => [...prev, member]);
+  };
+
+  const handleRemoveItemFromDraft = (itemId: string) => {
+    setDraftSetItems((prev) => prev.filter((m) => String(m.id) !== String(itemId)));
+  };
+
+  const handleTogglePathIncluded = (pathName: string) => {
+    setSetPathsIncluded((prev) =>
+      prev.includes(pathName) ? prev.filter((p) => p !== pathName) : [...prev, pathName]
+    );
+  };
+
+  const handleSaveSet = async () => {
+    if (!name.trim()) {
+      setFeedback({ type: 'error', message: 'Set name is required.' });
+      return;
+    }
+    if (isDuplicateClone) {
+      setFeedback({
+        type: 'error',
+        message: 'Duplicate Set Detected: An identical set already exists with these exact items. Please add, remove, or modify items before forging this set.',
+      });
+      return;
+    }
+
+    setIsSavingSet(true);
+    try {
+      const setOwner = workshopMode === 'designer' ? 'Designer' : (playerEmail || 'guest@metascape.com').toLowerCase();
+      const payload: Partial<SupabaseSet> & { name: string; category: SetCategory } = {
+        name: name.trim(),
+        category: selectedSetCategory,
+        description: setDescription.trim(),
+        genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
+        paths: setPathsIncluded,
+        items_count: draftSetItems.length,
+        owner: setOwner,
+      };
+
+      let savedSet: SupabaseSet;
+      if (selectedSetId && !isCreatingNewSet) {
+        savedSet = await gameApi.updateSet(selectedSetId, payload);
+      } else {
+        savedSet = await gameApi.saveSet(payload);
+        if (savedSet.id) {
+          setSelectedSetId(String(savedSet.id));
+          setIsCreatingNewSet(false);
+        }
+      }
+
+      // Batch update underlying catalog items membership
+      const memberItemIds = draftSetItems.map((m) => String(m.id));
+      await gameApi.batchUpdateSetMembership(
+        name.trim(),
+        selectedSetCategory,
+        memberItemIds
+      );
+
+      setInitialBaseItemIds(new Set());
+      setBasedOnSourceSets([]);
+
+      await refreshCatalogs();
+      setFeedback({
+        type: 'success',
+        message: `✨ Set '${name.trim()}' successfully forged with ${draftSetItems.length} item(s)!`,
+      });
+    } catch (err: any) {
+      console.error('[PlayerWorkshopModal] Error saving set:', err);
+      setFeedback({
+        type: 'error',
+        message: `Failed to save set: ${err.message || 'Unknown database error'}`,
+      });
+    } finally {
+      setIsSavingSet(false);
+    }
+  };
+
+  const handleDeleteCurrentSet = async () => {
+    if (!selectedSetId) return;
+    const ok = window.confirm(`Permanently delete set '${name}'? This will also remove the set tag from all ${draftSetItems.length} item(s).`);
+    if (!ok) return;
+
+    setIsSavingSet(true);
+    try {
+      await gameApi.batchUpdateSetMembership(name.trim(), selectedSetCategory, []);
+      await gameApi.deleteSet(selectedSetId);
+      await refreshCatalogs();
+      handleNewSet();
+      setFeedback({
+        type: 'success',
+        message: `🗑️ Set '${name}' deleted and item references purged.`,
+      });
+    } catch (err: any) {
+      console.error('[PlayerWorkshopModal] Error deleting set:', err);
+      setFeedback({
+        type: 'error',
+        message: `Failed to delete set: ${err.message || 'Unknown database error'}`,
+      });
+    } finally {
+      setIsSavingSet(false);
+    }
+  };
+
   // Switch tabs cleanly
   const handleSwitchTab = (newType: CustomCreationType) => {
     if (newType !== creationType) {
@@ -2461,6 +2843,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       if (newType === 'gear' || newType === 'exotic' || newType === 'artifact') {
         setActiveStudioSelection({ type: 'chassis' });
         setStudioChassisType(gearDatabaseChassis);
+      } else if (newType === 'set') {
+        handleNewSet();
       }
     }
   };
@@ -2476,6 +2860,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       return paths || [];
     } else if (creationType === 'chaos_gem') {
       return chaosGemsCatalog || [];
+    } else if (creationType === 'set') {
+      return setsCatalog || [];
     } else if (creationType === 'power') {
       return powers || [];
     } else if (creationType === 'trait') {
@@ -2493,6 +2879,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     suppliesCatalog,
     paths,
     chaosGemsCatalog,
+    setsCatalog,
     powers,
     traits,
     skills,
@@ -2616,7 +3003,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     (name.trim() && creationType === 'gear')
   );
 
+  const isSetActive = Boolean(
+    canonicalSelectedId ||
+    editingItem ||
+    isCreatingNewSet ||
+    selectedSetId ||
+    (workshopMode === 'designer' && isAuthoringNewMaster && creationType === 'set') ||
+    (name.trim() && creationType === 'set')
+  );
+
   const isFormValid = useMemo(() => {
+    if (creationType === 'set') {
+      return isNameValid && !isDuplicateClone;
+    }
     if (creationType === 'paths_abilities') {
       if (pathStudioMode === 'path') {
         if (!isNameValid) return false;
@@ -2921,6 +3320,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       category: categoryStr,
       allow_cloning: true,
     };
+
+    if (creationType === 'set') {
+      await handleSaveSet();
+      setIsSubmitting(false);
+      return;
+    }
 
     if (creationType === 'paths_abilities') {
       if (pathStudioMode === 'path') {
@@ -4603,6 +5008,18 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </button>
             <button
               type="button"
+              onClick={() => handleSwitchTab('set')}
+              className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                creationType === 'set'
+                  ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              <span>🗂️</span>
+              <span>Sets</span>
+            </button>
+            <button
+              type="button"
               onClick={() => handleSwitchTab('chaos_gem')}
               className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 creationType === 'chaos_gem'
@@ -5349,6 +5766,455 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
                 </>
               ) : null}
+            </div>
+          ) : creationType === 'set' ? (
+            <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
+              {/* Header: Title / Count, Search Bar, and + New Set Button */}
+              <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
+                <span className="flex items-center gap-1.5 shrink-0">
+                  <span>{workshopMode === 'designer' ? '👑' : '🎨'}</span>
+                  <span>
+                    {workshopMode === 'designer' ? 'Master Sets' : 'My Sets'} ({availableSetsForLeftPane.length})
+                  </span>
+                </span>
+
+                {/* Inline Search Bar */}
+                <div className="flex-1 min-w-[120px] max-w-xs relative flex items-center">
+                  <input
+                    type="text"
+                    value={setsSearchQuery}
+                    onChange={(e) => setSetsSearchQuery(e.target.value)}
+                    placeholder={workshopMode === 'designer' ? 'Search master sets...' : 'Search my sets...'}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/80 transition"
+                  />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
+                  {setsSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSetsSearchQuery('')}
+                      className="absolute right-2 text-slate-500 hover:text-slate-300"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleNewSet}
+                  className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-extrabold text-[11px] shadow-sm shadow-indigo-950/40 transition flex items-center gap-1 cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>+ New Set</span>
+                </button>
+              </div>
+
+              {/* Set Selector Dropdown */}
+              <div className="relative shrink-0">
+                <select
+                  value={selectedSetId}
+                  onChange={(e) => {
+                    const found = setsCatalog?.find((s) => String(s.id) === e.target.value);
+                    if (found) {
+                      handleSelectSet(found);
+                    } else if (e.target.value === '') {
+                      handleNewSet();
+                    }
+                  }}
+                  className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 appearance-none focus:outline-none focus:border-indigo-500 transition cursor-pointer pr-8 font-medium"
+                >
+                  <option value="">-- Choose an existing set to inspect/edit --</option>
+                  {availableSetsForLeftPane.map((s) => (
+                    <option key={s.id || s.name} value={s.id ? String(s.id) : ''}>
+                      {s.name} ({s.category}{s.items_count !== undefined ? ` • ${s.items_count} items` : ''})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
+              </div>
+
+              {/* Main Content Area */}
+              {isSetActive ? (
+                <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-0.5">
+                  {/* Row 1: Name & Collision Badge */}
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-300 text-xs">Set Name</span>
+                        <GuardrailBadge isValid={isNameValid} />
+                        <InfoTooltip text="Unique name for this set collection." />
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Masterwork Blades, Dragon Knight Armory, Elemental Evocations..."
+                      className={`w-full bg-slate-900 border rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none transition shadow-inner font-semibold ${
+                        topLevelCollision.isCollision
+                          ? 'border-rose-500/80 focus:border-rose-400'
+                          : 'border-slate-700/80 focus:border-indigo-500'
+                      }`}
+                    />
+                    {topLevelCollision.isCollision && (
+                      <p className="text-[10px] text-rose-400 font-medium">
+                        ⚠️ A {topLevelCollision.isCanonMatch ? 'canonical' : 'custom'} entry named "{topLevelCollision.existingItemName}" already exists.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Row 2: Category Multi-Option Pill Switch */}
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-300 text-xs">Category</span>
+                      <span className="text-[10px] text-slate-500 font-mono">Homogeneous Domain</span>
+                    </div>
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md overflow-x-auto">
+                      {SET_CATEGORIES.map((cat) => {
+                        const isCatActive = selectedSetCategory === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => handleSwitchSetCategory(cat.id)}
+                            className={`flex-1 py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
+                              isCatActive
+                                ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            <span>{cat.icon}</span>
+                            <span>{cat.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Row 3: Based-On Multi-Merge Selector */}
+                  <div className="relative flex flex-col gap-1.5 bg-slate-900/70 border border-slate-800/90 rounded-xl p-2.5 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-300">Based On (Multi-Merge Clone)</span>
+                        <InfoTooltip text="Select 1 or more existing sets in this category to aggregate all their items into this draft." />
+                      </div>
+                      {basedOnSourceSets.length > 0 && (
+                        <span className="px-2 py-0.2 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">
+                          {basedOnSourceSets.length} Set(s) Selected
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowBasedOnDropdown(!showBasedOnDropdown)}
+                        className="flex-1 py-1.5 px-3 bg-slate-950 border border-slate-700/80 rounded-lg text-xs text-left text-slate-300 flex items-center justify-between hover:border-slate-600 transition"
+                      >
+                        <span className="truncate">
+                          {basedOnSourceSets.length === 0
+                            ? 'Choose base set(s) to merge...'
+                            : basedOnSourceSets.join(', ')}
+                        </span>
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleExecuteMultiMerge}
+                        disabled={basedOnSourceSets.length === 0 || isLoadingSetMembers}
+                        className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                          basedOnSourceSets.length > 0 && !isLoadingSetMembers
+                            ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm font-extrabold cursor-pointer'
+                            : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                        }`}
+                        title="Merge selected sets into draft"
+                      >
+                        <span>⚡</span>
+                        <span>Merge</span>
+                      </button>
+                    </div>
+
+                    {showBasedOnDropdown && (
+                      <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 max-h-52 overflow-y-auto flex flex-col gap-1 backdrop-blur-md">
+                        {availableBasedOnSets.length === 0 ? (
+                          <div className="p-3 text-center text-xs text-slate-500">
+                            No other {selectedSetCategory} sets found to merge.
+                          </div>
+                        ) : (
+                          availableBasedOnSets.map((bs) => {
+                            const isChecked = basedOnSourceSets.includes(bs.name);
+                            return (
+                              <label
+                                key={bs.id || bs.name}
+                                className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-800/80 cursor-pointer text-xs text-slate-300 transition"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => handleToggleBasedOnSet(bs.name)}
+                                    className="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-0 cursor-pointer"
+                                  />
+                                  <span className="font-semibold text-slate-200">{bs.name}</span>
+                                  {bs.owner === 'Designer' && (
+                                    <span className="text-[10px] text-amber-400 font-mono">👑 Canon</span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-slate-500 font-mono">
+                                  {bs.items_count !== undefined ? `${bs.items_count} items` : ''}
+                                </span>
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Row 4: Description */}
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <span className="font-bold text-slate-300 text-xs">Description & Lore</span>
+                    <textarea
+                      value={setDescription}
+                      onChange={(e) => setSetDescription(e.target.value)}
+                      rows={2}
+                      placeholder="Theme, history, or tactical doctrine for this set..."
+                      className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition shadow-inner font-mono leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Row 5: Genres & Paths */}
+                  <div className="grid grid-cols-2 gap-2 shrink-0">
+                    {/* Genres */}
+                    <div className="flex flex-col gap-1">
+                      <span className="font-bold text-slate-300 text-xs">Genres</span>
+                      <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5">
+                        {GENRE_OPTIONS.map((g) => {
+                          const isSelected = selectedGenres.includes(g.id);
+                          return (
+                            <button
+                              key={g.id}
+                              type="button"
+                              onClick={() => handleToggleGenre(g.id)}
+                              className={`flex-1 py-1 px-1.5 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                isSelected
+                                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                              }`}
+                            >
+                              <span>{g.icon}</span>
+                              <span className="truncate">{g.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Paths Included */}
+                    <div className="relative flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-300 text-xs">Paths Included</span>
+                        {setPathsIncluded.length > 0 && (
+                          <span className="text-[10px] text-blue-400 font-mono">
+                            {setPathsIncluded.length}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowPathsDropdown(!showPathsDropdown)}
+                        className="py-1.5 px-2.5 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-left text-slate-300 flex items-center justify-between hover:border-slate-600 transition"
+                      >
+                        <span className="truncate text-[11px]">
+                          {setPathsIncluded.length === 0
+                            ? 'Tag Paths...'
+                            : setPathsIncluded.join(', ')}
+                        </span>
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      </button>
+
+                      {showPathsDropdown && (
+                        <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 max-h-48 overflow-y-auto flex flex-col gap-1 backdrop-blur-md">
+                          {(paths || []).map((p) => {
+                            const isChecked = setPathsIncluded.includes(p.name);
+                            return (
+                              <label
+                                key={p.id || p.name}
+                                className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer text-xs text-slate-300 transition"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => handleTogglePathIncluded(p.name)}
+                                    className="rounded border-slate-700 bg-slate-950 text-blue-500 focus:ring-0 cursor-pointer"
+                                  />
+                                  <span className="font-semibold text-slate-200">{p.name}</span>
+                                </div>
+                                <span className="text-[10px] text-slate-500">{p.category}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Row 6: Live Draft Items Table */}
+                  <div className="flex flex-col gap-1.5 flex-1 min-h-[160px] bg-slate-900/60 border border-slate-800/80 rounded-xl p-2.5 overflow-hidden">
+                    <div className="flex items-center justify-between pb-1 border-b border-slate-800 shrink-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-200">Draft Set Items</span>
+                        <span className="px-2 py-0.2 rounded-full bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 text-[10px] font-bold">
+                          {draftSetItems.length}
+                        </span>
+                      </div>
+                      {draftSetItems.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setDraftSetItems([])}
+                          className="text-[10px] text-rose-400 hover:text-rose-300 transition font-bold cursor-pointer"
+                        >
+                          Clear All
+                        </button>
+                      )}
+                    </div>
+
+                    {isLoadingSetMembers ? (
+                      <div className="flex-1 flex flex-col items-center justify-center p-6 text-slate-500 text-xs">
+                        <RefreshCw className="w-5 h-5 animate-spin text-indigo-400 mb-2" />
+                        <span>Loading set items...</span>
+                      </div>
+                    ) : draftSetItems.length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center p-4 text-center text-slate-500 text-xs gap-1">
+                        <span className="text-xl">📥</span>
+                        <p className="font-bold text-slate-400">Draft is Empty</p>
+                        <p className="text-[10px] text-slate-600 max-w-xs">
+                          Use "Based On" above or click "+ Add to Set" on abilities in the right catalog.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-1">
+                        {draftSetItems.map((item, idx) => (
+                          <div
+                            key={`${item.id}_${idx}`}
+                            className="flex items-center justify-between p-2 rounded-lg bg-slate-950/80 border border-slate-800/80 text-xs hover:border-slate-700 transition"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-xs shrink-0">
+                                {item.element_type === 'weapon'
+                                  ? '⚔️'
+                                  : item.element_type === 'armor' || item.element_type === 'shield'
+                                  ? '🛡️'
+                                  : item.element_type === 'power'
+                                  ? '⚡'
+                                  : item.element_type === 'skill'
+                                  ? '🎯'
+                                  : '🧬'}
+                              </span>
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-bold text-slate-200 truncate">{item.name}</span>
+                                <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                                  {item.requirement && (
+                                    <span className="font-mono text-slate-500">{item.requirement}</span>
+                                  )}
+                                  {item.action && (
+                                    <span className="text-cyan-400 font-bold">{item.action}</span>
+                                  )}
+                                  {item.cost && (
+                                    <span className="text-amber-400 font-bold">{item.cost}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItemFromDraft(String(item.id))}
+                              className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-slate-900 transition cursor-pointer shrink-0"
+                              title="Remove from set"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Anti-Duplicate-Clone Alert Banner */}
+                  {isDuplicateClone && (
+                    <div className="p-2.5 rounded-xl bg-amber-950/70 border border-amber-500/60 text-amber-200 text-xs flex items-center gap-2 animate-fadeIn shrink-0">
+                      <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span className="leading-snug text-[11px]">
+                        <strong>Duplicate Set Detected:</strong> An identical set already exists with these exact items. Please add, remove, or modify items before forging this set.
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 pt-1 border-t border-slate-800 shrink-0">
+                    {selectedSetId && (
+                      <button
+                        type="button"
+                        onClick={handleDeleteCurrentSet}
+                        disabled={isSavingSet}
+                        className="py-2.5 px-3 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shrink-0"
+                        title="Delete this set"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleSaveSet}
+                      disabled={!isNameValid || isDuplicateClone || isSavingSet}
+                      className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg ${
+                        isNameValid && !isDuplicateClone && !isSavingSet
+                          ? 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 hover:from-indigo-500 hover:to-indigo-400 text-white font-extrabold shadow-indigo-950/50 cursor-pointer active:scale-[0.98]'
+                          : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                      }`}
+                    >
+                      {isSavingSet ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Saving Set...</span>
+                        </>
+                      ) : selectedSetId && !isCreatingNewSet ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>Update Set</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4" />
+                          <span>Forge Set</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleNewSet}
+                      className="py-2.5 px-3 bg-slate-950 border border-slate-700 text-slate-400 hover:text-slate-200 text-xs font-semibold rounded-xl transition cursor-pointer shrink-0"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 text-xs">
+                  <span className="text-3xl mb-2">🗂️</span>
+                  <p className="font-bold text-slate-300 text-sm">Forge Sets Studio</p>
+                  <p className="text-[11px] mt-1 text-slate-500 max-w-sm">
+                    Select a set from the dropdown above to inspect and edit its items, or click "+ New Set" to author a new collection.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
@@ -7191,7 +8057,165 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
               )}
             </div>
-) : (
+          ) : creationType === 'set' ? (
+            <div className="lg:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-4 overflow-hidden gap-3 text-xs">
+              {/* Feedback Alert if present */}
+              {feedback && (
+                <div
+                  className={`p-3 rounded-xl border flex items-center gap-2 text-xs font-semibold animate-fadeIn shrink-0 ${
+                    feedback.type === 'success'
+                      ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-200'
+                      : 'bg-rose-950/60 border-rose-500/50 text-rose-200'
+                  }`}
+                >
+                  {feedback.type === 'success' ? (
+                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  )}
+                  <span>{feedback.message}</span>
+                </div>
+              )}
+
+              {/* Header: Category Title, Counter, and Search */}
+              <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-800 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">
+                    {selectedSetCategory === 'Weapons'
+                      ? '⚔️'
+                      : selectedSetCategory === 'Armor & Shields'
+                      ? '🛡️'
+                      : selectedSetCategory === 'Powers'
+                      ? '⚡'
+                      : selectedSetCategory === 'Skills'
+                      ? '🎯'
+                      : '🧬'}
+                  </span>
+                  <div>
+                    <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                      {selectedSetCategory} Catalog
+                    </h3>
+                    <p className="text-[10px] text-slate-400">
+                      Showing {filteredCategoryCatalog.length} of {categoryCatalogItems.length} items
+                    </p>
+                  </div>
+                </div>
+
+                {/* Search Input */}
+                <div className="relative w-64">
+                  <input
+                    type="text"
+                    value={setsRightCatalogSearchQuery}
+                    onChange={(e) => setSetsRightCatalogSearchQuery(e.target.value)}
+                    placeholder={`Search ${selectedSetCategory.toLowerCase()}...`}
+                    className="w-full bg-slate-950 border border-slate-700/80 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition shadow-inner"
+                  />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
+                  {setsRightCatalogSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSetsRightCatalogSearchQuery('')}
+                      className="absolute right-2.5 top-2 text-slate-500 hover:text-slate-300"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Catalog Grid */}
+              <div className="flex-1 min-h-0 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-2.5 pr-1">
+                {filteredCategoryCatalog.length === 0 ? (
+                  <div className="col-span-full flex flex-col items-center justify-center p-12 text-center text-slate-500 text-xs">
+                    <span className="text-2xl mb-2">🔍</span>
+                    <p className="font-bold text-slate-400">No matching items found</p>
+                    <p className="text-[10px] text-slate-600 mt-1">
+                      Try adjusting your search filter or switch set category.
+                    </p>
+                  </div>
+                ) : (
+                  filteredCategoryCatalog.map((item) => {
+                    const inDraft = draftSetItemIdSet.has(String(item.id));
+                    const member = convertCatalogItemToSetMember(item, selectedSetCategory);
+                    return (
+                      <div
+                        key={String(item.id)}
+                        className={`p-3 rounded-xl border flex flex-col justify-between gap-2 transition ${
+                          inDraft
+                            ? 'bg-slate-950/90 border-indigo-500/50 shadow-sm shadow-indigo-950/30'
+                            : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700'
+                        }`}
+                      >
+                        {/* Top: Name & Badges */}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-slate-200 text-xs truncate">
+                              {item.name}
+                            </span>
+                            {item.cost && (
+                              <span className="px-1.5 py-0.2 rounded bg-amber-950/80 border border-amber-500/40 text-amber-300 font-mono text-[10px] shrink-0">
+                                {item.cost}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Chips row */}
+                          <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
+                            {member.requirement && (
+                              <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-slate-400">
+                                {member.requirement}
+                              </span>
+                            )}
+                            {member.action && (
+                              <span className="px-1.5 py-0.2 rounded bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 font-bold">
+                                {member.action}
+                              </span>
+                            )}
+                            {item.tier && (
+                              <span className="px-1.5 py-0.2 rounded bg-purple-950/80 border border-purple-500/30 text-purple-300 font-bold">
+                                Tier {item.tier}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Middle: Effect / Stats */}
+                        {member.effect && (
+                          <p className="text-[11px] text-slate-400 font-mono line-clamp-2 leading-relaxed bg-slate-900/50 p-1.5 rounded border border-slate-800/60">
+                            {member.effect}
+                          </p>
+                        )}
+
+                        {/* Bottom: Action Button */}
+                        <div className="pt-1 flex items-center justify-end">
+                          {inDraft ? (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItemFromDraft(String(item.id))}
+                              className="py-1 px-3 rounded-lg bg-emerald-950/80 hover:bg-rose-950/80 border border-emerald-500/40 hover:border-rose-500/40 text-emerald-300 hover:text-rose-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer group"
+                              title="Click to remove from set"
+                            >
+                              <span className="group-hover:hidden">✓ In Set</span>
+                              <span className="hidden group-hover:inline">✕ Remove</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleAddItemToDraft(item)}
+                              className="py-1 px-3 rounded-lg bg-slate-800 hover:bg-indigo-600 border border-slate-700 hover:border-indigo-500 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add to Set</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          ) : (
             <form onSubmit={handleSubmit} className="lg:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-5 overflow-y-auto gap-4 text-xs">
             {/* Feedback Alert */}
             {feedback && (
