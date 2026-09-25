@@ -2537,7 +2537,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       if (!isCreatingNewSet && selectedSetId && String(match.id) === String(selectedSetId)) {
         return { isCollision: false, isCanonMatch: false };
       }
-    } else if (canonicalSelectedId && String(match.id) === String(canonicalSelectedId)) {
+    } else if (canonicalSelectedId && (String(match.id) === String(canonicalSelectedId) || match.name === originalCanonicalName)) {
       return { isCollision: false, isCanonMatch: false };
     }
 
@@ -2899,8 +2899,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const finalWeaponDomain = weaponDomain === 'CUSTOM_NEW' ? weaponDomainNewText.trim() || 'Archaic' : weaponDomain;
   const finalShieldDomain = shieldDomain === 'CUSTOM_NEW' ? shieldDomainNewText.trim() || 'Archaic' : shieldDomain;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (!isFormValid) return;
 
     setIsSubmitting(true);
@@ -6946,55 +6946,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       required
                     />
                   </div>
-
-                  {/* Row 4: Action / Save Path Button (Sole domain of Path Persistence) */}
-                  <div className="shrink-0 flex flex-col gap-2 pt-3 border-t border-slate-800/80 mt-auto">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span>Status:</span>
-                      <span className={`text-[10px] font-mono font-bold ${isPathReadyForAbilities ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {isPathReadyForAbilities ? 'Ready to Save' : 'Incomplete Requirements'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={!isPathReadyForAbilities || isSubmitting || (isUniversalPath && workshopMode !== 'designer')}
-                        className={`flex-1 py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
-                          isPathReadyForAbilities && !isSubmitting && (!isUniversalPath || workshopMode === 'designer')
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-900/40 cursor-pointer font-extrabold'
-                            : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
-                        }`}
-                        title={
-                          isUniversalPath && workshopMode !== 'designer'
-                            ? 'Universal Path is read-only in Player mode'
-                            : !isPathReadyForAbilities
-                            ? 'Fill in Path Name, Category, Description, and Genre before saving'
-                            : workshopMode === 'designer'
-                            ? canonicalSelectedId
-                              ? 'Update Master Path in Supabase'
-                              : 'Create Master Path in Supabase'
-                            : editingItem || canonicalSelectedId
-                            ? 'Update Path Archetype'
-                            : 'Forge Path to My Creations'
-                        }
-                      >
-                        <AnvilIcon className="w-4 h-4" />
-                        <span>
-                          {isSubmitting
-                            ? 'Forging...'
-                            : workshopMode === 'designer'
-                            ? canonicalSelectedId
-                              ? 'Update Master Path 👑'
-                              : 'Create Master Path 👑'
-                            : editingItem || canonicalSelectedId
-                            ? 'Update Path Archetype'
-                            : 'Forge Path to My Creations'}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
                 </div>
               ) : activePathSelection.type === 'path_set' ? (
                 /* ROUTE 2: LINKED SET INSPECTOR & REDIRECT NOTICE */
@@ -7126,28 +7077,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       )}
                     </div>
                   </div>
-
-                  {/* Footer Actions */}
-                  <div className="shrink-0 flex items-center justify-between pt-2 border-t border-slate-800/80 mt-auto">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleRemoveLinkedElement(activePathSelection.setItem.id);
-                        setActivePathSelection({ type: 'path_root' });
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Remove from Path</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActivePathSelection({ type: 'path_root' })}
-                      className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
-                    >
-                      Done Inspecting
-                    </button>
-                  </div>
                 </div>
               ) : activePathSelection.type === 'path_element' ? (
                 /* ROUTE 3: ABILITY INSPECTOR & PERMISSIONED EDIT */
@@ -7277,30 +7206,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       </div>
                     );
                   })()}
-
-                  {/* Footer Actions */}
-                  <div className="shrink-0 flex items-center justify-between pt-2 border-t border-slate-800/80 mt-auto">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (activePathSelection.element) {
-                          handleRemoveLinkedElement(activePathSelection.element.id);
-                        }
-                        setActivePathSelection({ type: 'path_root' });
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Remove from Path</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActivePathSelection({ type: 'path_root' })}
-                      className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
-                    >
-                      Done Inspecting
-                    </button>
-                  </div>
                 </div>
               ) : activePathSelection.type === 'path_add_set' ? (
                 /* ROUTE 4: FILTERED SET PICKER */
@@ -8958,6 +8863,33 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               )}
             </button>
           )}
+
+          {/* Conditional Save Path button */}
+          {creationType === 'paths_abilities' && isPathActive && (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!isPathReadyForAbilities || isSubmitting || (isUniversalPath && workshopMode !== 'designer')}
+              className={`py-2 px-6 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center gap-2 select-none shadow-md ${
+                isPathReadyForAbilities && !isSubmitting && (!isUniversalPath || workshopMode === 'designer')
+                  ? 'bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600 hover:from-blue-500 hover:to-indigo-400 text-white shadow-blue-950/50 cursor-pointer active:scale-[0.98]'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+              }`}
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Forging Path...</span>
+                </>
+              ) : (
+                <>
+                  <AnvilIcon className="w-4 h-4" />
+                  <span>Forge Path</span>
+                </>
+              )}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onClose}
