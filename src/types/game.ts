@@ -58,8 +58,11 @@ export interface SupabasePath {
   category: PathCategory;
   ap_cost?: number;
   description?: string;
+  genres?: string[];
+  linked_elements?: PathLinkedElement[];
   owner?: string;
   created_at?: string;
+  updated_at?: string;
 }
 
 export type SetCategory =
@@ -83,6 +86,24 @@ export interface SupabaseSet {
 }
 
 export type SetItem = SupabaseSet;
+
+export interface SetMemberItem {
+  id: string | number;
+  name: string;
+  category: SetCategory;
+  table: 'traits' | 'skills' | 'powers' | 'weapons' | 'armor' | 'shields';
+  requirement?: string;
+  action?: string;
+  usage?: string;
+  effect?: string;
+  notes?: string;
+  domain?: string;
+  attribute?: string;
+  discipline?: string;
+  cost?: string;
+  sets?: string[];
+  [key: string]: any;
+}
 
 export type KitCategory =
   | 'Armor'
@@ -1279,6 +1300,8 @@ export type AuthMode = 'login' | 'signup' | 'reset_password' | 'profile';
 
 export type CustomCreationType =
   | 'paths_abilities'
+  | 'set'
+  | 'sets'
   | 'power'
   | 'power_table'
   | 'path'
@@ -1316,7 +1339,8 @@ export type PathElementType =
   | 'trait'
   | 'weapon'
   | 'armor'
-  | 'shield';
+  | 'shield'
+  | 'set';
 
 export interface PathLinkedElement {
   id: string | number;

@@ -20,6 +20,8 @@ import {
   PowerTable,
   SupabasePath,
   SupabaseSet,
+  SetCategory,
+  SetMemberItem,
   SupabaseKit,
   SupabaseBundle,
   FunctionItem,
@@ -626,6 +628,272 @@ export const gameApi = {
       return [];
     }
     return (data || []) as SupabaseSet[];
+  },
+
+  // --- SET MEMBERSHIP METHODS ---
+  async getSetMembers(setName: string, category: SetCategory): Promise<SetMemberItem[]> {
+    if (!setName || !setName.trim()) return [];
+    const cleanName = setName.trim();
+    const members: SetMemberItem[] = [];
+
+    try {
+      const cat = (category || '').toLowerCase();
+      if (cat.includes('weapon')) {
+        const { data, error } = await supabase
+          .from('weapons')
+          .select('*')
+          .contains('sets', [cleanName]);
+        if (!error && data) {
+          data.forEach((w) => {
+            members.push({
+              id: w.id,
+              name: w.name,
+              category: 'Weapons',
+              table: 'weapons',
+              requirement: w.requirement,
+              action: w.type,
+              usage: w.atk,
+              effect: w.dmg,
+              notes: w.notes,
+              domain: w.domain,
+              sets: w.sets || [],
+              ...w,
+            });
+          });
+        }
+      } else if (cat.includes('armor') || cat.includes('shield')) {
+        const [armorRes, shieldRes] = await Promise.all([
+          supabase.from('armor').select('*').contains('sets', [cleanName]),
+          supabase.from('shields').select('*').contains('sets', [cleanName]),
+        ]);
+        if (armorRes.data) {
+          armorRes.data.forEach((a) => {
+            members.push({
+              id: a.id,
+              name: a.name,
+              category: 'Armor & Shields',
+              table: 'armor',
+              requirement: a.requirement,
+              action: `AR ${a.ar}`,
+              usage: `MR ${a.mr}`,
+              effect: a.notes,
+              notes: a.notes,
+              domain: a.domain,
+              sets: a.sets || [],
+              ...a,
+            });
+          });
+        }
+        if (shieldRes.data) {
+          shieldRes.data.forEach((s) => {
+            members.push({
+              id: s.id,
+              name: s.name,
+              category: 'Armor & Shields',
+              table: 'shields',
+              requirement: s.requirement,
+              action: `Block ${s.max_block}`,
+              usage: `MR ${s.mr}`,
+              effect: s.notes,
+              notes: s.notes,
+              domain: s.domain,
+              sets: s.sets || [],
+              ...s,
+            });
+          });
+        }
+      } else if (cat.includes('power')) {
+        const { data, error } = await supabase
+          .from('powers')
+          .select('*')
+          .contains('sets', [cleanName]);
+        if (!error && data) {
+          data.forEach((p) => {
+            members.push({
+              id: p.id,
+              name: p.name,
+              category: 'Powers',
+              table: 'powers',
+              action: p.action,
+              usage: p.usage,
+              effect: p.effect,
+              notes: p.notes,
+              discipline: p.discipline,
+              sets: p.sets || [],
+              ...p,
+            });
+          });
+        }
+      } else if (cat.includes('skill')) {
+        const { data, error } = await supabase
+          .from('skills')
+          .select('*')
+          .contains('sets', [cleanName]);
+        if (!error && data) {
+          data.forEach((s) => {
+            members.push({
+              id: s.id,
+              name: s.name,
+              category: 'Skills',
+              table: 'skills',
+              attribute: s.attribute,
+              discipline: s.discipline,
+              notes: s.notes,
+              sets: s.sets || [],
+              ...s,
+            });
+          });
+        }
+      } else if (cat.includes('trait')) {
+        const { data, error } = await supabase
+          .from('traits')
+          .select('*')
+          .contains('sets', [cleanName]);
+        if (!error && data) {
+          data.forEach((t) => {
+            members.push({
+              id: t.id,
+              name: t.name,
+              category: 'Traits',
+              table: 'traits',
+              effect: t.effect,
+              notes: t.notes,
+              discipline: t.discipline,
+              cost: t.cost,
+              sets: t.sets || [],
+              ...t,
+            });
+          });
+        }
+      }
+    } catch (err) {
+      console.error(`[gameApi] Error fetching members for set '${cleanName}':`, err);
+    }
+
+    return members;
+  },
+
+  async batchUpdateSetMembership(
+    setName: string,
+    category: SetCategory,
+    targetMemberIds: (string | number)[]
+  ): Promise<boolean> {
+    if (!setName || !setName.trim()) return false;
+    const cleanName = setName.trim();
+    const targetSet = new Set(targetMemberIds.map((id) => String(id)));
+    const cat = (category || '').toLowerCase();
+
+    const targetTables: ('weapons' | 'armor' | 'shields' | 'powers' | 'skills' | 'traits')[] = [];
+    if (cat.includes('weapon')) targetTables.push('weapons');
+    else if (cat.includes('armor') || cat.includes('shield')) targetTables.push('armor', 'shields');
+    else if (cat.includes('power')) targetTables.push('powers');
+    else if (cat.includes('skill')) targetTables.push('skills');
+    else if (cat.includes('trait')) targetTables.push('traits');
+
+    try {
+      for (const table of targetTables) {
+        // 1. Find all items currently containing setName
+        const { data: existingItems, error: fetchErr } = await supabase
+          .from(table)
+          .select('id, sets')
+          .contains('sets', [cleanName]);
+        if (fetchErr) {
+          console.error(`[batchUpdateSetMembership] Error querying ${table}:`, fetchErr);
+          continue;
+        }
+
+        // Remove setName from items no longer in targetMemberIds
+        for (const item of existingItems || []) {
+          if (!targetSet.has(String(item.id))) {
+            const nextSets = (item.sets || []).filter((s: string) => s !== cleanName);
+            await supabase.from(table).update({ sets: nextSets }).eq('id', item.id);
+          }
+        }
+
+        // 2. Add setName to items in targetMemberIds that are in this table
+        if (targetMemberIds.length > 0) {
+          const { data: targetsToAdd, error: addQueryErr } = await supabase
+            .from(table)
+            .select('id, sets')
+            .in('id', targetMemberIds);
+          if (!addQueryErr && targetsToAdd) {
+            for (const item of targetsToAdd) {
+              const currentSets: string[] = item.sets || [];
+              if (!currentSets.includes(cleanName)) {
+                await supabase.from(table).update({ sets: [...currentSets, cleanName] }).eq('id', item.id);
+              }
+            }
+          }
+        }
+      }
+      return true;
+    } catch (err) {
+      console.error(`[batchUpdateSetMembership] Error updating set membership for '${cleanName}':`, err);
+      return false;
+    }
+  },
+
+  async mergeMultipleSets(sourceSetNames: string[], category: SetCategory): Promise<SetMemberItem[]> {
+    if (!sourceSetNames || sourceSetNames.length === 0) return [];
+    const aggregated: SetMemberItem[] = [];
+    const seenKeys = new Set<string>();
+
+    for (const sName of sourceSetNames) {
+      if (!sName || !sName.trim()) continue;
+      const members = await this.getSetMembers(sName, category);
+      for (const m of members) {
+        const key = `${m.table}_${m.id}_${m.name.toLowerCase().trim()}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          aggregated.push(m);
+        }
+      }
+    }
+    return aggregated;
+  },
+
+  async checkDuplicateSet(
+    category: SetCategory,
+    candidateMemberIds: (string | number)[],
+    baseSetNames?: string[]
+  ): Promise<{ isDuplicate: boolean; duplicateSetName?: string }> {
+    if (!candidateMemberIds) return { isDuplicate: false };
+    const candSet = new Set(candidateMemberIds.map((id) => String(id)));
+
+    // Check against specific base sets if provided
+    if (baseSetNames && baseSetNames.length > 0) {
+      // Check multi-merge exact match
+      const mergedMembers = await this.mergeMultipleSets(baseSetNames, category);
+      if (mergedMembers.length === candSet.size && candSet.size > 0) {
+        const mergedIds = new Set(mergedMembers.map((m) => String(m.id)));
+        const allMatch = Array.from(candSet).every((id) => mergedIds.has(id));
+        if (allMatch) {
+          return {
+            isDuplicate: true,
+            duplicateSetName: baseSetNames.length === 1 ? baseSetNames[0] : baseSetNames.join(' + '),
+          };
+        }
+      }
+    }
+
+    // Also check against all existing sets in this category
+    const allSets = await this.getSets();
+    const catSets = allSets.filter(
+      (s) => s.category?.toLowerCase() === (category || '').toLowerCase()
+    );
+
+    for (const existingSet of catSets) {
+      const existingMembers = await this.getSetMembers(existingSet.name, category);
+      if (existingMembers.length === candSet.size && candSet.size > 0) {
+        const existingIds = new Set(existingMembers.map((m) => String(m.id)));
+        const allMatch = Array.from(candSet).every((id) => existingIds.has(id));
+        if (allMatch) {
+          return { isDuplicate: true, duplicateSetName: existingSet.name };
+        }
+      }
+    }
+
+    return { isDuplicate: false };
   },
 
   // --- KITS CATALOG (Equipment & Hardware Suites) ---
@@ -2642,17 +2910,18 @@ export const gameApi = {
   },
 
   // 1b. SETS
-  async saveCanonicalSet(payload: any): Promise<any> {
+  async saveSet(payload: Partial<SupabaseSet> & { name: string; category: SetCategory }): Promise<SupabaseSet> {
+    const owner = payload.owner || 'Designer';
     const { data, error } = await supabase
       .from('sets')
-      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
+      .insert([{ ...payload, owner, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
-    return data;
+    return data as SupabaseSet;
   },
 
-  async updateCanonicalSet(id: string | number, payload: any): Promise<any> {
+  async updateSet(id: string | number, payload: Partial<SupabaseSet>): Promise<SupabaseSet> {
     const { data, error } = await supabase
       .from('sets')
       .update({ ...payload, updated_at: new Date().toISOString() })
@@ -2660,13 +2929,25 @@ export const gameApi = {
       .select('*')
       .single();
     if (error) throw error;
-    return data;
+    return data as SupabaseSet;
   },
 
-  async deleteCanonicalSet(id: string | number): Promise<boolean> {
+  async deleteSet(id: string | number): Promise<boolean> {
     const { error } = await supabase.from('sets').delete().eq('id', id);
     if (error) throw error;
     return true;
+  },
+
+  async saveCanonicalSet(payload: any): Promise<any> {
+    return this.saveSet({ ...payload, owner: payload.owner || 'Designer' });
+  },
+
+  async updateCanonicalSet(id: string | number, payload: any): Promise<any> {
+    return this.updateSet(id, payload);
+  },
+
+  async deleteCanonicalSet(id: string | number): Promise<boolean> {
+    return this.deleteSet(id);
   },
 
   // 2. POWERS
