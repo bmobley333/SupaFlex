@@ -88,6 +88,10 @@ const parseSkill = (
   };
 };
 
+const normalizeSkillsetName = (name?: string): string => {
+  return (name || '').replace(/🎓/g, '').trim();
+};
+
 export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition, isAtBottom }) => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
@@ -116,15 +120,16 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
     if (freeIndividualSkillsSet.has(lower) || freeElementNames.has(lower)) return true;
     if (parentSets && Array.isArray(parentSets)) {
       for (const s of parentSets) {
-        if (s && freeSets.has(s.toLowerCase().trim())) return true;
+        const cleanParent = normalizeSkillsetName(s).toLowerCase();
+        if (cleanParent && (freeSets.has(cleanParent) || freeSkillsetsSet.has(cleanParent))) return true;
       }
     }
     return false;
-  }, [freeIndividualSkillsSet, freeElementNames, freeSets]);
+  }, [freeIndividualSkillsSet, freeElementNames, freeSets, freeSkillsetsSet]);
 
   const isSkillsetFree = useCallback((setName: string) => {
-    const lower = setName.toLowerCase().trim();
-    if (freeSkillsetsSet.has(lower) || freeElementNames.has(lower) || freeSets.has(lower)) return true;
+    const clean = normalizeSkillsetName(setName).toLowerCase();
+    if (freeSkillsetsSet.has(clean) || freeElementNames.has(clean) || freeSets.has(clean)) return true;
     return false;
   }, [freeSkillsetsSet, freeElementNames, freeSets]);
 
@@ -134,7 +139,10 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
 
     // 1. Group atomic skills by skillset membership
     skills.forEach((sk) => {
-      (sk.skillset || []).forEach((setName) => {
+      const rawSets = sk.sets || sk.skillset || [];
+      rawSets.forEach((rawSetName) => {
+        const setName = normalizeSkillsetName(rawSetName);
+        if (!setName) return;
         const key = setName.toLowerCase();
         if (!map.has(key)) {
           map.set(key, {
@@ -159,11 +167,13 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
     // 2. Merge custom skillsets from character sheet
     const customList: CustomSkillsetDefinition[] = activeCharacter?.sheet_data?.custom_skillsets || [];
     customList.forEach((cs) => {
-      const key = cs.name.toLowerCase();
+      const cleanName = normalizeSkillsetName(cs.name);
+      if (!cleanName) return;
+      const key = cleanName.toLowerCase();
       if (!map.has(key)) {
         map.set(key, {
           id: (typeof cs.id === 'number' ? cs.id : Date.now()) as any,
-          name: cs.name,
+          name: cleanName,
           skills: cs.skills,
           source: cs.source || 'Custom',
           created_at: cs.created_at || new Date().toISOString(),
@@ -174,9 +184,17 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
     return Array.from(map.values()).sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
   }, [skills, activeCharacter?.sheet_data?.custom_skillsets, isGsUnlocked]);
 
+  const findEffectiveSkillset = useCallback((name?: string): Skillset | undefined => {
+    if (!name) return undefined;
+    const target = normalizeSkillsetName(name).toLowerCase();
+    return effectiveSkillsets.find((s) => s.name.toLowerCase() === target);
+  }, [effectiveSkillsets]);
+
   const rawKnownSkillsetNames = activeCharacter?.sheet_data?.known_skillsets || [];
   const knownSkillsetNames = useMemo(() => {
-    return rawKnownSkillsetNames.filter((s) => s && typeof s === 'string' && s.trim() !== '');
+    return rawKnownSkillsetNames
+      .filter((s) => s && typeof s === 'string' && s.trim() !== '')
+      .map((s) => normalizeSkillsetName(s));
   }, [rawKnownSkillsetNames]);
 
   const rawKnownIndividualSkills = activeCharacter?.sheet_data?.known_individual_skills || [];
@@ -233,17 +251,18 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
   }, [showManageModal]);
 
   const handleToggleSkillset = (name: string) => {
+    const cleanName = normalizeSkillsetName(name);
     const uniqueCurrent = Array.from(new Set(knownSkillsetNames));
-    const isLearning = !uniqueCurrent.includes(name);
+    const isLearning = !uniqueCurrent.some((k) => k.toLowerCase() === cleanName.toLowerCase());
 
     if (isLearning) {
-      const targetSet = effectiveSkillsets.find((ks) => ks.name.toLowerCase() === name.toLowerCase());
+      const targetSet = findEffectiveSkillset(cleanName);
       const skillsInNewSet = targetSet && Array.isArray(targetSet.skills) ? targetSet.skills : [];
 
       const otherKnownSkillsetsSkills = new Set<string>();
       uniqueCurrent.forEach((ksName) => {
-        if (ksName.toLowerCase() !== name.toLowerCase()) {
-          const otherSet = effectiveSkillsets.find((ks) => ks.name.toLowerCase() === ksName.toLowerCase());
+        if (ksName.toLowerCase() !== cleanName.toLowerCase()) {
+          const otherSet = findEffectiveSkillset(ksName);
           if (otherSet && Array.isArray(otherSet.skills)) {
             otherSet.skills.forEach((s) => otherKnownSkillsetsSkills.add(s.toLowerCase().trim()));
           }
@@ -254,8 +273,10 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
       let refundedSkills: string[] = [];
 
       updateActiveSheetData((prev) => {
-        const current = prev.known_skillsets || [];
-        const updatedSkillsets = current.includes(name) ? current : [...current, name];
+        const current = (prev.known_skillsets || []).map((s) => normalizeSkillsetName(s));
+        const updatedSkillsets = current.some((s) => s.toLowerCase() === cleanName.toLowerCase())
+          ? current
+          : [...current, cleanName];
 
         const reconciliation = reconcileSkillsOnSkillsetAdded(
           prev,
@@ -273,30 +294,30 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
         };
       });
 
-      const apCost = isSkillsetFree(name) ? 0 : 2;
+      const apCost = isSkillsetFree(cleanName) ? 0 : 2;
       if (apCost > 0) {
-        recordApExpenditure(apCost, 'Skills', `Learned Skill Set: ${name} (${apCost} AP)`, 1, 'Manage Skills');
+        recordApExpenditure(apCost, 'Skills', `Learned Skill Set: ${cleanName} (${apCost} AP)`, 1, 'Manage Skills');
       }
 
       if (totalRefund > 0) {
         recordApExpenditure(
           -totalRefund,
           'Skills',
-          `SkillSet Bundle Auto-Credit: ${name} (Refunded ${totalRefund} AP: ${refundedSkills.join(', ')})`,
+          `SkillSet Bundle Auto-Credit: ${cleanName} (Refunded ${totalRefund} AP: ${refundedSkills.join(', ')})`,
           1,
           'Manage Skills'
         );
       }
     } else {
       updateActiveSheetData((prev) => {
-        const current = prev.known_skillsets || [];
-        const updated = current.filter((s) => s !== name);
+        const current = (prev.known_skillsets || []).map((s) => normalizeSkillsetName(s));
+        const updated = current.filter((s) => s.toLowerCase() !== cleanName.toLowerCase());
         return { ...prev, known_skillsets: updated };
       });
 
-      const apRefund = isSkillsetFree(name) ? 0 : 2;
+      const apRefund = isSkillsetFree(cleanName) ? 0 : 2;
       if (apRefund > 0) {
-        recordApExpenditure(-apRefund, 'Skills', `Unlearned Skill Set: ${name} (-${apRefund} AP Refunded)`, 1, 'Manage Skills');
+        recordApExpenditure(-apRefund, 'Skills', `Unlearned Skill Set: ${cleanName} (-${apRefund} AP Refunded)`, 1, 'Manage Skills');
       }
     }
 
@@ -334,11 +355,14 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
     skills.forEach((sk) => {
       const key = sk.name.toLowerCase();
       const attrKey = EMOJI_MAP[sk.attribute]?.key || 'mind';
+      const parentSets = (sk.sets || sk.skillset || [])
+        .map((s) => normalizeSkillsetName(s))
+        .filter(Boolean);
       map.set(key, {
         name: sk.name,
         emoji: sk.attribute,
         attributeKey: attrKey,
-        parentSkillsets: sk.skillset || [],
+        parentSkillsets: Array.from(new Set(parentSets)),
         notes: sk.notes,
         genres: sk.genres || ['Medieval', 'Modern', 'SciFi'],
         discipline: sk.discipline,
@@ -396,7 +420,7 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
   const skillsetDerivedSkillsSet = useMemo(() => {
     const set = new Set<string>();
     knownSkillsetNames.forEach((ksName) => {
-      const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
+      const ksObj = findEffectiveSkillset(ksName);
       if (ksObj && Array.isArray(ksObj.skills)) {
         ksObj.skills.forEach((rawSkill) => {
           const parsed = parseSkill(rawSkill, allCatalogSkillsMap);
@@ -405,14 +429,14 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
       }
     });
     return set;
-  }, [knownSkillsetNames, effectiveSkillsets, allCatalogSkillsMap]);
+  }, [knownSkillsetNames, findEffectiveSkillset, allCatalogSkillsMap]);
 
   // Compile unique active skills for main sheet Derived Skills Registry
   const activeRegistrySkillsMap = useMemo(() => {
     const map = new Map<string, DerivedSkill>();
 
     knownSkillsetNames.forEach((ksName) => {
-      const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
+      const ksObj = findEffectiveSkillset(ksName);
       if (ksObj && Array.isArray(ksObj.skills)) {
         ksObj.skills.forEach((rawSkill) => {
           const parsed = parseSkill(rawSkill, allCatalogSkillsMap);
@@ -451,7 +475,7 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
     });
 
     return map;
-  }, [knownSkillsetNames, knownIndividualSkills, effectiveSkillsets, attributeDice, allCatalogSkillsMap]);
+  }, [knownSkillsetNames, knownIndividualSkills, findEffectiveSkillset, attributeDice, allCatalogSkillsMap]);
 
   const sortedActiveSkills = useMemo(() => {
     return Array.from(activeRegistrySkillsMap.values()).sort((a, b) =>
@@ -467,12 +491,12 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
     if (!leftSearchQuery.trim()) return uniqueKnownSkillsetNames;
     const query = leftSearchQuery.toLowerCase().trim();
     return uniqueKnownSkillsetNames.filter((ksName) => {
-      const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
+      const ksObj = findEffectiveSkillset(ksName);
       const nameMatch = ksName.toLowerCase().includes(query);
       const skillMatch = ksObj && Array.isArray(ksObj.skills) && ksObj.skills.some((s) => s.toLowerCase().includes(query));
       return nameMatch || skillMatch;
     });
-  }, [uniqueKnownSkillsetNames, effectiveSkillsets, leftSearchQuery]);
+  }, [uniqueKnownSkillsetNames, findEffectiveSkillset, leftSearchQuery]);
 
   // Check if a skillset is starred
   const isSkillsetStarred = useCallback(
@@ -792,8 +816,8 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                       ) : (
                         <>
                           {filteredKnownSkillsets.map((ksName) => {
-                            const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
-                            const isCustom = ksObj?.source === 'Custom' || (activeCharacter?.sheet_data?.custom_skillsets || []).some((cs) => cs.name.toLowerCase() === ksName.toLowerCase());
+                            const ksObj = findEffectiveSkillset(ksName);
+                            const isCustom = ksObj?.source === 'Custom' || (activeCharacter?.sheet_data?.custom_skillsets || []).some((cs) => normalizeSkillsetName(cs.name).toLowerCase() === ksName.toLowerCase());
                             const isMso = isGsUnlocked && isMsoEntry(ksName);
 
                             return (
@@ -1060,7 +1084,7 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                     </button>
                                     <span className={`font-outfit font-bold text-xs inline-flex items-center align-baseline ${isMso ? 'text-purple-300' : 'text-slate-100'}`}>
                                       <span className="truncate">{isMso ? `🌌 ${ks.name}` : ks.name}</span>
-                                      <ItemNotesPopover notes={ks.notes || effectiveSkillsets.find((s) => s.name.toLowerCase() === ks.name.toLowerCase())?.notes} itemName={ks.name} inline />
+                                      <ItemNotesPopover notes={ks.notes || findEffectiveSkillset(ks.name)?.notes} itemName={ks.name} inline />
                                     </span>
                                     {(() => {
                                       const isFree = isSkillsetFree(ks.name);
@@ -1276,8 +1300,8 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
           </span>
           <div className="flex flex-wrap gap-1.5">
             {uniqueKnownSkillsetNames.map((ksName) => {
-              const ksObj = effectiveSkillsets.find((s) => s.name.toLowerCase() === ksName.toLowerCase());
-              const isCustom = ksObj?.source === 'Custom' || (activeCharacter?.sheet_data?.custom_skillsets || []).some((cs) => cs.name.toLowerCase() === ksName.toLowerCase());
+              const ksObj = findEffectiveSkillset(ksName);
+              const isCustom = ksObj?.source === 'Custom' || (activeCharacter?.sheet_data?.custom_skillsets || []).some((cs) => normalizeSkillsetName(cs.name).toLowerCase() === ksName.toLowerCase());
               const isMso = isGsUnlocked && isMsoEntry(ksName);
 
               return (
