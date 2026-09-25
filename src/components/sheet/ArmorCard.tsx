@@ -16,6 +16,9 @@ import {
 import { resolveStatHooks } from '../../utils/statHooks';
 import {
   getCharacterKnownPaths,
+  getCharacterKnownSets,
+  getCharacterFreeSets,
+  getCharacterFreeElementNames,
   evaluateItemAp,
   matchesApCategoryFilter,
   ApCostCategory,
@@ -31,7 +34,7 @@ const getDieNum = (dieRating?: string): number => {
 export const ArmorCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, armorCatalog: storeArmor } = useCharacterStore();
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, armorCatalog: storeArmor, paths, setsCatalog } = useCharacterStore();
   const statHooks = useMemo(() => resolveStatHooks(activeCharacter?.sheet_data), [activeCharacter?.sheet_data]);
 
   const armor: ArmorData = activeCharacter?.sheet_data?.armor_slot || {
@@ -62,12 +65,26 @@ export const ArmorCard: React.FC = () => {
   const derivedDodge = getDieNum(attributeDice.motion);
 
   const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
+  const knownSets = useMemo(() => getCharacterKnownSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
+  const freeSets = useMemo(() => getCharacterFreeSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
+  const freeElementNames = useMemo(() => getCharacterFreeElementNames(knownPaths, paths), [knownPaths, paths]);
 
   const getArmorEvalResult = useCallback(
     (item: SupabaseArmor): ApEvaluationResult => {
-      return evaluateItemAp(item.path, item.requirement, attributeDice, knownPaths, undefined);
+      return evaluateItemAp(
+        item.path,
+        item.requirement,
+        attributeDice,
+        knownPaths,
+        undefined,
+        item.sets,
+        knownSets,
+        freeSets,
+        freeElementNames,
+        item.name
+      );
     },
-    [knownPaths, attributeDice]
+    [knownPaths, knownSets, freeSets, freeElementNames, attributeDice]
   );
 
   const isArmorSkilled = (item: ArmorData): boolean => {
@@ -173,6 +190,8 @@ export const ArmorCard: React.FC = () => {
       mr: item.mr,
       cost: item.cost,
       notes: item.notes,
+      path: item.path,
+      sets: item.sets || [],
       ap_cost: evalResult.apCost,
       effect: `${evalResult.apCost} AP`,
     };
@@ -182,7 +201,7 @@ export const ArmorCard: React.FC = () => {
       const isAlreadyInWardrobe = existingWardrobe.some(
         (w) => w.name.toLowerCase() === item.name.toLowerCase()
       );
-      if (!isAlreadyInWardrobe && isSkilled) {
+      if (!isAlreadyInWardrobe && isSkilled && evalResult.apCost > 0) {
         recordApExpenditure(
           evalResult.apCost,
           'Armor',
@@ -217,7 +236,7 @@ export const ArmorCard: React.FC = () => {
     const isCurrentlySkilled = isArmorSkilled(item);
     if (isCurrentlySkilled === wantSkilled) return;
 
-    const apCost = item.ap_cost || 1;
+    const apCost = typeof item.ap_cost === 'number' ? item.ap_cost : 1;
 
     if (wantSkilled) {
       if (availableAp < apCost) {
@@ -245,13 +264,15 @@ export const ArmorCard: React.FC = () => {
           movement_rate: calculateMovementRate(updatedSheet),
         };
       });
-      recordApExpenditure(
-        apCost,
-        'Armor',
-        `Learned Armor Proficiency: ${item.name} (${apCost} AP)`,
-        1,
-        'Manage Armor'
-      );
+      if (apCost > 0) {
+        recordApExpenditure(
+          apCost,
+          'Armor',
+          `Learned Armor Proficiency: ${item.name} (${apCost} AP)`,
+          1,
+          'Manage Armor'
+        );
+      }
       saveActiveCharacter();
     } else {
       updateActiveSheetData((prev) => {
@@ -272,13 +293,15 @@ export const ArmorCard: React.FC = () => {
           movement_rate: calculateMovementRate(updatedSheet),
         };
       });
-      recordApExpenditure(
-        -apCost,
-        'Armor',
-        `Marked Armor as Unskilled: ${item.name} (-${apCost} AP Refunded)`,
-        1,
-        'Manage Armor'
-      );
+      if (apCost > 0) {
+        recordApExpenditure(
+          -apCost,
+          'Armor',
+          `Marked Armor as Unskilled: ${item.name} (-${apCost} AP Refunded)`,
+          1,
+          'Manage Armor'
+        );
+      }
       saveActiveCharacter();
     }
   };
@@ -286,7 +309,7 @@ export const ArmorCard: React.FC = () => {
   const handleDropFromWardrobe = (armorName: string) => {
     const targetArmor = wardrobe.find((w) => w.name.toLowerCase() === armorName.toLowerCase());
     const wasSkilled = targetArmor ? isArmorSkilled(targetArmor) : false;
-    const apRefund = targetArmor?.ap_cost || 1;
+    const apRefund = typeof targetArmor?.ap_cost === 'number' ? targetArmor.ap_cost : 1;
 
     updateActiveSheetData((prev) => {
       const existingWardrobe = prev.wardrobe || wardrobe;
@@ -303,7 +326,7 @@ export const ArmorCard: React.FC = () => {
         };
       }
 
-      if (wasSkilled) {
+      if (wasSkilled && apRefund > 0) {
         recordApExpenditure(-apRefund, 'Armor', `Unlearned Armor: ${armorName} (-${apRefund} AP Refunded)`, 1, 'Manage Armor');
       }
 
@@ -825,12 +848,19 @@ export const ArmorCard: React.FC = () => {
                                       <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
                                       <ItemNotesPopover notes={item.notes} itemName={item.name} inline />
                                     </span>
+                                    {evalResult.matchedSetName && (
+                                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-950/60 text-amber-300 border border-amber-500/40">
+                                        🗂️ {evalResult.matchedSetName}
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-2 shrink-0">
                                     <button
                                       onClick={() => handleAddToWardrobe(item)}
                                       className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
-                                        evalResult.apCost === 1
+                                        evalResult.isFree || evalResult.apCost === 0
+                                          ? 'bg-emerald-600/40 text-emerald-100 border-emerald-400 hover:bg-emerald-600/60 shadow-sm'
+                                          : evalResult.apCost === 1
                                           ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
                                           : evalResult.apCost === 2
                                           ? 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
@@ -840,7 +870,7 @@ export const ArmorCard: React.FC = () => {
                                       }`}
                                       title={`Learn ${item.name} for ${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' (Requires GM Approval)' : ''}`}
                                     >
-                                      + Learn ({evalResult.apCost} AP)
+                                      + Learn ({evalResult.isFree || evalResult.apCost === 0 ? '0 AP' : `${evalResult.apCost} AP`})
                                     </button>
                                   </div>
                                 </div>

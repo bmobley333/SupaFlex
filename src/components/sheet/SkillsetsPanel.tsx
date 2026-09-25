@@ -6,7 +6,13 @@ import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp 
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { isTraitItem, isMsoEntry, compareMsoOptions, compareMsoItems } from '../../utils/kitUtils';
-import { isPathStringMatch, parseItemPaths } from '../../utils/pathApUtils';
+import {
+  isPathStringMatch,
+  parseItemPaths,
+  getCharacterKnownPaths,
+  getCharacterFreeSets,
+  getCharacterFreeElementNames,
+} from '../../utils/pathApUtils';
 import { reconcileSkillsOnSkillsetAdded } from '../../utils/pathReconciliationUtils';
 
 export interface SkillsetsPanelProps {
@@ -85,7 +91,42 @@ const parseSkill = (
 export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition, isAtBottom }) => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
-  const { activeCharacter, skills, updateActiveSheetData, saveActiveCharacter, recordApExpenditure } = useCharacterStore();
+  const {
+    activeCharacter,
+    skills,
+    paths,
+    setsCatalog,
+    updateActiveSheetData,
+    saveActiveCharacter,
+    recordApExpenditure,
+  } = useCharacterStore();
+
+  const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
+  const freeSets = useMemo(() => getCharacterFreeSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
+  const freeElementNames = useMemo(() => getCharacterFreeElementNames(knownPaths, paths), [knownPaths, paths]);
+
+  const freeIndividualSkillsList: string[] = useMemo(() => activeCharacter?.sheet_data?.free_individual_skills || [], [activeCharacter?.sheet_data?.free_individual_skills]);
+  const freeIndividualSkillsSet = useMemo(() => new Set(freeIndividualSkillsList.map((s) => s.toLowerCase().trim())), [freeIndividualSkillsList]);
+
+  const freeSkillsetsList: string[] = useMemo(() => activeCharacter?.sheet_data?.free_skillsets || [], [activeCharacter?.sheet_data?.free_skillsets]);
+  const freeSkillsetsSet = useMemo(() => new Set(freeSkillsetsList.map((s) => s.toLowerCase().trim())), [freeSkillsetsList]);
+
+  const isSkillFree = useCallback((skillName: string, parentSets?: string[]) => {
+    const lower = skillName.toLowerCase().trim();
+    if (freeIndividualSkillsSet.has(lower) || freeElementNames.has(lower)) return true;
+    if (parentSets && Array.isArray(parentSets)) {
+      for (const s of parentSets) {
+        if (s && freeSets.has(s.toLowerCase().trim())) return true;
+      }
+    }
+    return false;
+  }, [freeIndividualSkillsSet, freeElementNames, freeSets]);
+
+  const isSkillsetFree = useCallback((setName: string) => {
+    const lower = setName.toLowerCase().trim();
+    if (freeSkillsetsSet.has(lower) || freeElementNames.has(lower) || freeSets.has(lower)) return true;
+    return false;
+  }, [freeSkillsetsSet, freeElementNames, freeSets]);
 
   // Dynamically derive all SkillSets from atomic skills table + character custom skillsets
   const effectiveSkillsets = useMemo(() => {
@@ -232,7 +273,10 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
         };
       });
 
-      recordApExpenditure(2, 'Skills', `Learned Skill Set: ${name} (2 AP)`, 1, 'Manage Skills');
+      const apCost = isSkillsetFree(name) ? 0 : 2;
+      if (apCost > 0) {
+        recordApExpenditure(apCost, 'Skills', `Learned Skill Set: ${name} (${apCost} AP)`, 1, 'Manage Skills');
+      }
 
       if (totalRefund > 0) {
         recordApExpenditure(
@@ -250,7 +294,10 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
         return { ...prev, known_skillsets: updated };
       });
 
-      recordApExpenditure(-2, 'Skills', `Unlearned Skill Set: ${name} (-2 AP Refunded)`, 1, 'Manage Skills');
+      const apRefund = isSkillsetFree(name) ? 0 : 2;
+      if (apRefund > 0) {
+        recordApExpenditure(-apRefund, 'Skills', `Unlearned Skill Set: ${name} (-${apRefund} AP Refunded)`, 1, 'Manage Skills');
+      }
     }
 
     saveActiveCharacter();
@@ -258,6 +305,7 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
 
   const handleToggleIndividualSkill = (skillName: string) => {
     const isLearning = !knownIndividualSkills.includes(skillName);
+    const apCost = isSkillFree(skillName) ? 0 : 1;
     updateActiveSheetData((prev) => {
       const current = prev.known_individual_skills || [];
       const updated = current.includes(skillName)
@@ -267,9 +315,13 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
     });
 
     if (isLearning) {
-      recordApExpenditure(1, 'Skills', `Learned Individual Skill: ${skillName} (1 AP)`, 1, 'Manage Skills');
+      if (apCost > 0) {
+        recordApExpenditure(apCost, 'Skills', `Learned Individual Skill: ${skillName} (${apCost} AP)`, 1, 'Manage Skills');
+      }
     } else {
-      recordApExpenditure(-1, 'Skills', `Unlearned Individual Skill: ${skillName} (-1 AP Refunded)`, 1, 'Manage Skills');
+      if (apCost > 0) {
+        recordApExpenditure(-apCost, 'Skills', `Unlearned Individual Skill: ${skillName} (-${apCost} AP Refunded)`, 1, 'Manage Skills');
+      }
     }
     saveActiveCharacter();
   };
@@ -762,6 +814,11 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                         Custom
                                       </span>
                                     )}
+                                    {isSkillsetFree(ksName) && (
+                                      <span className="text-[9px] font-mono font-extrabold bg-emerald-950/80 text-emerald-300 px-1.5 py-0.2 rounded border border-emerald-500/40 shrink-0">
+                                        Free
+                                      </span>
+                                    )}
                                   </span>
                                   {ksObj && Array.isArray(ksObj.skills) && (
                                     <span className="text-[10px] text-slate-400 leading-normal">
@@ -806,6 +863,11 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                   >
                                     <span className={`text-xs truncate flex items-center gap-1 ${isMso ? 'text-purple-300 font-bold' : 'font-semibold text-slate-200'}`}>
                                       <span>{isMso ? `🌌 ${parsed.cleanName}` : parsed.cleanName}</span>
+                                      {isSkillFree(parsed.cleanName) && (
+                                        <span className="text-[9px] font-mono font-extrabold bg-emerald-950/80 text-emerald-300 px-1 py-0.2 rounded border border-emerald-500/40 shrink-0">
+                                          Free
+                                        </span>
+                                      )}
                                       <span className="text-[11px] font-bold text-indigo-300 flex items-center gap-0.5 ml-1 shrink-0">
                                         <span>{parsed.emoji}</span>
                                         <span className="font-mono font-black">{dieRating}</span>
@@ -1000,9 +1062,20 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                       <span className="truncate">{isMso ? `🌌 ${ks.name}` : ks.name}</span>
                                       <ItemNotesPopover notes={ks.notes || effectiveSkillsets.find((s) => s.name.toLowerCase() === ks.name.toLowerCase())?.notes} itemName={ks.name} inline />
                                     </span>
-                                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 shrink-0">
-                                      2 AP
-                                    </span>
+                                    {(() => {
+                                      const isFree = isSkillsetFree(ks.name);
+                                      return (
+                                        <span
+                                          className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border shrink-0 ${
+                                            isFree
+                                              ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/40 font-extrabold'
+                                              : 'bg-indigo-950/90 text-indigo-300 border-indigo-500/40'
+                                          }`}
+                                        >
+                                          {isFree ? '0 AP {Free}' : '2 AP'}
+                                        </span>
+                                      );
+                                    })()}
                                     {isCustom && (
                                       <span className="text-[9px] font-mono font-bold bg-indigo-900/80 text-indigo-200 px-1.5 py-0.2 rounded border border-indigo-500/40 shrink-0">
                                         Custom
@@ -1017,13 +1090,22 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                 </div>
 
                                 <div className="flex items-center gap-1.5 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleToggleSkillset(ks.name)}
-                                    className="px-2.5 py-1 text-xs font-bold rounded-lg border bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50 shrink-0 transition-all cursor-pointer"
-                                  >
-                                    + Learn (2 AP)
-                                  </button>
+                                  {(() => {
+                                    const isFree = isSkillsetFree(ks.name);
+                                    return (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleSkillset(ks.name)}
+                                        className={`px-2.5 py-1 text-xs font-bold rounded-lg border shrink-0 transition-all cursor-pointer ${
+                                          isFree
+                                            ? 'bg-emerald-600/40 text-emerald-100 border-emerald-400 hover:bg-emerald-600/60 shadow-sm'
+                                            : 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50'
+                                        }`}
+                                      >
+                                        + Learn ({isFree ? '0 AP' : '2 AP'})
+                                      </button>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                             );
@@ -1046,6 +1128,7 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                             );
                             const isMso = isGsUnlocked && isMsoEntry(sk.name);
                             const isTrait = isTraitItem(sk);
+                            const isFree = isTrait || isSkillFree(sk.name, sk.parentSkillsets);
 
                             return (
                               <div
@@ -1098,12 +1181,16 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                         <span className="truncate">{isMso ? `🌌 ${sk.name}` : sk.name}</span>
                                         <ItemNotesPopover notes={sk.notes} itemName={sk.name} inline />
                                       </span>
-                                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950/90 text-indigo-300 border border-indigo-500/40 shrink-0">
-                                        {isTrait ? '0 AP' : '1 AP'}
+                                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded shrink-0 ${
+                                        isFree
+                                          ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/40'
+                                          : 'bg-indigo-950/90 text-indigo-300 border border-indigo-500/40'
+                                      }`}>
+                                        {isFree ? '0 AP' : '1 AP'}
                                       </span>
-                                      {isTrait && (
+                                      {isFree && (
                                         <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 shrink-0">
-                                          <span>🧬</span> Trait (Free)
+                                          <span>{isTrait ? '🧬' : '🎁'}</span> {isTrait ? 'Trait (Free)' : 'Free'}
                                         </span>
                                       )}
                                       {sk.discipline && (
@@ -1139,12 +1226,12 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                       type="button"
                                       onClick={() => handleToggleIndividualSkill(sk.name)}
                                       className={`px-2.5 py-1 text-xs font-bold rounded-lg border shrink-0 transition-all cursor-pointer ${
-                                        isTrait
+                                        isFree
                                           ? 'bg-emerald-600/40 text-emerald-200 border-emerald-500/60 hover:bg-emerald-600/60 shadow-sm'
                                           : 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50'
                                       }`}
                                     >
-                                      {isTrait ? '+ Learn Trait (0 AP)' : '+ Learn (1 AP)'}
+                                      {isFree ? (isTrait ? '+ Learn Trait (0 AP)' : '+ Learn (0 AP)') : '+ Learn (1 AP)'}
                                     </button>
                                   )}
                                 </div>
@@ -1207,6 +1294,11 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                   {isCustom && (
                     <span className="text-[9px] font-mono font-bold bg-indigo-900/80 text-indigo-200 px-1 py-0.2 rounded border border-indigo-500/40">
                       Custom
+                    </span>
+                  )}
+                  {isSkillsetFree(ksName) && (
+                    <span className="text-[9px] font-mono font-extrabold bg-emerald-950/80 text-emerald-300 px-1 py-0.2 rounded border border-emerald-500/40">
+                      Free
                     </span>
                   )}
                 </span>

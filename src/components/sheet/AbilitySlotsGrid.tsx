@@ -18,6 +18,9 @@ import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from 
 import { cleanKitName, getKitMinLevel, isMsoEntry, compareMsoOptions, compareMsoItems } from '../../utils/kitUtils';
 import {
   getCharacterKnownPaths,
+  getCharacterKnownSets,
+  getCharacterFreeSets,
+  getCharacterFreeElementNames,
   evaluateItemAp,
   matchesApCategoryFilter,
   ApCostCategory,
@@ -166,6 +169,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     activeCharacter,
     powers,
     magicItems,
+    paths,
+    setsCatalog,
     functionsCatalog,
     modsCatalog,
     updateActiveSheetData,
@@ -759,6 +764,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       path: (item as Power).path || (item as any).kit || (item as any).table_name,
       discipline: (item as Power).discipline,
       ap_cost: evalResult.apCost,
+      sets: (item as Power).sets || [],
     };
 
     updateActiveSheetData((prev) => {
@@ -1155,6 +1161,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   };
 
   const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
+  const knownSets = useMemo(() => getCharacterKnownSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
+  const freeSets = useMemo(() => getCharacterFreeSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
+  const freeElementNames = useMemo(() => getCharacterFreeElementNames(knownPaths, paths), [knownPaths, paths]);
   const attributeDice = useMemo(() => activeCharacter?.sheet_data?.attribute_dice || {}, [activeCharacter]);
 
   const getPowerEvalResult = useCallback(
@@ -1165,10 +1174,16 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         pathVal,
         undefined,
         attributeDice,
-        knownPaths
+        knownPaths,
+        undefined,
+        pItem.sets,
+        knownSets,
+        freeSets,
+        freeElementNames,
+        pItem.name
       );
     },
-    [attributeDice, knownPaths]
+    [attributeDice, knownPaths, knownSets, freeSets, freeElementNames]
   );
 
   const uniquePowerDomains = useMemo(() => {
@@ -2871,13 +2886,22 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                           {/* AP Cost Badge */}
                                           <span
                                             className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${
-                                              evalResult.apCost === 1
+                                              evalResult.isFree || evalResult.apCost === 0
+                                                ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50 shadow-sm'
+                                                : evalResult.apCost === 1
                                                 ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
                                                 : 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
                                             }`}
                                           >
-                                            {evalResult.apCost} AP {evalResult.requiresGmApproval ? '• 👑 GM' : '• Path'}
+                                            {evalResult.isFree || evalResult.apCost === 0
+                                              ? '0 AP {Free}'
+                                              : `${evalResult.apCost} AP ${evalResult.requiresGmApproval ? '• 👑 GM' : '• Path'}`}
                                           </span>
+                                          {evalResult.matchedSetName && (
+                                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-500/40">
+                                              🗂️ {evalResult.matchedSetName}
+                                            </span>
+                                          )}
                                           {version > 1 && (
                                             <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
                                               v{version}
@@ -2912,13 +2936,15 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                             className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
                                               isLevelLocked
                                                 ? 'bg-slate-900 text-slate-500 border-slate-800 cursor-not-allowed opacity-60'
+                                                : evalResult.isFree || evalResult.apCost === 0
+                                                ? 'bg-emerald-600/40 text-emerald-100 border-emerald-400 hover:bg-emerald-600/60 shadow-sm'
                                                 : evalResult.apCost === 1
                                                 ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
                                                 : 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50 shadow-sm'
                                             }`}
                                             title={`Learn ${baseName} for ${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' (Requires GM Approval)' : ''}`}
                                           >
-                                            + Learn ({evalResult.apCost} AP)
+                                            + Learn ({evalResult.isFree || evalResult.apCost === 0 ? '0 AP' : `${evalResult.apCost} AP`})
                                           </button>
                                         </div>
                                       </div>

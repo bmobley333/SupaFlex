@@ -17,12 +17,13 @@ import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { compareMsoItems, compareMsoOptions, isMsoEntry } from '../../utils/kitUtils';
 import {
   getCharacterKnownPaths,
+  getCharacterKnownSets,
+  getCharacterFreeSets,
+  getCharacterFreeElementNames,
   evaluateItemAp,
   matchesApCategoryFilter,
   ApCostCategory,
   ApEvaluationResult,
-  isItemInPath,
-  isItemRequirementMet,
 } from '../../utils/pathApUtils';
 
 const DIE_SCALE = [4, 6, 8, 10, 12];
@@ -89,7 +90,7 @@ const calculateWeaponDmg = (name: string, mhsCategory: string, attributeDice: Re
 export const WeaponsCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, weaponsCatalog: storeWeapons } = useCharacterStore();
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, weaponsCatalog: storeWeapons, paths, setsCatalog } = useCharacterStore();
   const rawWeapons: WeaponSlot[] = activeCharacter?.sheet_data?.weapons || [];
   const weapons: WeaponSlot[] = useMemo(() => {
     return rawWeapons.filter((w) => w && w.name && w.name.trim() !== '');
@@ -196,24 +197,32 @@ export const WeaponsCard: React.FC = () => {
   );
 
   const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
+  const knownSets = useMemo(() => getCharacterKnownSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
+  const freeSets = useMemo(() => getCharacterFreeSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
+  const freeElementNames = useMemo(() => getCharacterFreeElementNames(knownPaths, paths), [knownPaths, paths]);
 
   const getWeaponEvalResult = useCallback(
     (weapon: SupabaseWeapon): ApEvaluationResult => {
-      const inPath = isItemInPath(weapon.path, knownPaths);
       const variants = splitWeaponIntoVariants(weapon);
-      const anyMeetsReq = variants.some((v) => isItemRequirementMet(v.requirementStr, attributeDice, v.variantType));
+      const evalResults = variants.map((v) =>
+        evaluateItemAp(
+          weapon.path,
+          v.requirementStr,
+          attributeDice,
+          knownPaths,
+          v.variantType,
+          weapon.sets,
+          knownSets,
+          freeSets,
+          freeElementNames,
+          weapon.name
+        )
+      );
 
-      if (inPath && anyMeetsReq) {
-        return { inPath: true, meetsReq: true, category: '1AP', apCost: 1, requiresGmApproval: false, statDownscaled: false };
-      } else if (inPath && !anyMeetsReq) {
-        return { inPath: true, meetsReq: false, category: '2AP', apCost: 2, requiresGmApproval: false, statDownscaled: false };
-      } else if (!inPath && anyMeetsReq) {
-        return { inPath: false, meetsReq: true, category: '3AP', apCost: 3, requiresGmApproval: true, statDownscaled: false };
-      } else {
-        return { inPath: false, meetsReq: false, category: '4AP', apCost: 4, requiresGmApproval: true, statDownscaled: false };
-      }
+      const best = evalResults.reduce((min, curr) => (curr.apCost < min.apCost ? curr : min), evalResults[0]);
+      return best || evaluateItemAp(weapon.path, undefined, attributeDice, knownPaths, undefined, weapon.sets, knownSets, freeSets, freeElementNames, weapon.name);
     },
-    [knownPaths, attributeDice]
+    [knownPaths, knownSets, freeSets, freeElementNames, attributeDice]
   );
 
   // Equip all variants of a weapon to the character sheet
@@ -249,6 +258,8 @@ export const WeaponsCard: React.FC = () => {
         max_blk: cleanBlockNum,
         effect: `${variant.variantType} Weapon (${evalResult.apCost} AP, Req ${variant.requirementStr})`,
         notes: weapon.notes,
+        path: weapon.path,
+        sets: weapon.sets || [],
         ap_cost: evalResult.apCost,
       };
     });
@@ -289,7 +300,7 @@ export const WeaponsCard: React.FC = () => {
     const currentlySkilled = targetGroup.slots.some((s) => s.sk);
     if (currentlySkilled === wantSkilled) return;
 
-    const groupCost = targetGroup.slots.reduce((max, s) => Math.max(max, s.ap_cost || 1), 1);
+    const groupCost = targetGroup.slots.reduce((max, s) => Math.max(max, typeof s.ap_cost === 'number' ? s.ap_cost : 1), 0);
 
     if (wantSkilled) {
       if (availableAp < groupCost) {
@@ -307,13 +318,15 @@ export const WeaponsCard: React.FC = () => {
             : w
         ),
       }));
-      recordApExpenditure(
-        groupCost,
-        'Weapons',
-        `Learned Weapon Proficiency: ${baseWeaponName} (${groupCost} AP)`,
-        1,
-        'Manage Weapons'
-      );
+      if (groupCost > 0) {
+        recordApExpenditure(
+          groupCost,
+          'Weapons',
+          `Learned Weapon Proficiency: ${baseWeaponName} (${groupCost} AP)`,
+          1,
+          'Manage Weapons'
+        );
+      }
       saveActiveCharacter();
     } else {
       updateActiveSheetData((prev) => ({
@@ -324,13 +337,15 @@ export const WeaponsCard: React.FC = () => {
             : w
         ),
       }));
-      recordApExpenditure(
-        -groupCost,
-        'Weapons',
-        `Marked Weapon as Unskilled: ${baseWeaponName} (-${groupCost} AP Refunded)`,
-        1,
-        'Manage Weapons'
-      );
+      if (groupCost > 0) {
+        recordApExpenditure(
+          -groupCost,
+          'Weapons',
+          `Marked Weapon as Unskilled: ${baseWeaponName} (-${groupCost} AP Refunded)`,
+          1,
+          'Manage Weapons'
+        );
+      }
       saveActiveCharacter();
     }
   };
@@ -341,7 +356,7 @@ export const WeaponsCard: React.FC = () => {
       (g) => g.baseName.toLowerCase() === baseWeaponName.toLowerCase()
     );
     const wasSkilled = targetGroup ? targetGroup.slots.some((s) => s.sk) : false;
-    const apRefund = targetGroup ? (targetGroup.slots.find((s) => s.ap_cost)?.ap_cost || 1) : 1;
+    const apRefund = targetGroup ? (targetGroup.slots.find((s) => typeof s.ap_cost === 'number')?.ap_cost ?? 1) : 1;
 
     updateActiveSheetData((prev) => ({
       ...prev,
@@ -350,7 +365,7 @@ export const WeaponsCard: React.FC = () => {
         .sort((a, b) => compareMsoItems(a, b, isGsUnlocked)),
     }));
 
-    if (wasSkilled) {
+    if (wasSkilled && apRefund > 0) {
       recordApExpenditure(-apRefund, 'Weapons', `Unlearned Weapon: ${baseWeaponName} (-${apRefund} AP Refunded)`, 1, 'Manage Weapons');
     }
 
@@ -669,7 +684,7 @@ export const WeaponsCard: React.FC = () => {
                       ) : (
                         filteredGroupedEquippedWeapons.map((group) => {
                           const isGroupSkilled = group.slots.some((s) => s.sk);
-                          const groupCost = group.slots.reduce((max, s) => Math.max(max, s.ap_cost || 1), 1);
+                          const groupCost = group.slots.reduce((max, s) => Math.max(max, typeof s.ap_cost === 'number' ? s.ap_cost : 1), 0);
                           const rawTypesList = Array.from(
                             new Set(
                               group.slots.map((s) =>
@@ -1036,13 +1051,20 @@ export const WeaponsCard: React.FC = () => {
                                         </span>
                                       );
                                     })}
+                                    {evalResult.matchedSetName && (
+                                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-950/60 text-amber-300 border border-amber-500/40">
+                                        🗂️ {evalResult.matchedSetName}
+                                      </span>
+                                    )}
                                   </div>
 
                                   <div className="flex items-center gap-2 shrink-0">
                                     <button
                                       onClick={() => handleEquipWeapon(weapon, variants)}
                                       className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
-                                        evalResult.apCost === 1
+                                        evalResult.isFree || evalResult.apCost === 0
+                                          ? 'bg-emerald-600/40 text-emerald-100 border-emerald-400 hover:bg-emerald-600/60 shadow-sm'
+                                          : evalResult.apCost === 1
                                           ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
                                           : evalResult.apCost === 2
                                           ? 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
@@ -1052,7 +1074,7 @@ export const WeaponsCard: React.FC = () => {
                                       }`}
                                       title={`Learn ${weapon.name} for ${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' (Requires GM Approval)' : ''}`}
                                     >
-                                      + Learn ({evalResult.apCost} AP)
+                                      + Learn ({evalResult.isFree || evalResult.apCost === 0 ? '0 AP' : `${evalResult.apCost} AP`})
                                     </button>
                                   </div>
                                 </div>
@@ -1060,7 +1082,18 @@ export const WeaponsCard: React.FC = () => {
                                 {/* Variant Stats Sub-Rows */}
                                 <div className="flex flex-col gap-1.5 pt-0.5">
                                   {variants.map((v) => {
-                                    const variantEval = evaluateItemAp(weapon.path, v.requirementStr, attributeDice, knownPaths, v.variantType);
+                                    const variantEval = evaluateItemAp(
+                                      weapon.path,
+                                      v.requirementStr,
+                                      attributeDice,
+                                      knownPaths,
+                                      v.variantType,
+                                      weapon.sets,
+                                      knownSets,
+                                      freeSets,
+                                      freeElementNames,
+                                      weapon.name
+                                    );
                                     const calculatedAtk = calculateWeaponAtk(v.name, v.mhs, attributeDice);
                                     const isSpecialDmg = v.dmg === '❌' || weapon.dmg === '❌';
                                     const calculatedDmg = isSpecialDmg ? '❌' : `d${calculateWeaponDmg(v.name, v.mhs, attributeDice)}`;

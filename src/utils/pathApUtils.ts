@@ -2,7 +2,7 @@
 // Universal Path & AP Cost Evaluation Engine for SupaFlex
 // Implements the 4-tier AP Cost Vector (1, 2, 3, 4 AP) and In-Path / Out-of-Path Resolution
 
-import { Character, SupabaseSet } from '../types/game';
+import { Character, SupabaseSet, SupabasePath } from '../types/game';
 import { cleanPathName } from './kitUtils';
 
 export type ApCostCategory = 'all' | '1AP' | '2AP' | '3AP' | '3AP_Universal' | '4AP';
@@ -15,6 +15,8 @@ export interface ApEvaluationResult {
   requiresGmApproval: boolean;
   statDownscaled: boolean;
   isUniversal?: boolean;
+  isFree?: boolean;
+  matchedSetName?: string;
 }
 
 /**
@@ -53,26 +55,131 @@ export const getCharacterKnownPaths = (character: Character | null | undefined):
 };
 
 /**
- * Resolves all known Sets for a character based on their known Paths and the sets catalog.
+ * Resolves all known Sets for a character based on their known Paths, the sets catalog, and paths catalog.
  * Returns a Set of lowercased, cleaned set names for fast O(1) lookup.
  */
 export const getCharacterKnownSets = (
   knownPaths: Set<string>,
-  setsCatalog: SupabaseSet[] = []
+  setsCatalog: SupabaseSet[] = [],
+  pathsCatalog: SupabasePath[] = []
 ): Set<string> => {
   const set = new Set<string>();
-  if (!knownPaths || knownPaths.size === 0 || !setsCatalog) return set;
-  for (const s of setsCatalog) {
-    if (s.paths && Array.isArray(s.paths)) {
-      for (const p of s.paths) {
-        if (knownPaths.has(cleanPathName(p).toLowerCase().trim())) {
-          set.add(cleanPathName(s.name).toLowerCase().trim());
-          break;
+  if (!knownPaths || knownPaths.size === 0) return set;
+
+  // 1. From setsCatalog: s.paths contains any known path
+  if (setsCatalog && setsCatalog.length > 0) {
+    for (const s of setsCatalog) {
+      if (s.paths && Array.isArray(s.paths)) {
+        for (const p of s.paths) {
+          if (knownPaths.has(cleanPathName(p).toLowerCase().trim())) {
+            set.add(cleanPathName(s.name).toLowerCase().trim());
+            break;
+          }
         }
       }
     }
   }
+
+  // 2. From pathsCatalog: path.linked_elements has { type: 'set', name: setName }
+  if (pathsCatalog && pathsCatalog.length > 0) {
+    for (const p of pathsCatalog) {
+      const cleanPath = cleanPathName(p.name).toLowerCase().trim();
+      if (knownPaths.has(cleanPath)) {
+        const elements = Array.isArray(p.linked_elements) ? p.linked_elements : [];
+        for (const el of elements) {
+          const elType = el.type || el.element_type;
+          if (elType === 'set' && el.name) {
+            set.add(cleanPathName(el.name).toLowerCase().trim());
+          }
+        }
+      }
+    }
+  }
+
   return set;
+};
+
+/**
+ * Resolves all Sets tagged {Free} for a character based on their known Paths.
+ * Returns a Set of lowercased, cleaned set names for fast O(1) lookup.
+ */
+export const getCharacterFreeSets = (
+  knownPaths: Set<string>,
+  setsCatalog: SupabaseSet[] = [],
+  pathsCatalog: SupabasePath[] = []
+): Set<string> => {
+  const freeSets = new Set<string>();
+  if (!knownPaths || knownPaths.size === 0) return freeSets;
+
+  // 1. From setsCatalog: s.paths has a path with {Free} tag matching a known path
+  if (setsCatalog && setsCatalog.length > 0) {
+    for (const s of setsCatalog) {
+      if (s.paths && Array.isArray(s.paths)) {
+        for (const p of s.paths) {
+          const lower = p.toLowerCase();
+          if (lower.includes('{free}') || lower.includes('{free1}') || lower.includes('{trait}')) {
+            const clean = cleanPathName(p).toLowerCase().trim();
+            if (knownPaths.has(clean)) {
+              freeSets.add(cleanPathName(s.name).toLowerCase().trim());
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 2. From pathsCatalog: path.linked_elements has { type: 'set', tag: 'Free' }
+  if (pathsCatalog && pathsCatalog.length > 0) {
+    for (const p of pathsCatalog) {
+      const cleanPath = cleanPathName(p.name).toLowerCase().trim();
+      if (knownPaths.has(cleanPath)) {
+        const elements = Array.isArray(p.linked_elements) ? p.linked_elements : [];
+        for (const el of elements) {
+          const elType = el.type || el.element_type;
+          if (elType === 'set' && el.name) {
+            const isFree = el.tag === 'Free' || el.isFree === true || el.is_free === true;
+            if (isFree) {
+              freeSets.add(cleanPathName(el.name).toLowerCase().trim());
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return freeSets;
+};
+
+/**
+ * Resolves direct individual abilities (Powers, Skills, Traits, Weapons, Armor, Shields)
+ * marked {Free} in the linked_elements of a character's known Paths.
+ * Returns a Set of lowercased, cleaned element names for fast O(1) lookup.
+ */
+export const getCharacterFreeElementNames = (
+  knownPaths: Set<string>,
+  pathsCatalog: SupabasePath[] = []
+): Set<string> => {
+  const freeElements = new Set<string>();
+  if (!knownPaths || knownPaths.size === 0 || !pathsCatalog) return freeElements;
+
+  for (const p of pathsCatalog) {
+    const cleanPath = cleanPathName(p.name).toLowerCase().trim();
+    if (knownPaths.has(cleanPath)) {
+      const elements = Array.isArray(p.linked_elements) ? p.linked_elements : [];
+      for (const el of elements) {
+        const elType = el.type || el.element_type;
+        if (elType !== 'set' && el.name) {
+          const isFree = el.tag === 'Free' || el.isFree === true || el.is_free === true;
+          if (isFree) {
+            freeElements.add(cleanPathName(el.name).toLowerCase().trim());
+          }
+        }
+      }
+    }
+  }
+
+  return freeElements;
 };
 
 /**
@@ -253,10 +360,72 @@ export const evaluateItemAp = (
   knownPaths: Set<string>,
   variantType?: 'Melee' | 'Hurled' | 'Shot',
   itemSets?: string[] | null,
-  knownSets?: Set<string>
+  knownSets?: Set<string>,
+  freeSets?: Set<string>,
+  freeElementNames?: Set<string>,
+  itemName?: string
 ): ApEvaluationResult => {
   const inPath = isItemInPath(rawPath, knownPaths, itemSets, knownSets);
   const meetsReq = isItemRequirementMet(requirementStr, attributeDice, variantType);
+
+  // Identify matched set name (if any)
+  let matchedSetName: string | undefined;
+  if (itemSets && Array.isArray(itemSets) && knownSets && knownSets.size > 0) {
+    for (const s of itemSets) {
+      if (s && knownSets.has(cleanPathName(s).toLowerCase().trim())) {
+        matchedSetName = cleanPathName(s);
+        break;
+      }
+    }
+  }
+
+  // 0 AP {Free} Check:
+  // 1. Direct name in freeElementNames
+  // 2. Any itemSets in freeSets
+  // 3. rawPath contains {Free} / {Perk} / {Trait} and matches knownPaths
+  let isFree = false;
+  if (itemName && freeElementNames && freeElementNames.has(cleanPathName(itemName).toLowerCase().trim())) {
+    isFree = true;
+  }
+  if (!isFree && itemSets && Array.isArray(itemSets) && freeSets && freeSets.size > 0) {
+    for (const s of itemSets) {
+      if (s && freeSets.has(cleanPathName(s).toLowerCase().trim())) {
+        isFree = true;
+        break;
+      }
+    }
+  }
+  if (!isFree && inPath && rawPath) {
+    const rawLower = rawPath.toLowerCase();
+    if (rawLower.includes('{free}') || rawLower.includes('{free1}') || rawLower.includes('{perk}') || rawLower.includes('{trait}')) {
+      const paths = parseItemPaths(rawPath);
+      for (const p of paths) {
+        const pLower = p.toLowerCase();
+        if (pLower.includes('{free}') || pLower.includes('{free1}') || pLower.includes('{perk}') || pLower.includes('{trait}')) {
+          for (const kp of knownPaths) {
+            if (isPathStringMatch(p, kp)) {
+              isFree = true;
+              break;
+            }
+          }
+        }
+        if (isFree) break;
+      }
+    }
+  }
+
+  if (isFree) {
+    return {
+      inPath: true,
+      meetsReq: true,
+      category: '1AP',
+      apCost: 0,
+      isFree: true,
+      requiresGmApproval: false,
+      statDownscaled: false,
+      matchedSetName,
+    };
+  }
 
   if (inPath && meetsReq) {
     return {
@@ -264,8 +433,10 @@ export const evaluateItemAp = (
       meetsReq: true,
       category: '1AP',
       apCost: 1,
+      isFree: false,
       requiresGmApproval: false,
       statDownscaled: false,
+      matchedSetName,
     };
   }
 
@@ -275,8 +446,10 @@ export const evaluateItemAp = (
       meetsReq: false,
       category: '2AP',
       apCost: 2,
+      isFree: false,
       requiresGmApproval: false,
       statDownscaled: false,
+      matchedSetName,
     };
   }
 
@@ -289,9 +462,11 @@ export const evaluateItemAp = (
       meetsReq: true,
       category: '3AP',
       apCost: 3,
+      isFree: false,
       requiresGmApproval: !isUniversal,
       statDownscaled: false,
       isUniversal,
+      matchedSetName,
     };
   }
 
@@ -301,9 +476,11 @@ export const evaluateItemAp = (
     meetsReq: false,
     category: '4AP',
     apCost: 4,
+    isFree: false,
     requiresGmApproval: !isUniversal,
     statDownscaled: false,
     isUniversal,
+    matchedSetName,
   };
 };
 

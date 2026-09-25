@@ -2,15 +2,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ManagePathsModal } from '../modals/ManagePathsModal';
-import { isMsoEntry } from '../../utils/kitUtils';
+import { isMsoEntry, cleanPathName } from '../../utils/kitUtils';
 import { CardHelpButton } from '../common/CardHelpButton';
+import { getCharacterKnownPaths, getCharacterKnownSets } from '../../utils/pathApUtils';
 
 interface PathsCardProps {
   className?: string;
 }
 
 export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
-  const { activeCharacter } = useCharacterStore();
+  const { activeCharacter, setsCatalog = [], paths: pathsCatalog = [] } = useCharacterStore();
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const [showPathsModal, setShowPathsModal] = useState(false);
 
@@ -33,6 +34,17 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
     return fromSheet.find((k) => (k || '').toLowerCase().includes('ship officer'));
   }, [activeCharacter?.sheet_data?.favorite_trait_kits]);
   const isShipOfficerMso = isGsUnlocked && shipOfficerPath ? isMsoEntry(shipOfficerPath) : false;
+
+  const extraLearnedPaths = useMemo(() => {
+    const fromSheet: string[] = activeCharacter?.sheet_data?.favorite_trait_kits || [];
+    return fromSheet.filter((k) => {
+      const lower = (k || '').toLowerCase().trim();
+      return lower !== 'base' && lower !== 'universal' && k !== race && k !== charClass && k !== shipOfficerPath;
+    });
+  }, [race, charClass, shipOfficerPath, activeCharacter?.sheet_data?.favorite_trait_kits]);
+
+  const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
+  const knownSets = useMemo(() => getCharacterKnownSets(knownPaths, setsCatalog, pathsCatalog), [knownPaths, setsCatalog, pathsCatalog]);
 
   if (!activeCharacter) return null;
 
@@ -103,6 +115,40 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
               >
                 <span>{isShipOfficerMso ? '🌌' : '🚀'}</span>
                 <span>{shipOfficerPath}</span>
+              </button>
+            )}
+
+            {/* Extra Learned Paths */}
+            {extraLearnedPaths.map((extra) => {
+              const isExtraMso = isGsUnlocked && isMsoEntry(extra);
+              return (
+                <button
+                  key={extra}
+                  type="button"
+                  onClick={() => setShowPathsModal(true)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 shadow-sm ${
+                    isExtraMso
+                      ? 'bg-purple-950/80 hover:bg-purple-900 border border-purple-500/60 text-purple-300 font-extrabold'
+                      : 'bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300'
+                  }`}
+                  title={`Learned Path: ${extra}`}
+                >
+                  <span>{isExtraMso ? '🌌' : '🧭'}</span>
+                  <span>{cleanPathName(extra)}</span>
+                </button>
+              );
+            })}
+
+            {/* Unlocked Sets Pill */}
+            {knownSets.size > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowPathsModal(true)}
+                className="px-2 py-0.5 rounded-full text-[11px] font-bold cursor-pointer transition-all flex items-center gap-1 shadow-sm bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500/40 text-indigo-300"
+                title={`${knownSets.size} Sets Unlocked: ${Array.from(knownSets).slice(0, 5).join(', ')}${knownSets.size > 5 ? '...' : ''}`}
+              >
+                <span>🗂️</span>
+                <span>{knownSets.size} Sets</span>
               </button>
             )}
           </div>

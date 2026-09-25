@@ -31,6 +31,7 @@ export interface SupabaseTrait {
   genres: string[];
   discipline?: string;
   path?: string;
+  sets?: string[];
   kit?: string;
   table_group?: string;
   is_hidden?: boolean;
@@ -219,6 +220,7 @@ export interface AbilitySlot {
   discipline?: string;
   stat_hook?: any;
   ap_cost?: number;
+  sets?: string[];
   source_gear?: string;
   source_mod?: string;
   ref_id?: number | string;
@@ -252,6 +254,7 @@ export interface WeaponSlot {
   notes?: string;
   ap_cost?: number;
   path?: string;
+  sets?: string[];
   requirement?: string;
   variantType?: 'Melee' | 'Hurled' | 'Shot';
   cost?: string;
@@ -276,6 +279,7 @@ export interface ArmorData {
   notes?: string;
   ap_cost?: number;
   path?: string;
+  sets?: string[];
   ref_id?: number | string;
   ref_table?: EntityCatalogTable;
   is_archived?: boolean;
@@ -619,6 +623,7 @@ export interface ShieldData {
   notes?: string;
   ap_cost?: number;
   path?: string;
+  sets?: string[];
   ref_id?: number | string;
   ref_table?: EntityCatalogTable;
   is_archived?: boolean;
@@ -744,6 +749,8 @@ export interface CharacterSheetData {
   simple_gear?: SimpleGearItem[];
   known_skillsets: string[];
   known_individual_skills?: string[]; // Individually learned skills outside a skillset
+  free_individual_skills?: string[]; // Individually learned skills granted for free (0 AP)
+  free_skillsets?: string[]; // Skillsets granted for free (0 AP)
   custom_skillsets?: CustomSkillsetDefinition[]; // Custom user-created skillsets
   traits_quirks?: TraitQuirkItem[]; // Passive traits, racial adaptations, unique quirks & flaws
   hardware_bundles?: HardwareBundleItem[]; // Equipped hardware suites, toolkits, armor suites, cyber rigs
@@ -882,7 +889,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
 
   const wardrobe = Array.isArray(sheetData.wardrobe) ? sheetData.wardrobe : [];
   const skilledArmor = wardrobe.filter((a: any) => a && a.sk);
-  const armorNet = skilledArmor.reduce((sum: number, a: any) => sum + (typeof a.ap_cost === 'number' && a.ap_cost > 0 ? a.ap_cost : 1), 0);
+  const armorNet = skilledArmor.reduce((sum: number, a: any) => sum + (typeof a.ap_cost === 'number' ? a.ap_cost : 1), 0);
 
   const sumLogCategory = (cat: string) =>
     apLog.reduce((sum, e) => (e && e.category === cat ? sum + (e.cost || 0) : sum), 0);
@@ -916,7 +923,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
   let powersNet = 0;
   for (let i = 0; i < allKnownPowers.length; i++) {
     const p = allKnownPowers[i];
-    if (typeof p.ap_cost === 'number' && p.ap_cost > 0) {
+    if (typeof p.ap_cost === 'number') {
       powersNet += p.ap_cost;
     } else {
       const slotNum = i + 1;
@@ -936,7 +943,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
 
   // 1 AP per learned Gear Power in spell_slots (plus version upgrades)
   const spellSlots = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
-  let gearPowersNet = spellSlots.reduce((sum: number, s: any) => sum + (typeof s?.ap_cost === 'number' && s.ap_cost > 0 ? s.ap_cost : 1), 0);
+  let gearPowersNet = spellSlots.reduce((sum: number, s: any) => sum + (typeof s?.ap_cost === 'number' ? s.ap_cost : 1), 0);
   for (const s of spellSlots) {
     if (!s || !s.name) continue;
     const { version } = parseAbilityVersion(s.base_name || s.name);
@@ -948,22 +955,28 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
 
   const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
   const skilledShields = armory.filter((s: any) => s && s.sk);
-  const shieldsNet = skilledShields.reduce((sum: number, s: any) => sum + (typeof s.ap_cost === 'number' && s.ap_cost > 0 ? s.ap_cost : 1), 0);
+  const shieldsNet = skilledShields.reduce((sum: number, s: any) => sum + (typeof s.ap_cost === 'number' ? s.ap_cost : 1), 0);
 
   const knownSkillsets = Array.isArray(sheetData.known_skillsets) ? sheetData.known_skillsets : [];
+  const freeSkillsetsSet = new Set((sheetData.free_skillsets || []).map((s: string) => (s || '').toLowerCase().trim()));
+  const paidSkillsets = knownSkillsets.filter((s: string) => !freeSkillsetsSet.has((s || '').toLowerCase().trim()));
+  const skillsetCost = paidSkillsets.length * 2;
+
   const knownIndivSkills = Array.isArray(sheetData.known_individual_skills) ? sheetData.known_individual_skills : [];
-  const skillsetCost = knownSkillsets.length * 2;
-  const indivCost = knownIndivSkills.length * 1;
+  const freeIndivSet = new Set((sheetData.free_individual_skills || []).map((s: string) => (s || '').toLowerCase().trim()));
+  const paidIndivSkills = knownIndivSkills.filter((s: string) => !freeIndivSet.has((s || '').toLowerCase().trim()));
+  const indivCost = paidIndivSkills.length * 1;
+
   const skillsNet = skillsetCost + indivCost;
 
   const vitalityNet = Math.max(0, sumLogCategory('Vitality'));
 
   const weapons = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
   const skilledWeapons = weapons.filter((w: any) => w && w.sk);
-  const weaponsNet = skilledWeapons.reduce((sum: number, w: any) => sum + (typeof w.ap_cost === 'number' && w.ap_cost > 0 ? w.ap_cost : 1), 0);
+  const weaponsNet = skilledWeapons.reduce((sum: number, w: any) => sum + (typeof w.ap_cost === 'number' ? w.ap_cost : 1), 0);
 
   const traits = Array.isArray(sheetData.traits_quirks) ? sheetData.traits_quirks : [];
-  const traitsNet = traits.reduce((sum: number, t: any) => sum + (typeof t.ap_cost === 'number' && t.ap_cost > 0 ? t.ap_cost : 0), 0);
+  const traitsNet = traits.reduce((sum: number, t: any) => sum + (typeof t.ap_cost === 'number' ? t.ap_cost : 0), 0);
 
   const categories = {
     Armor: armorNet,
@@ -1259,6 +1272,7 @@ export interface Skillset {
   kit?: string;
   table_group?: string;
   notes?: string;
+  sets?: string[];
   created_at: string;
 }
 

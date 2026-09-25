@@ -3,9 +3,9 @@
 // Implements the Path Mastery Auto-Credit Mandate, SkillSet Bundle Deduplication Mandate,
 // Requirement Surcharge Auto-Refund Engine, and {Free} 0-AP Path Grant Reconciler.
 
-import { Character, CharacterSheetData, AbilitySlot, WeaponSlot, ArmorData, ShieldData, TraitQuirkItem, AttributeKey, DieRating, SupabaseTrait } from '../types/game';
+import { Character, CharacterSheetData, AbilitySlot, WeaponSlot, ArmorData, ShieldData, TraitQuirkItem, AttributeKey, DieRating, SupabaseTrait, SupabaseSet, SupabasePath } from '../types/game';
 import { cleanPathName, parseKit } from './kitUtils';
-import { getCharacterKnownPaths, evaluateItemAp, isItemInPath, parseItemPaths, getCharacterMatchingPath, isPathStringMatch, normalizePathForComparison } from './pathApUtils';
+import { getCharacterKnownPaths, getCharacterKnownSets, getCharacterFreeSets, getCharacterFreeElementNames, evaluateItemAp, parseItemPaths, getCharacterMatchingPath, isPathStringMatch, normalizePathForComparison } from './pathApUtils';
 
 export interface PathReconciliationResult {
   updatedSheetData: CharacterSheetData;
@@ -82,7 +82,9 @@ export const reconcileAbilitiesOnPathAdded = (
   sheetData: CharacterSheetData,
   newPathName: string,
   character?: Character | null,
-  freeGrantNames?: Set<string>
+  freeGrantNames?: Set<string>,
+  setsCatalog: SupabaseSet[] = [],
+  pathsCatalog: SupabasePath[] = []
 ): PathReconciliationResult => {
   if (!sheetData) {
     return { updatedSheetData: sheetData, totalRefund: 0, refundLogDetails: [] };
@@ -93,6 +95,10 @@ export const reconcileAbilitiesOnPathAdded = (
   if (cleanNewPath) {
     knownPaths.add(cleanNewPath);
   }
+
+  const knownSets = getCharacterKnownSets(knownPaths, setsCatalog, pathsCatalog);
+  const freeSets = getCharacterFreeSets(knownPaths, setsCatalog, pathsCatalog);
+  const freeElementNames = getCharacterFreeElementNames(knownPaths, pathsCatalog);
 
   const rawAttributeDice = sheetData.attribute_dice || {
     might: 'd4',
@@ -113,9 +119,19 @@ export const reconcileAbilitiesOnPathAdded = (
   let totalRefund = 0;
   const refundLogDetails: string[] = [];
 
-  const isFreeGrant = (rawKitOrPath?: string | null, rawSource?: string | null, name?: string): boolean => {
+  const isFreeGrant = (rawKitOrPath?: string | null, rawSource?: string | null, name?: string, itemSets?: string[] | null): boolean => {
     if (freeGrantNames && name && freeGrantNames.has(name.toLowerCase().trim())) {
       return true;
+    }
+    if (name && freeElementNames.has(cleanPathName(name).toLowerCase().trim())) {
+      return true;
+    }
+    if (itemSets && Array.isArray(itemSets) && freeSets.size > 0) {
+      for (const s of itemSets) {
+        if (s && freeSets.has(cleanPathName(s).toLowerCase().trim())) {
+          return true;
+        }
+      }
     }
     const target = rawKitOrPath || '';
     if (!target && !rawSource) return false;
@@ -135,7 +151,20 @@ export const reconcileAbilitiesOnPathAdded = (
     ? sheetData.power_slots.map((p) => {
         if (!p || typeof p.ap_cost !== 'number' || p.ap_cost <= 0) return p;
 
-        if (isFreeGrant(p.path || (p as any).kit, (p as any).source, p.name)) {
+        const evalResult = evaluateItemAp(
+          p.path || (p as any).kit,
+          (p as any).requirement,
+          attributeDice,
+          knownPaths,
+          undefined,
+          (p as any).sets,
+          knownSets,
+          freeSets,
+          freeElementNames,
+          p.name
+        );
+
+        if (evalResult.isFree || isFreeGrant(p.path || (p as any).kit, (p as any).source, p.name, (p as any).sets)) {
           const diff = p.ap_cost;
           totalRefund += diff;
           refundLogDetails.push(`${p.name} (-${diff} AP Free Grant)`);
@@ -148,16 +177,10 @@ export const reconcileAbilitiesOnPathAdded = (
         }
 
         if (p.ap_cost <= 1) return p;
-        const evalResult = evaluateItemAp(
-          p.path || (p as any).kit,
-          (p as any).requirement,
-          attributeDice,
-          knownPaths
-        );
         if (evalResult.inPath && evalResult.apCost < p.ap_cost) {
           const diff = p.ap_cost - evalResult.apCost;
           totalRefund += diff;
-          refundLogDetails.push(`${p.name} (-${diff} AP)`);
+          refundLogDetails.push(`${p.name} (-${diff} AP In-Path Discount)`);
           return { ...p, ap_cost: evalResult.apCost };
         }
         return p;
@@ -169,7 +192,20 @@ export const reconcileAbilitiesOnPathAdded = (
     ? sheetData.character_power_codex.map((p) => {
         if (!p || typeof p.ap_cost !== 'number' || p.ap_cost <= 0) return p;
 
-        if (isFreeGrant(p.path || (p as any).kit, (p as any).source, p.name)) {
+        const evalResult = evaluateItemAp(
+          p.path || (p as any).kit,
+          (p as any).requirement,
+          attributeDice,
+          knownPaths,
+          undefined,
+          (p as any).sets,
+          knownSets,
+          freeSets,
+          freeElementNames,
+          p.name
+        );
+
+        if (evalResult.isFree || isFreeGrant(p.path || (p as any).kit, (p as any).source, p.name, (p as any).sets)) {
           const diff = p.ap_cost;
           totalRefund += diff;
           refundLogDetails.push(`${p.name} (-${diff} AP Free Grant)`);
@@ -182,16 +218,10 @@ export const reconcileAbilitiesOnPathAdded = (
         }
 
         if (p.ap_cost <= 1) return p;
-        const evalResult = evaluateItemAp(
-          p.path || (p as any).kit,
-          (p as any).requirement,
-          attributeDice,
-          knownPaths
-        );
         if (evalResult.inPath && evalResult.apCost < p.ap_cost) {
           const diff = p.ap_cost - evalResult.apCost;
           totalRefund += diff;
-          refundLogDetails.push(`${p.name} (-${diff} AP)`);
+          refundLogDetails.push(`${p.name} (-${diff} AP In-Path Discount)`);
           return { ...p, ap_cost: evalResult.apCost };
         }
         return p;
@@ -203,7 +233,20 @@ export const reconcileAbilitiesOnPathAdded = (
     ? sheetData.weapons.map((w) => {
         if (!w || !w.sk || typeof w.ap_cost !== 'number' || w.ap_cost <= 0) return w;
 
-        if (isFreeGrant(w.path, undefined, w.name)) {
+        const evalResult = evaluateItemAp(
+          w.path,
+          w.requirement,
+          attributeDice,
+          knownPaths,
+          w.variantType,
+          (w as any).sets,
+          knownSets,
+          freeSets,
+          freeElementNames,
+          w.name
+        );
+
+        if (evalResult.isFree || isFreeGrant(w.path, undefined, w.name, (w as any).sets)) {
           const diff = w.ap_cost;
           totalRefund += diff;
           refundLogDetails.push(`${w.name} (-${diff} AP Free Grant)`);
@@ -211,17 +254,10 @@ export const reconcileAbilitiesOnPathAdded = (
         }
 
         if (w.ap_cost <= 1) return w;
-        const evalResult = evaluateItemAp(
-          w.path,
-          w.requirement,
-          attributeDice,
-          knownPaths,
-          w.variantType
-        );
         if (evalResult.inPath && evalResult.apCost < w.ap_cost) {
           const diff = w.ap_cost - evalResult.apCost;
           totalRefund += diff;
-          refundLogDetails.push(`${w.name} (-${diff} AP)`);
+          refundLogDetails.push(`${w.name} (-${diff} AP In-Path Discount)`);
           return { ...w, ap_cost: evalResult.apCost };
         }
         return w;
@@ -234,7 +270,20 @@ export const reconcileAbilitiesOnPathAdded = (
     ? sheetData.wardrobe.map((a) => {
         if (!a || !a.sk || typeof a.ap_cost !== 'number' || a.ap_cost <= 0) return a;
 
-        if (isFreeGrant(a.path, undefined, a.name)) {
+        const evalResult = evaluateItemAp(
+          a.path,
+          a.requirement,
+          attributeDice,
+          knownPaths,
+          undefined,
+          (a as any).sets,
+          knownSets,
+          freeSets,
+          freeElementNames,
+          a.name
+        );
+
+        if (evalResult.isFree || isFreeGrant(a.path, undefined, a.name, (a as any).sets)) {
           const diff = a.ap_cost;
           totalRefund += diff;
           refundLogDetails.push(`${a.name} (-${diff} AP Free Grant)`);
@@ -246,11 +295,10 @@ export const reconcileAbilitiesOnPathAdded = (
         }
 
         if (a.ap_cost <= 1) return a;
-        const evalResult = evaluateItemAp(a.path, a.requirement, attributeDice, knownPaths);
         if (evalResult.inPath && evalResult.apCost < a.ap_cost) {
           const diff = a.ap_cost - evalResult.apCost;
           totalRefund += diff;
-          refundLogDetails.push(`${a.name} (-${diff} AP)`);
+          refundLogDetails.push(`${a.name} (-${diff} AP In-Path Discount)`);
           const updatedArmor = { ...a, ap_cost: evalResult.apCost };
           if (nextArmorSlot && nextArmorSlot.name.toLowerCase() === a.name.toLowerCase()) {
             nextArmorSlot = { ...nextArmorSlot, ap_cost: evalResult.apCost };
@@ -267,7 +315,20 @@ export const reconcileAbilitiesOnPathAdded = (
     ? sheetData.armory.map((s) => {
         if (!s || !s.sk || typeof s.ap_cost !== 'number' || s.ap_cost <= 0) return s;
 
-        if (isFreeGrant(s.path, undefined, s.name)) {
+        const evalResult = evaluateItemAp(
+          s.path,
+          s.requirement,
+          attributeDice,
+          knownPaths,
+          undefined,
+          (s as any).sets,
+          knownSets,
+          freeSets,
+          freeElementNames,
+          s.name
+        );
+
+        if (evalResult.isFree || isFreeGrant(s.path, undefined, s.name, (s as any).sets)) {
           const diff = s.ap_cost;
           totalRefund += diff;
           refundLogDetails.push(`${s.name} (-${diff} AP Free Grant)`);
@@ -279,11 +340,10 @@ export const reconcileAbilitiesOnPathAdded = (
         }
 
         if (s.ap_cost <= 1) return s;
-        const evalResult = evaluateItemAp(s.path, s.requirement, attributeDice, knownPaths);
         if (evalResult.inPath && evalResult.apCost < s.ap_cost) {
           const diff = s.ap_cost - evalResult.apCost;
           totalRefund += diff;
-          refundLogDetails.push(`${s.name} (-${diff} AP)`);
+          refundLogDetails.push(`${s.name} (-${diff} AP In-Path Discount)`);
           const updatedShield = { ...s, ap_cost: evalResult.apCost };
           if (nextShieldSlot && nextShieldSlot.name.toLowerCase() === s.name.toLowerCase()) {
             nextShieldSlot = { ...nextShieldSlot, ap_cost: evalResult.apCost };
@@ -299,7 +359,20 @@ export const reconcileAbilitiesOnPathAdded = (
     ? sheetData.traits_quirks.map((t) => {
         if (!t || typeof t.ap_cost !== 'number' || t.ap_cost <= 0) return t;
 
-        if (isFreeGrant(t.path || (t as any).kit, (t as any).source, t.name)) {
+        const evalResult = evaluateItemAp(
+          t.path || (t as any).kit || (t as any).table_group,
+          undefined,
+          attributeDice,
+          knownPaths,
+          undefined,
+          (t as any).sets,
+          knownSets,
+          freeSets,
+          freeElementNames,
+          t.name
+        );
+
+        if (evalResult.isFree || isFreeGrant(t.path || (t as any).kit, (t as any).source, t.name, (t as any).sets)) {
           const diff = t.ap_cost;
           totalRefund += diff;
           refundLogDetails.push(`${t.name} (-${diff} AP Free Grant)`);
@@ -312,12 +385,11 @@ export const reconcileAbilitiesOnPathAdded = (
         }
 
         if (t.ap_cost <= 1) return t;
-        const inPath = isItemInPath(t.path || (t as any).kit, knownPaths);
-        if (inPath) {
-          const diff = t.ap_cost - 1;
+        if (evalResult.inPath && evalResult.apCost < t.ap_cost) {
+          const diff = t.ap_cost - evalResult.apCost;
           totalRefund += diff;
-          refundLogDetails.push(`${t.name} (-${diff} AP)`);
-          return { ...t, ap_cost: 1 };
+          refundLogDetails.push(`${t.name} (-${diff} AP In-Path Discount)`);
+          return { ...t, ap_cost: evalResult.apCost };
         }
         return t;
       })

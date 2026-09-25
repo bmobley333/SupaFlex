@@ -15,6 +15,9 @@ import {
 } from '../../types/game';
 import {
   getCharacterKnownPaths,
+  getCharacterKnownSets,
+  getCharacterFreeSets,
+  getCharacterFreeElementNames,
   evaluateItemAp,
   matchesApCategoryFilter,
   ApCostCategory,
@@ -24,7 +27,7 @@ import {
 export const ShieldCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, shieldsCatalog: storeShields } = useCharacterStore();
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, shieldsCatalog: storeShields, paths, setsCatalog } = useCharacterStore();
 
   const shield: ShieldData = activeCharacter?.sheet_data?.shield_slot || {
     id: 'shd_default',
@@ -62,12 +65,26 @@ export const ShieldCard: React.FC = () => {
   const derivedBlock = getDieNum(attributeDice.might);
 
   const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
+  const knownSets = useMemo(() => getCharacterKnownSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
+  const freeSets = useMemo(() => getCharacterFreeSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
+  const freeElementNames = useMemo(() => getCharacterFreeElementNames(knownPaths, paths), [knownPaths, paths]);
 
   const getShieldEvalResult = useCallback(
     (item: SupabaseShield): ApEvaluationResult => {
-      return evaluateItemAp(item.path, item.requirement, attributeDice, knownPaths, undefined);
+      return evaluateItemAp(
+        item.path,
+        item.requirement,
+        attributeDice,
+        knownPaths,
+        undefined,
+        item.sets,
+        knownSets,
+        freeSets,
+        freeElementNames,
+        item.name
+      );
     },
-    [knownPaths, attributeDice]
+    [knownPaths, knownSets, freeSets, freeElementNames, attributeDice]
   );
 
   const isShieldSkilled = (item: ShieldData): boolean => {
@@ -176,6 +193,8 @@ export const ShieldCard: React.FC = () => {
       mr_adjustment: item.mr,
       cost: item.cost,
       notes: item.notes,
+      path: item.path,
+      sets: item.sets || [],
       ap_cost: evalResult.apCost,
       effect: `${evalResult.apCost} AP`,
     };
@@ -185,7 +204,7 @@ export const ShieldCard: React.FC = () => {
       const isAlreadyInArmory = existingArmory.some(
         (s) => s.name.toLowerCase() === item.name.toLowerCase()
       );
-      if (!isAlreadyInArmory && isSkilled) {
+      if (!isAlreadyInArmory && isSkilled && evalResult.apCost > 0) {
         recordApExpenditure(
           evalResult.apCost,
           'Shields',
@@ -218,7 +237,7 @@ export const ShieldCard: React.FC = () => {
     const isCurrentlySkilled = isShieldSkilled(item);
     if (isCurrentlySkilled === wantSkilled) return;
 
-    const apCost = item.ap_cost || 1;
+    const apCost = typeof item.ap_cost === 'number' ? item.ap_cost : 1;
 
     if (wantSkilled) {
       if (availableAp < apCost) {
@@ -246,13 +265,15 @@ export const ShieldCard: React.FC = () => {
           movement_rate: calculateMovementRate(updatedSheet),
         };
       });
-      recordApExpenditure(
-        apCost,
-        'Shields',
-        `Learned Shield Proficiency: ${item.name} (${apCost} AP)`,
-        1,
-        'Manage Shields'
-      );
+      if (apCost > 0) {
+        recordApExpenditure(
+          apCost,
+          'Shields',
+          `Learned Shield Proficiency: ${item.name} (${apCost} AP)`,
+          1,
+          'Manage Shields'
+        );
+      }
       saveActiveCharacter();
     } else {
       updateActiveSheetData((prev) => {
@@ -273,13 +294,15 @@ export const ShieldCard: React.FC = () => {
           movement_rate: calculateMovementRate(updatedSheet),
         };
       });
-      recordApExpenditure(
-        -apCost,
-        'Shields',
-        `Marked Shield as Unskilled: ${item.name} (-${apCost} AP Refunded)`,
-        1,
-        'Manage Shields'
-      );
+      if (apCost > 0) {
+        recordApExpenditure(
+          -apCost,
+          'Shields',
+          `Marked Shield as Unskilled: ${item.name} (-${apCost} AP Refunded)`,
+          1,
+          'Manage Shields'
+        );
+      }
       saveActiveCharacter();
     }
   };
@@ -287,7 +310,7 @@ export const ShieldCard: React.FC = () => {
   const handleDropFromArmory = (shieldName: string) => {
     const targetShield = armory.find((s) => s.name.toLowerCase() === shieldName.toLowerCase());
     const wasSkilled = targetShield ? isShieldSkilled(targetShield) : false;
-    const apRefund = targetShield?.ap_cost || 1;
+    const apRefund = typeof targetShield?.ap_cost === 'number' ? targetShield.ap_cost : 1;
 
     updateActiveSheetData((prev) => {
       const updatedArmory = (prev.armory || armory).filter((s) => s.name.toLowerCase() !== shieldName.toLowerCase());
@@ -298,7 +321,7 @@ export const ShieldCard: React.FC = () => {
           : { id: 'shd_none', equipped: false, name: 'None', sk: true, max_block: 0 };
       }
 
-      if (wasSkilled) {
+      if (wasSkilled && apRefund > 0) {
         recordApExpenditure(-apRefund, 'Shields', `Unlearned Shield: ${shieldName} (-${apRefund} AP Refunded)`, 1, 'Manage Shields');
       }
 
@@ -883,13 +906,20 @@ export const ShieldCard: React.FC = () => {
                                     <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
                                     <ItemNotesPopover notes={item.notes} itemName={item.name} inline />
                                   </span>
+                                  {evalResult.matchedSetName && (
+                                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-950/60 text-amber-300 border border-amber-500/40">
+                                      🗂️ {evalResult.matchedSetName}
+                                    </span>
+                                  )}
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
                                   <button
                                     onClick={() => handleAddToArmory(item)}
                                     className={`px-3 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
-                                      evalResult.apCost === 1
+                                      evalResult.isFree || evalResult.apCost === 0
+                                        ? 'bg-emerald-600/40 text-emerald-100 border-emerald-400 hover:bg-emerald-600/60 shadow-sm'
+                                        : evalResult.apCost === 1
                                         ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50 hover:bg-emerald-600/50 shadow-sm'
                                         : evalResult.apCost === 2
                                         ? 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50 shadow-sm'
@@ -899,7 +929,7 @@ export const ShieldCard: React.FC = () => {
                                     }`}
                                     title={`Learn ${item.name} for ${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' (Requires GM Approval)' : ''}`}
                                   >
-                                    + Learn ({evalResult.apCost} AP)
+                                    + Learn ({evalResult.isFree || evalResult.apCost === 0 ? '0 AP' : `${evalResult.apCost} AP`})
                                   </button>
                                 </div>
                               </div>

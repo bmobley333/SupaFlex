@@ -10,7 +10,8 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { calculateAvailableAp } from '../../types/game';
 import { cleanPathName, isMsoEntry, compareMsoOptions } from '../../utils/kitUtils';
-import { collectPathTraitGrants, applyPathTraitGrantsToSheet } from '../../utils/bundleGrants';
+import { collectPathAndSetGrants, applyPathAndSetGrantsToSheet } from '../../utils/bundleGrants';
+import { reconcileAbilitiesOnPathAdded } from '../../utils/pathReconciliationUtils';
 import { isGuildSpaceUnlocked } from '../../utils/guildspaceAuth';
 
 interface ManagePathsModalProps {
@@ -24,6 +25,10 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     powers: stockPowersCatalog = [],
     skills: stockSkillsCatalog = [],
     traits: stockRulesCatalog = [],
+    weaponsCatalog = [],
+    armorCatalog = [],
+    shieldsCatalog = [],
+    setsCatalog = [],
     kits: stockPathsCatalog = [],
     paths: pathsCatalog = [],
     activeRole,
@@ -164,24 +169,74 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
       .sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
   }, [allDiscoveredPaths, learnedPaths, selectedPathCategory, resolvedPathsCatalog, stockPathsCatalog, isGsUnlocked]);
 
+  // Helper to harvest grants and reconcile abilities across all catalogs
+  const executePathGrantsAndReconciliation = (
+    currentSheet: any,
+    targetPathName: string,
+    existingKits: string[]
+  ) => {
+    const grants = collectPathAndSetGrants(
+      targetPathName,
+      currentSheet?.level || 1,
+      stockPowersCatalog,
+      stockSkillsCatalog,
+      stockRulesCatalog,
+      weaponsCatalog,
+      armorCatalog,
+      shieldsCatalog,
+      setsCatalog,
+      resolvedPathsCatalog
+    );
+
+    const freeGrantNames = new Set<string>();
+    grants.powers.forEach((p) => freeGrantNames.add(p.name.toLowerCase().trim()));
+    grants.skills.forEach((s) => freeGrantNames.add(s.name.toLowerCase().trim()));
+    grants.traits.forEach((t) => freeGrantNames.add(t.name.toLowerCase().trim()));
+    grants.weapons.forEach((w) => freeGrantNames.add(w.name.toLowerCase().trim()));
+    grants.armor.forEach((a) => freeGrantNames.add(a.name.toLowerCase().trim()));
+    grants.shields.forEach((s) => freeGrantNames.add(s.name.toLowerCase().trim()));
+
+    const intermediateSheet = {
+      ...currentSheet,
+      favorite_trait_kits: existingKits,
+    };
+
+    const grantedSheet = applyPathAndSetGrantsToSheet(intermediateSheet, grants);
+
+    const reconciliation = reconcileAbilitiesOnPathAdded(
+      grantedSheet,
+      targetPathName,
+      activeCharacter,
+      freeGrantNames,
+      setsCatalog,
+      resolvedPathsCatalog
+    );
+
+    if (reconciliation.totalRefund > 0) {
+      recordApExpenditure(
+        -reconciliation.totalRefund,
+        'Powers',
+        `Retroactive Path & Set AP Refund: ${targetPathName} (Refunded ${reconciliation.totalRefund} AP: ${reconciliation.refundLogDetails.slice(0, 3).join(', ')}${reconciliation.refundLogDetails.length > 3 ? '...' : ''})`,
+        1,
+        'Paths Hub'
+      );
+    }
+
+    return reconciliation.updatedSheetData;
+  };
+
   // Handle changing Race Path (GM only)
   const handleSelectRacePath = (newRace: string) => {
     if (!newRace || newRace === activeRace) return;
     updateActiveCharacterMeta({ race: newRace });
-    const grants = collectPathTraitGrants(
-      newRace,
-      activeCharacter?.sheet_data?.level || 1,
-      stockPowersCatalog,
-      stockSkillsCatalog,
-      stockRulesCatalog
-    );
 
     updateActiveSheetData((prev) => {
-      return applyPathTraitGrantsToSheet(prev, grants);
+      const currentList = Array.isArray(prev.favorite_trait_kits) ? prev.favorite_trait_kits : [];
+      return executePathGrantsAndReconciliation(prev, newRace, currentList);
     });
 
     saveActiveCharacter();
-    setFeedbackMsg(`✓ Race Path updated to ${newRace}. Starting traits bundled!`);
+    setFeedbackMsg(`✓ Race Path updated to ${newRace}. Starting traits and sets bundled!`);
     setTimeout(() => setFeedbackMsg(null), 3000);
   };
 
@@ -189,20 +244,14 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
   const handleSelectClassPath = (newClass: string) => {
     if (!newClass || newClass === activeClass) return;
     updateActiveCharacterMeta({ class: newClass });
-    const grants = collectPathTraitGrants(
-      newClass,
-      activeCharacter?.sheet_data?.level || 1,
-      stockPowersCatalog,
-      stockSkillsCatalog,
-      stockRulesCatalog
-    );
 
     updateActiveSheetData((prev) => {
-      return applyPathTraitGrantsToSheet(prev, grants);
+      const currentList = Array.isArray(prev.favorite_trait_kits) ? prev.favorite_trait_kits : [];
+      return executePathGrantsAndReconciliation(prev, newClass, currentList);
     });
 
     saveActiveCharacter();
-    setFeedbackMsg(`✓ Class Path updated to ${newClass}. In-path elements unlocked!`);
+    setFeedbackMsg(`✓ Class Path updated to ${newClass}. In-path sets and proficiencies unlocked!`);
     setTimeout(() => setFeedbackMsg(null), 3000);
   };
 
@@ -227,22 +276,10 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
       recordApExpenditure(0, 'GM Bonus', `Learned Free Path: ${clean}`, 'Creation', 'Paths Hub');
     }
 
-    const grants = collectPathTraitGrants(
-      clean,
-      activeCharacter?.sheet_data?.level || 1,
-      stockPowersCatalog,
-      stockSkillsCatalog,
-      stockRulesCatalog
-    );
-
     updateActiveSheetData((prev) => {
       const currentList = Array.isArray(prev.favorite_trait_kits) ? prev.favorite_trait_kits : [];
       const updatedKits = Array.from(new Set([...currentList, clean]));
-      const intermediateSheet = {
-        ...prev,
-        favorite_trait_kits: updatedKits,
-      };
-      return applyPathTraitGrantsToSheet(intermediateSheet, grants);
+      return executePathGrantsAndReconciliation(prev, clean, updatedKits);
     });
 
     saveActiveCharacter();
@@ -626,6 +663,66 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                         <p className="text-[11px] text-slate-400 italic">
                           Unlocks in-path abilities, trait bundles, and mastery progressions for this path.
                         </p>
+                      );
+                    })()}
+
+                    {/* Included Sets Stream */}
+                    {(() => {
+                      const cleanSelected = cleanPathName(selectedExtraPathToBuy).toLowerCase().trim();
+                      const pathObj = resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy);
+                      const linkedSets: { name: string; isFree: boolean }[] = [];
+
+                      // From setsCatalog
+                      setsCatalog.forEach((s) => {
+                        if (s.paths && Array.isArray(s.paths)) {
+                          for (const p of s.paths) {
+                            if (cleanPathName(p).toLowerCase().trim() === cleanSelected) {
+                              const isFree = p.toLowerCase().includes('{free}') || p.toLowerCase().includes('{free1}') || p.toLowerCase().includes('{trait}');
+                              linkedSets.push({ name: s.name, isFree });
+                              break;
+                            }
+                          }
+                        }
+                      });
+
+                      // From path.linked_elements
+                      const linkedElList = pathObj && Array.isArray((pathObj as any).linked_elements) ? (pathObj as any).linked_elements : [];
+                      if (linkedElList.length > 0) {
+                        linkedElList.forEach((el: any) => {
+                          const elType = el.type || el.element_type;
+                          if (elType === 'set' && el.name) {
+                            const isFree = el.tag === 'Free' || el.isFree === true || el.is_free === true;
+                            if (!linkedSets.some((ls) => ls.name.toLowerCase() === el.name.toLowerCase())) {
+                              linkedSets.push({ name: el.name, isFree });
+                            }
+                          }
+                        });
+                      }
+
+                      if (linkedSets.length === 0) return null;
+
+                      return (
+                        <div className="pt-2 border-t border-purple-500/20 flex flex-col gap-1">
+                          <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1">
+                            <span>🗂️</span> Included Sets ({linkedSets.length})
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {linkedSets.map((ls) => (
+                              <span
+                                key={ls.name}
+                                className={`px-2 py-0.5 rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm border ${
+                                  ls.isFree
+                                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+                                    : 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
+                                }`}
+                              >
+                                <span>🗂️</span>
+                                <span>{ls.name}</span>
+                                <span className="text-[9px] opacity-80">{ls.isFree ? '{Free}' : '(1 AP)'}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       );
                     })()}
                   </div>

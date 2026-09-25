@@ -19,7 +19,16 @@ import {
   calculateAvailableAp,
 } from '../../types/game';
 import { cleanKitName, cleanPathName, isMsoEntry, compareMsoItems, compareMsoOptions } from '../../utils/kitUtils';
-import { getCharacterKnownPaths, isItemInPath, parseItemPaths, getCharacterMatchingPath, isPathStringMatch } from '../../utils/pathApUtils';
+import {
+  getCharacterKnownPaths,
+  getCharacterKnownSets,
+  getCharacterFreeSets,
+  getCharacterFreeElementNames,
+  isItemInPath,
+  parseItemPaths,
+  getCharacterMatchingPath,
+  isPathStringMatch,
+} from '../../utils/pathApUtils';
 import { reconcileCharacterFreeTraits } from '../../utils/pathReconciliationUtils';
 
 interface ManageTraitsModalProps {
@@ -68,6 +77,8 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     activeCharacter,
     activeRole,
     traits: stockRulesCatalog = [],
+    paths,
+    setsCatalog,
     addTraitQuirk,
     removeTraitQuirk,
     toggleTraitVisibility,
@@ -132,30 +143,42 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   }, [activeCharacter?.sheet_data?.traits_quirks]);
 
   const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
+  const knownSets = useMemo(() => getCharacterKnownSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
+  const freeSets = useMemo(() => getCharacterFreeSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
+  const freeElementNames = useMemo(() => getCharacterFreeElementNames(knownPaths, paths), [knownPaths, paths]);
 
   const isTraitInPath = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
     const pathVal = rule.path || rule.kit || rule.table_group;
-    if (!pathVal || pathVal.trim() === '' || pathVal.toLowerCase() === 'none') {
-      return false;
-    }
-    return isItemInPath(pathVal, knownPaths);
-  }, [knownPaths]);
+    return isItemInPath(pathVal, knownPaths, rule.sets, knownSets);
+  }, [knownPaths, knownSets]);
 
   const isTraitUniversal = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
     const pathVal = rule.path || rule.kit || rule.table_group || '';
-    const paths = parseItemPaths(pathVal);
-    return paths.some((p) => p.toLowerCase() === 'universal');
+    const pathsList = parseItemPaths(pathVal);
+    return pathsList.some((p) => p.toLowerCase() === 'universal');
   }, []);
 
   const isTraitInherent = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
     const cost = (rule as any).ap_cost;
     if (typeof cost === 'number' && cost > 0) return false;
+    if (typeof cost === 'number' && cost === 0) return true;
+
+    // Check direct free elements
+    const cleanName = rule.name.toLowerCase().trim();
+    if (freeElementNames.has(cleanName)) return true;
+
+    // Check free sets
+    if (rule.sets && Array.isArray(rule.sets)) {
+      for (const s of rule.sets) {
+        if (s && freeSets.has(s.toLowerCase().trim())) return true;
+      }
+    }
+
     // Trait MUST be in character's known paths to be inherent
     if (!isTraitInPath(rule)) return false;
-    if (typeof cost === 'number' && cost === 0) return true;
     const pathStr = (rule.path || rule.kit || rule.table_group || (rule as any).source || '').toLowerCase();
     return pathStr.includes('{free}') || pathStr.includes('{perk}') || pathStr.includes('{trait}');
-  }, [isTraitInPath]);
+  }, [isTraitInPath, freeElementNames, freeSets]);
 
   const getTraitApCost = useCallback((rule: SupabaseTrait | TraitItem): number => {
     if (isTraitInherent(rule)) return 0;
@@ -323,6 +346,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
       table_group: ruleKit,
       source: ruleKit || 'Stock Traits',
       path: rule.path,
+      sets: rule.sets || [],
       ap_cost: cost,
     };
     addTraitQuirk(item);
@@ -843,6 +867,23 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                               {getCharacterMatchingPath(rule.path || rule.kit || rule.table_group, activeCharacter)}
                             </span>
                           )}
+
+                          {(() => {
+                            let matchedSet: string | undefined;
+                            if (rule.sets && Array.isArray(rule.sets)) {
+                              for (const s of rule.sets) {
+                                if (s && knownSets.has(s.toLowerCase().trim())) {
+                                  matchedSet = s;
+                                  break;
+                                }
+                              }
+                            }
+                            return matchedSet ? (
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-amber-950/60 text-amber-300 border border-amber-500/40">
+                                🗂️ {matchedSet}
+                              </span>
+                            ) : null;
+                          })()}
                         </div>
 
                         <p className="text-xs text-slate-300 leading-relaxed font-sans">{rule.effect || rule.notes || 'No effect description'}</p>
