@@ -364,7 +364,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [setsSearchQuery, setSetsSearchQuery] = useState<string>('');
   const [setsRightCatalogSearchQuery, setSetsRightCatalogSearchQuery] = useState<string>('');
   const [isSavingSet, setIsSavingSet] = useState<boolean>(false);
-  const [showPathsDropdown, setShowPathsDropdown] = useState<boolean>(false);
   const [selectedBaseSetName, setSelectedBaseSetName] = useState<string>('');
   const [baseSetMembers, setBaseSetMembers] = useState<SetMemberItem[]>([]);
   const [isLoadingBaseMembers, setIsLoadingBaseMembers] = useState<boolean>(false);
@@ -981,7 +980,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setSetPathsIncluded([]);
     setSetsSearchQuery('');
     setSetsRightCatalogSearchQuery('');
-    setShowPathsDropdown(false);
     setFeedback(null);
   };
 
@@ -2257,7 +2255,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setBasedOnSourceSets([]);
     setInitialBaseItemIds(new Set());
     setActiveSetSelection({ type: 'set_root' });
-    setShowPathsDropdown(false);
   };
 
   const handleSelectSet = async (s: SupabaseSet) => {
@@ -2272,7 +2269,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setBaseSetMembers([]);
     setBasedOnSourceSets([]);
     setInitialBaseItemIds(new Set());
-    setShowPathsDropdown(false);
     setActiveSetSelection({ type: 'set_root' });
     try {
       const members = await gameApi.getSetMembers(s.name, s.category);
@@ -2299,7 +2295,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setInitialBaseItemIds(new Set());
     setIsCreatingNewSet(true);
     setActiveSetSelection({ type: 'set_root' });
-    setShowPathsDropdown(false);
   };
 
   const handleSwitchSetCategory = (newCat: SetCategory) => {
@@ -2359,12 +2354,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const handleRemoveItemFromDraft = (itemId: string) => {
     setDraftSetItems((prev) => prev.filter((m) => String(m.id) !== String(itemId)));
-  };
-
-  const handleTogglePathIncluded = (pathName: string) => {
-    setSetPathsIncluded((prev) =>
-      prev.includes(pathName) ? prev.filter((p) => p !== pathName) : [...prev, pathName]
-    );
   };
 
   const handleSaveSet = async () => {
@@ -5524,53 +5513,38 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   {/* 1. SET ROOT NODE CARD */}
                   <div
                     onClick={() => setActiveSetSelection({ type: 'set_root' })}
-                    className={`p-3 rounded-xl border transition flex flex-col gap-1.5 cursor-pointer shadow-sm ${
+                    className={`p-2.5 sm:p-3 rounded-xl border transition flex items-center justify-between gap-2 cursor-pointer shadow-sm ${
                       activeSetSelection.type === 'set_root'
                         ? 'bg-indigo-950/40 border-indigo-500/80 ring-1 ring-indigo-500/40'
                         : 'bg-slate-900/80 border-slate-800 hover:border-indigo-500/40 hover:bg-slate-900'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-base shrink-0">🗂️</span>
-                        <span className="font-bold text-slate-100 text-xs truncate">
-                          {name || 'Unnamed Set'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {selectedSetId && (
-                          <span className="text-[10px] text-amber-400 font-mono font-bold bg-amber-950/70 border border-amber-500/30 px-1.5 py-0.5 rounded">
-                            {workshopMode === 'designer' ? '👑 ID: ' : 'ID: '}{selectedSetId}
-                          </span>
-                        )}
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-500/40">
-                          {selectedSetCategory}
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                          {draftSetItems.length} {draftSetItems.length === 1 ? 'item' : 'items'}
-                        </span>
-                        {selectedSetId && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCurrentSet();
-                            }}
-                            className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/50 border border-transparent hover:border-rose-500/40 transition cursor-pointer"
-                            title="Delete Set"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-base shrink-0">🗂️</span>
+                      <span className="font-bold text-slate-100 text-xs truncate">
+                        {name || 'Unnamed Set'}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span className="capitalize">
-                        Category: {selectedSetCategory}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-500/40">
+                        {selectedSetCategory}
                       </span>
-                      <span className={`text-[10px] font-mono font-bold ${activeSetSelection.type === 'set_root' ? 'text-amber-400' : 'text-slate-500'}`}>
-                        {activeSetSelection.type === 'set_root' ? '● Active in Editor' : 'Click to Edit'}
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                        {draftSetItems.length} {draftSetItems.length === 1 ? 'item' : 'items'}
                       </span>
+                      {selectedSetId && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteCurrentSet();
+                          }}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/50 border border-transparent hover:border-rose-500/40 transition cursor-pointer"
+                          title="Delete Set"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -7960,56 +7934,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     />
                   </div>
 
-                  {/* Row 5: Paths Included */}
-                  <div className="relative flex flex-col gap-1 shrink-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-300 text-xs">Paths Included</span>
-                      {setPathsIncluded.length > 0 && (
-                        <span className="text-[10px] text-blue-400 font-mono">
-                          {setPathsIncluded.length} Path(s)
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowPathsDropdown(!showPathsDropdown)}
-                      className="py-1.5 px-2.5 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-left text-slate-300 flex items-center justify-between hover:border-slate-600 transition cursor-pointer"
-                    >
-                      <span className="truncate text-[11px]">
-                        {setPathsIncluded.length === 0
-                          ? 'Tag Paths...'
-                          : setPathsIncluded.join(', ')}
-                      </span>
-                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    </button>
-
-                    {showPathsDropdown && (
-                      <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 max-h-48 overflow-y-auto flex flex-col gap-1 backdrop-blur-md">
-                        {(paths || []).map((p) => {
-                          const isChecked = setPathsIncluded.includes(p.name);
-                          return (
-                            <label
-                              key={p.id || p.name}
-                              className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer text-xs text-slate-300 transition"
-                            >
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={() => handleTogglePathIncluded(p.name)}
-                                  className="rounded border-slate-700 bg-slate-950 text-blue-500 focus:ring-0 cursor-pointer"
-                                />
-                                <span className="font-semibold text-slate-200">{p.name}</span>
-                              </div>
-                              <span className="text-[10px] text-slate-500">{p.category}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Row 6: Based On - Clone from Existing Set (Above Save Button) */}
+                  {/* Row 5: Based On - Clone from Existing Set (Above Save Button) */}
                   <div className="flex flex-col gap-2 bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 shrink-0">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
@@ -8141,10 +8066,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   )}
 
                   {/* SAVE SET ACTION BAR - EXCLUSIVELY IN RIGHT PANE */}
-                  <div className="mt-auto pt-3 border-t border-slate-800 flex items-center justify-between gap-3 shrink-0">
-                    <span className="text-[11px] text-slate-400 font-medium">
-                      {draftSetItems.length} {draftSetItems.length === 1 ? 'item' : 'items'} in set
-                    </span>
+                  <div className="mt-auto pt-3 border-t border-slate-800 flex items-center justify-end gap-3 shrink-0">
                     <button
                       type="button"
                       onClick={handleSaveSet}
