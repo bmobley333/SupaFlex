@@ -4104,6 +4104,31 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         return el;
       })
     );
+    setActivePathSelection((prev) => {
+      if (prev.type === 'path_set' && (prev.setItem?.id === id || String(prev.setItem?.id) === String(id))) {
+        return {
+          ...prev,
+          setItem: {
+            ...prev.setItem,
+            tag: newTag,
+            isFree: newTag === 'Free',
+            is_free: newTag === 'Free',
+          },
+        };
+      }
+      if (prev.type === 'path_element' && prev.element && (prev.element.id === id || String(prev.element.id) === String(id))) {
+        return {
+          ...prev,
+          element: {
+            ...prev.element,
+            tag: newTag,
+            isFree: newTag === 'Free',
+            is_free: newTag === 'Free',
+          } as PathLinkedElement,
+        };
+      }
+      return prev;
+    });
   };
 
   const handleRemoveLinkedElement = (id: string | number) => {
@@ -5043,6 +5068,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               const setRec = (setsCatalog || []).find(
                                 (s) => String(s.id) === String(setItem.id) || s.name === setItem.name
                               );
+                              const itemCount =
+                                Array.isArray((setItem as any).items) && (setItem as any).items.length > 0
+                                  ? (setItem as any).items.length
+                                  : Array.isArray((setRec as any)?.items) && (setRec as any).items.length > 0
+                                  ? (setRec as any).items.length
+                                  : setRec?.items_count;
+
                               return (
                                 <div
                                   key={String(setItem.id)}
@@ -5050,49 +5082,58 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                   className={`p-2 rounded-lg border transition flex items-center justify-between gap-2 cursor-pointer ${
                                     isSelected
                                       ? 'bg-blue-950/40 border-blue-500/80 ring-1 ring-blue-500/40'
-                                      : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900'
+                                      : 'bg-gradient-to-r from-slate-900/90 to-slate-950/80 border-slate-800 border-l-2 border-l-amber-500/70 hover:border-slate-700 hover:bg-slate-900'
                                   }`}
                                 >
                                   <div className="flex items-center gap-1.5 min-w-0">
                                     <span className="text-xs shrink-0">🗂️</span>
+                                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 font-extrabold uppercase shrink-0">
+                                      SET
+                                    </span>
                                     <span className="font-bold text-slate-200 text-xs truncate">
                                       {setItem.name}
                                     </span>
-                                    {setRec?.items_count !== undefined && (
+                                    {itemCount !== undefined && (
                                       <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 shrink-0">
-                                        {setRec.items_count} items
+                                        {itemCount} items
                                       </span>
                                     )}
                                   </div>
 
                                   <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                    {/* KISS Pill Switch for Free vs 1 AP */}
+                                    {/* KISS Pill Switch for All Free vs All 1 AP */}
                                     <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-0.5 shadow-inner backdrop-blur-md">
                                       <button
                                         type="button"
                                         onClick={() => handleToggleLinkedTag(setItem.id, 'Free')}
-                                        className={`py-0.5 px-2 text-[10px] font-bold rounded transition-all flex items-center gap-1 cursor-pointer ${
+                                        className={`py-0.5 px-2 rounded transition-all flex items-center gap-1.5 cursor-pointer ${
                                           setItem.tag === 'Free'
                                             ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                                         }`}
-                                        title="Free (0 AP)"
+                                        title="All items in set are Free (0 AP)"
                                       >
-                                        <span>🎁</span>
-                                        <span>Free</span>
+                                        <span className="text-xs shrink-0 leading-none">🎁</span>
+                                        <div className="flex flex-col items-center justify-center leading-none">
+                                          <span className="text-[7.5px] font-black uppercase tracking-wider opacity-85 leading-none">All</span>
+                                          <span className="text-[9.5px] font-extrabold leading-none mt-0.5">Free</span>
+                                        </div>
                                       </button>
                                       <button
                                         type="button"
                                         onClick={() => handleToggleLinkedTag(setItem.id, '1 AP')}
-                                        className={`py-0.5 px-2 text-[10px] font-bold rounded transition-all flex items-center gap-1 cursor-pointer ${
+                                        className={`py-0.5 px-2 rounded transition-all flex items-center gap-1.5 cursor-pointer ${
                                           setItem.tag === '1 AP'
                                             ? 'bg-amber-600 text-white shadow-sm font-extrabold'
                                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                                         }`}
-                                        title="1 AP advancement"
+                                        title="All items in set cost 1 AP each to acquire"
                                       >
-                                        <span>🧩</span>
-                                        <span>1 AP</span>
+                                        <span className="text-xs shrink-0 leading-none">🧩</span>
+                                        <div className="flex flex-col items-center justify-center leading-none">
+                                          <span className="text-[7.5px] font-black uppercase tracking-wider opacity-85 leading-none">All</span>
+                                          <span className="text-[9.5px] font-extrabold leading-none mt-0.5">1 AP</span>
+                                        </div>
                                       </button>
                                     </div>
 
@@ -7003,7 +7044,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
                   {/* Path Tag Assignment */}
                   <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800 shrink-0">
-                    <span className="text-xs font-bold text-slate-300">Path Acquisition Tag</span>
+                    <span className="text-xs font-bold text-slate-300">Set Acquisition Tag (Applies to All Set Elements)</span>
                     <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md max-w-xs">
                       <button
                         type="button"
@@ -7013,9 +7054,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                         }`}
+                        title="All items in this set are Free (0 AP)"
                       >
                         <span>🎁</span>
-                        <span>Free (0 AP)</span>
+                        <span>All Free (0 AP)</span>
                       </button>
                       <button
                         type="button"
@@ -7025,9 +7067,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             ? 'bg-amber-600 text-white shadow-sm font-extrabold'
                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                         }`}
+                        title="All items in this set cost 1 AP each to acquire"
                       >
                         <span>🧩</span>
-                        <span>1 AP</span>
+                        <span>All 1 AP</span>
                       </button>
                     </div>
                   </div>
@@ -7292,7 +7335,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
                             <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
                               <span className="text-[10px] text-slate-500">
-                                {isLinked ? `Currently Linked as ${linkedInfo.tag}` : 'Not linked to Path'}
+                                {isLinked ? `Currently Linked as ${linkedInfo.tag === 'Free' ? 'All Free' : 'All 1 AP'}` : 'Not linked to Path'}
                               </span>
 
                               {isLinked ? (
@@ -7310,17 +7353,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                     type="button"
                                     onClick={() => handleToggleLinkElement(set, 'set', 'Free')}
                                     className="px-2.5 py-1 rounded-lg bg-emerald-950/70 hover:bg-emerald-900/90 border border-emerald-500/40 hover:border-emerald-400 text-emerald-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                    title="Add entire set as All Free (0 AP)"
                                   >
                                     <Plus className="w-3 h-3" />
-                                    <span>🎁 Free</span>
+                                    <span>🎁 All Free</span>
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleToggleLinkElement(set, 'set', '1 AP')}
                                     className="px-2.5 py-1 rounded-lg bg-amber-950/70 hover:bg-amber-900/90 border border-amber-500/40 hover:border-amber-400 text-amber-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                                    title="Add entire set as All 1 AP advancement"
                                   >
                                     <Plus className="w-3 h-3" />
-                                    <span>🧩 1 AP</span>
+                                    <span>🧩 All 1 AP</span>
                                   </button>
                                 </div>
                               )}
