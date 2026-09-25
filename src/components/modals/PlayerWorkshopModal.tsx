@@ -2598,7 +2598,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     isGearCategoryValid,
   ]);
   const isPathReadyForAbilities =
-    isNameValid && isGenresValid && isPathCategoryValid && pathDescription.trim().length > 0;
+    isNameValid && isPathCategoryValid && pathDescription.trim().length > 0;
 
 
   const isChaosGemActive = Boolean(
@@ -2640,7 +2640,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (creationType === 'paths_abilities') {
       if (pathStudioMode === 'path') {
         if (!isNameValid) return false;
-        if (!isGenresValid) return false;
         return isPathCategoryValid && pathDescription.trim().length > 0;
       } else {
         // standalone ability mode
@@ -3060,7 +3059,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             category: finalPathCat,
             description: pathDescription.trim(),
             linked_elements: linkedElements,
-            genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
             owner: targetOwner,
           };
 
@@ -4951,59 +4949,44 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   {/* Tier 1: Path Root Card */}
                   <div
                     onClick={() => setActivePathSelection({ type: 'path_root' })}
-                    className={`p-3 rounded-xl border transition flex flex-col gap-1.5 cursor-pointer shadow-sm ${
+                    className={`p-2.5 rounded-xl border transition flex items-center justify-between gap-2 cursor-pointer shadow-sm ${
                       activePathSelection.type === 'path_root'
                         ? 'bg-blue-950/40 border-blue-500/80 ring-1 ring-blue-500/40'
                         : 'bg-slate-900/80 border-slate-800 hover:border-blue-500/40 hover:bg-slate-900'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-base shrink-0">🧭</span>
-                        <span className="font-bold text-slate-100 text-xs truncate">
-                          {name || 'Unnamed Path'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {canonicalSelectedId && (
-                          <span className="text-[10px] text-amber-400 font-mono font-bold bg-amber-950/70 border border-amber-500/30 px-1.5 py-0.5 rounded">
-                            {workshopMode === 'designer' ? '👑 ID: ' : 'ID: '}{canonicalSelectedId}
-                          </span>
-                        )}
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-950/80 text-blue-300 border border-blue-500/40">
-                          {finalPathCat}
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                          1 AP
-                        </span>
-                        {/* Delete Path trashcan if saved */}
-                        {((canonicalSelectedId && workshopMode === 'designer' && !isUniversalPath) ||
-                          (workshopMode === 'player' && (editingItem || canonicalSelectedId))) && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirmTarget({
-                                type: 'path',
-                                id: (editingItem ? editingItem.id : canonicalSelectedId) as string | number,
-                                name: editingItem ? editingItem.name : (originalCanonicalName || name.trim()),
-                              });
-                            }}
-                            className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/50 border border-transparent hover:border-rose-500/40 transition cursor-pointer"
-                            title="Delete this Path"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-base shrink-0">🧭</span>
+                      <span className="font-bold text-slate-100 text-xs truncate">
+                        {name || 'Unnamed Path'}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span className="capitalize">
-                        Archetype: {finalPathCat} Path
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-950/80 text-blue-300 border border-blue-500/40">
+                        {finalPathCat}
                       </span>
-                      <span className={`text-[10px] font-mono font-bold ${activePathSelection.type === 'path_root' ? 'text-amber-400' : 'text-slate-500'}`}>
-                        {activePathSelection.type === 'path_root' ? '● Active in Editor' : 'Click to Edit'}
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                        🧩 1 AP
                       </span>
+                      {/* Delete Path trashcan if saved */}
+                      {((canonicalSelectedId && workshopMode === 'designer' && !isUniversalPath) ||
+                        (workshopMode === 'player' && (editingItem || canonicalSelectedId))) && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirmTarget({
+                              type: 'path',
+                              id: (editingItem ? editingItem.id : canonicalSelectedId) as string | number,
+                              name: editingItem ? editingItem.name : (originalCanonicalName || name.trim()),
+                            });
+                          }}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/50 border border-transparent hover:border-rose-500/40 transition cursor-pointer"
+                          title="Delete this Path"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -5085,7 +5068,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                         }`}
                                         title="1 AP advancement"
                                       >
-                                        <span>⚡</span>
+                                        <span>🧩</span>
                                         <span>1 AP</span>
                                       </button>
                                     </div>
@@ -5194,7 +5177,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                         }`}
                                         title="1 AP advancement"
                                       >
-                                        <span>⚡</span>
+                                        <span>🧩</span>
                                         <span>1 AP</span>
                                       </button>
                                     </div>
@@ -6813,7 +6796,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           {selectedPathId || editingItem ? `Edit Path: ${name || 'Unnamed Path'}` : 'New Path Archetype'}
                         </h3>
                         <p className="text-[11px] text-slate-400">
-                          Configure path archetype metadata, category form, lore, and permitted genres.
+                          Configure path archetype metadata, category form, and lore.
                         </p>
                       </div>
                     </div>
@@ -6944,39 +6927,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     />
                   </div>
 
-                  {/* Row 4: Genres */}
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-300 text-xs">Permitted Genres</span>
-                        <GuardrailBadge isValid={isGenresValid} />
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
-                    </div>
-                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md flex-wrap">
-                      {GENRE_OPTIONS.map((g) => {
-                        const isSelected = selectedGenres.includes(g.id);
-                        return (
-                          <button
-                            key={g.id}
-                            type="button"
-                            disabled={isUniversalPath && workshopMode !== 'designer'}
-                            onClick={() => handleToggleGenre(g.id)}
-                            className={`flex-1 py-1 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer disabled:cursor-not-allowed ${
-                              isSelected
-                                ? 'bg-blue-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                          >
-                            <span>{g.icon}</span>
-                            <span>{g.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Row 5: Action / Save Path Button (Sole domain of Path Persistence) */}
+                  {/* Row 4: Action / Save Path Button (Sole domain of Path Persistence) */}
                   <div className="shrink-0 flex flex-col gap-2 pt-3 border-t border-slate-800/80 mt-auto">
                     <div className="flex items-center justify-between text-[11px] text-slate-400">
                       <span>Status:</span>
@@ -7104,7 +7055,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                         }`}
                       >
-                        <span>⚡</span>
+                        <span>🧩</span>
                         <span>1 AP</span>
                       </button>
                     </div>
@@ -7224,7 +7175,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                         }`}
                       >
-                        <span>⚡</span>
+                        <span>🧩</span>
                         <span>1 AP</span>
                       </button>
                     </div>
@@ -7444,7 +7395,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                     className="px-2.5 py-1 rounded-lg bg-amber-950/70 hover:bg-amber-900/90 border border-amber-500/40 hover:border-amber-400 text-amber-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                                   >
                                     <Plus className="w-3 h-3" />
-                                    <span>⚡ 1 AP</span>
+                                    <span>🧩 1 AP</span>
                                   </button>
                                 </div>
                               )}
@@ -7587,7 +7538,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                 : 'text-slate-400 hover:text-slate-200 border border-transparent'
                             }`}
                           >
-                            <span>⚡</span>
+                            <span>🧩</span>
                             <span>1 AP</span>
                           </button>
                         </div>
@@ -7843,7 +7794,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                       className="px-2.5 py-1 rounded-lg bg-amber-950/70 hover:bg-amber-900/90 border border-amber-500/40 hover:border-amber-400 text-amber-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
                                     >
                                       <Plus className="w-3 h-3" />
-                                      <span>⚡ 1 AP</span>
+                                      <span>🧩 1 AP</span>
                                     </button>
                                   </div>
                                 )}
