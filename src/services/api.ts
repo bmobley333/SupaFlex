@@ -19,6 +19,7 @@ import {
   CustomCreationItem,
   PowerTable,
   SupabasePath,
+  PathLinkedElement,
   SupabaseSet,
   SetCategory,
   SetMemberItem,
@@ -2882,6 +2883,77 @@ export const gameApi = {
   // ==========================================
 
   // 1. PATHS
+  async syncPathLinkedSets(
+    pathName: string,
+    currentElements: PathLinkedElement[],
+    previousElements?: PathLinkedElement[]
+  ): Promise<boolean> {
+    if (!pathName || !pathName.trim()) return false;
+    const cleanPath = pathName.trim();
+
+    try {
+      // 1. Current linked sets map: SetName (lowercase) -> { originalName: string, tag: 'Free' | '1 AP' }
+      const currentSetMap = new Map<string, { name: string; tag: string }>();
+      (currentElements || [])
+        .filter((el) => (el.type || el.element_type) === 'set' && el.name)
+        .forEach((el) => {
+          currentSetMap.set(el.name.trim().toLowerCase(), {
+            name: el.name.trim(),
+            tag: el.tag === 'Free' ? 'Free' : '1 AP',
+          });
+        });
+
+      // 2. Previous linked sets (lowercase)
+      const prevSetNames = new Set<string>();
+      if (previousElements && previousElements.length > 0) {
+        previousElements
+          .filter((el) => (el.type || el.element_type) === 'set' && el.name)
+          .forEach((el) => prevSetNames.add(el.name.trim().toLowerCase()));
+      }
+
+      // 3. For any sets that were unlinked: strip this path from set.paths
+      for (const oldLowerName of prevSetNames) {
+        if (!currentSetMap.has(oldLowerName)) {
+          const { data: setItem, error: fetchErr } = await supabase
+            .from('sets')
+            .select('id, paths')
+            .ilike('name', oldLowerName)
+            .maybeSingle();
+
+          if (!fetchErr && setItem && Array.isArray(setItem.paths)) {
+            const nextPaths = setItem.paths.filter((p: string) => !isPathStringMatch(p, cleanPath));
+            await supabase.from('sets').update({ paths: nextPaths }).eq('id', setItem.id);
+          }
+        }
+      }
+
+      // 4. For all currently linked sets: ensure pathName (with or without {Free}) is present
+      for (const [, setInfo] of currentSetMap.entries()) {
+        const { data: setItem, error: fetchErr } = await supabase
+          .from('sets')
+          .select('id, paths')
+          .ilike('name', setInfo.name)
+          .maybeSingle();
+
+        if (!fetchErr && setItem) {
+          const existingPaths: string[] = Array.isArray(setItem.paths) ? setItem.paths : [];
+          const targetEntry = setInfo.tag === 'Free' ? `${cleanPath} {Free}` : cleanPath;
+
+          // Remove any existing variant of this path
+          const nextPaths = existingPaths.filter((p: string) => !isPathStringMatch(p, cleanPath));
+          nextPaths.push(targetEntry);
+
+          await supabase.from('sets').update({ paths: nextPaths }).eq('id', setItem.id);
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error(`[syncPathLinkedSets] Error synchronizing sets for path '${cleanPath}':`, err);
+      return false;
+    }
+  },
+
   async saveCanonicalPath(payload: any): Promise<any> {
     const { data, error } = await supabase
       .from('paths')
@@ -2889,10 +2961,21 @@ export const gameApi = {
       .select('*')
       .single();
     if (error) throw error;
+
+    if (data && Array.isArray(payload.linked_elements)) {
+      await this.syncPathLinkedSets(data.name, payload.linked_elements);
+    }
     return data;
   },
 
   async updateCanonicalPath(id: string | number, payload: any): Promise<any> {
+    // Fetch existing path first to get previous linked_elements
+    const { data: existing } = await supabase
+      .from('paths')
+      .select('name, linked_elements')
+      .eq('id', id)
+      .maybeSingle();
+
     const { data, error } = await supabase
       .from('paths')
       .update({ ...payload, updated_at: new Date().toISOString() })
@@ -2900,12 +2983,30 @@ export const gameApi = {
       .select('*')
       .single();
     if (error) throw error;
+
+    if (data && Array.isArray(payload.linked_elements)) {
+      await this.syncPathLinkedSets(
+        data.name || (existing ? existing.name : ''),
+        payload.linked_elements,
+        existing ? existing.linked_elements : undefined
+      );
+    }
     return data;
   },
 
   async deleteCanonicalPath(id: string | number): Promise<boolean> {
+    const { data: existing } = await supabase
+      .from('paths')
+      .select('name, linked_elements')
+      .eq('id', id)
+      .maybeSingle();
+
     const { error } = await supabase.from('paths').delete().eq('id', id);
     if (error) throw error;
+
+    if (existing && existing.name) {
+      await this.syncPathLinkedSets(existing.name, [], existing.linked_elements);
+    }
     return true;
   },
 
