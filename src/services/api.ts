@@ -3161,9 +3161,20 @@ export const gameApi = {
   // 1b. SETS
   async saveSet(payload: Partial<SupabaseSet> & { name: string; category: SetCategory }): Promise<SupabaseSet> {
     const owner = payload.owner || 'Designer';
+    const cleanPayload: Record<string, any> = {
+      name: payload.name.trim(),
+      category: payload.category,
+      owner,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (payload.description !== undefined) cleanPayload.description = payload.description;
+    if (payload.paths !== undefined) cleanPayload.paths = payload.paths;
+    if (payload.genres !== undefined) cleanPayload.genres = payload.genres;
+
     const { data, error } = await supabase
       .from('sets')
-      .insert([{ ...payload, owner, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }])
+      .insert([cleanPayload])
       .select('*')
       .single();
     if (error) throw error;
@@ -3171,9 +3182,19 @@ export const gameApi = {
   },
 
   async updateSet(id: string | number, payload: Partial<SupabaseSet>): Promise<SupabaseSet> {
+    const cleanPayload: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (payload.name !== undefined) cleanPayload.name = payload.name.trim();
+    if (payload.category !== undefined) cleanPayload.category = payload.category;
+    if (payload.description !== undefined) cleanPayload.description = payload.description;
+    if (payload.paths !== undefined) cleanPayload.paths = payload.paths;
+    if (payload.genres !== undefined) cleanPayload.genres = payload.genres;
+    if (payload.owner !== undefined) cleanPayload.owner = payload.owner;
+
     const { data, error } = await supabase
       .from('sets')
-      .update({ ...payload, updated_at: new Date().toISOString() })
+      .update(cleanPayload)
       .eq('id', id)
       .select('*')
       .single();

@@ -46,6 +46,29 @@ export function getCatalogCacheKey(email?: string): string {
   return cleanEmail ? `${CATALOGS_CACHE_KEY}_${cleanEmail}` : CATALOGS_CACHE_KEY;
 }
 
+function hydrateSetsWithCounts(
+  rawSets: SupabaseSet[] | undefined | null,
+  allItemsPool: any[]
+): SupabaseSet[] {
+  if (!rawSets || rawSets.length === 0) return [];
+  const counts: Record<string, number> = {};
+  for (const item of allItemsPool) {
+    if (Array.isArray(item?.sets)) {
+      for (const s of item.sets) {
+        const key = (s || '').trim().toLowerCase();
+        if (key) counts[key] = (counts[key] || 0) + 1;
+      }
+    }
+  }
+  return rawSets.map((set) => {
+    const key = (set.name || '').trim().toLowerCase();
+    return {
+      ...set,
+      items_count: counts[key] || 0,
+    };
+  });
+}
+
 function loadCatalogsFromCache(minTimestamp?: number, email?: string): CatalogsCachePayload['data'] | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -507,6 +530,17 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         }, email);
       }
 
+      const allCatalogItemsPool = [
+        ...(weaponsData || []),
+        ...(armorData || []),
+        ...(shieldsData || []),
+        ...(powers || []),
+        ...(skills || []),
+        ...(traits || []),
+        ...(functionsData || []),
+      ];
+      const hydratedSetsCatalog = hydrateSetsWithCounts(setsData, allCatalogItemsPool);
+
       // If unauthenticated, do not select any character
       if (!email) {
         set({
@@ -520,7 +554,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           skills,
           traits,
           paths: pathsData,
-          setsCatalog: setsData || [],
+          setsCatalog: hydratedSetsCatalog,
           equipmentKits: bundlesData,
           kits: pathsData as any,
           bundles: bundlesData,
@@ -605,7 +639,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         skills,
         traits,
         paths: pathsData,
-        setsCatalog: setsData || [],
+        setsCatalog: hydratedSetsCatalog,
         equipmentKits: bundlesData,
         kits: pathsData as any,
         bundles: bundlesData,

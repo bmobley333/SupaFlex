@@ -2383,7 +2383,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         description: setDescription.trim(),
         genres: selectedGenres.length > 0 ? selectedGenres : ['Medieval'],
         paths: setPathsIncluded,
-        items_count: draftSetItems.length,
         owner: setOwner,
       };
 
