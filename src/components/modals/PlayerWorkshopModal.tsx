@@ -363,10 +363,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [setPathsIncluded, setSetPathsIncluded] = useState<string[]>([]);
   const [setsSearchQuery, setSetsSearchQuery] = useState<string>('');
   const [setsRightCatalogSearchQuery, setSetsRightCatalogSearchQuery] = useState<string>('');
-  const [isLoadingSetMembers, setIsLoadingSetMembers] = useState<boolean>(false);
   const [isSavingSet, setIsSavingSet] = useState<boolean>(false);
-  const [showBasedOnDropdown, setShowBasedOnDropdown] = useState<boolean>(false);
   const [showPathsDropdown, setShowPathsDropdown] = useState<boolean>(false);
+  const [selectedBaseSetName, setSelectedBaseSetName] = useState<string>('');
+  const [baseSetMembers, setBaseSetMembers] = useState<SetMemberItem[]>([]);
+  const [isLoadingBaseMembers, setIsLoadingBaseMembers] = useState<boolean>(false);
 
   // --- Paths Studio Expansion State (Phase 4) ---
   const [isAuthoringPathCustomAbility, setIsAuthoringPathCustomAbility] = useState<boolean>(false);
@@ -973,12 +974,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setSelectedSetId('');
     setSetDescription('');
     setDraftSetItems([]);
+    setSelectedBaseSetName('');
+    setBaseSetMembers([]);
     setBasedOnSourceSets([]);
     setInitialBaseItemIds(new Set());
     setSetPathsIncluded([]);
     setSetsSearchQuery('');
     setSetsRightCatalogSearchQuery('');
-    setShowBasedOnDropdown(false);
     setShowPathsDropdown(false);
     setFeedback(null);
   };
@@ -2242,6 +2244,22 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     });
   }, [categoryCatalogItems, setsRightCatalogSearchQuery]);
 
+  const handleResetSetSelection = () => {
+    setSelectedSetId('');
+    setIsCreatingNewSet(false);
+    setName('');
+    setSetDescription('');
+    setSelectedGenres(['Medieval']);
+    setSetPathsIncluded([]);
+    setDraftSetItems([]);
+    setSelectedBaseSetName('');
+    setBaseSetMembers([]);
+    setBasedOnSourceSets([]);
+    setInitialBaseItemIds(new Set());
+    setActiveSetSelection({ type: 'set_root' });
+    setShowPathsDropdown(false);
+  };
+
   const handleSelectSet = async (s: SupabaseSet) => {
     setSelectedSetId(s.id ? String(s.id) : '');
     setName(s.name || '');
@@ -2250,12 +2268,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setSelectedGenres(Array.isArray(s.genres) && s.genres.length > 0 ? s.genres : ['Medieval']);
     setSetPathsIncluded(Array.isArray(s.paths) ? s.paths : []);
     setIsCreatingNewSet(false);
+    setSelectedBaseSetName('');
+    setBaseSetMembers([]);
     setBasedOnSourceSets([]);
     setInitialBaseItemIds(new Set());
-    setShowBasedOnDropdown(false);
     setShowPathsDropdown(false);
     setActiveSetSelection({ type: 'set_root' });
-    setIsLoadingSetMembers(true);
     try {
       const members = await gameApi.getSetMembers(s.name, s.category);
       setDraftSetItems(members);
@@ -2265,8 +2283,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         type: 'error',
         message: `Failed to load set items: ${err.message || 'Unknown error'}`,
       });
-    } finally {
-      setIsLoadingSetMembers(false);
     }
   };
 
@@ -2277,11 +2293,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setSelectedGenres(['Medieval']);
     setSetPathsIncluded([]);
     setDraftSetItems([]);
+    setSelectedBaseSetName('');
+    setBaseSetMembers([]);
     setBasedOnSourceSets([]);
     setInitialBaseItemIds(new Set());
     setIsCreatingNewSet(true);
     setActiveSetSelection({ type: 'set_root' });
-    setShowBasedOnDropdown(false);
     setShowPathsDropdown(false);
   };
 
@@ -2295,52 +2312,43 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     }
     setSelectedSetCategory(newCat);
     setDraftSetItems([]);
+    setSelectedBaseSetName('');
+    setBaseSetMembers([]);
     setBasedOnSourceSets([]);
     setInitialBaseItemIds(new Set());
-    setShowBasedOnDropdown(false);
   };
 
-  const handleToggleBasedOnSet = (sourceSetName: string) => {
-    setBasedOnSourceSets((prev) =>
-      prev.includes(sourceSetName) ? prev.filter((s) => s !== sourceSetName) : [...prev, sourceSetName]
-    );
-  };
-
-  const handleExecuteMultiMerge = async () => {
-    if (basedOnSourceSets.length === 0) return;
-    setIsLoadingSetMembers(true);
-    try {
-      const mergedMembers = await gameApi.mergeMultipleSets(basedOnSourceSets, selectedSetCategory);
-      const existingIds = new Set(draftSetItems.map((m) => String(m.id)));
-      const newItems = mergedMembers.filter((m) => !existingIds.has(String(m.id)));
-      const combined = [...draftSetItems, ...newItems];
-      setDraftSetItems(combined);
-
-      const baseIds = new Set(combined.map((m) => String(m.id)));
-      setInitialBaseItemIds(baseIds);
-
-      if (!name.trim()) {
-        if (basedOnSourceSets.length === 1) {
-          setName(`${basedOnSourceSets[0]} (Custom)`);
-        } else {
-          setName(`${basedOnSourceSets.join(' + ')}`);
-        }
-      }
-
-      setFeedback({
-        type: 'success',
-        message: `⚡ Merged ${newItems.length} item(s) from ${basedOnSourceSets.length} set(s) into draft.`,
-      });
-      setShowBasedOnDropdown(false);
-    } catch (err: any) {
-      console.error('[PlayerWorkshopModal] Multi-merge error:', err);
-      setFeedback({
-        type: 'error',
-        message: `Failed to merge sets: ${err.message || 'Unknown error'}`,
-      });
-    } finally {
-      setIsLoadingSetMembers(false);
+  const handleSelectBaseSet = async (baseName: string) => {
+    setSelectedBaseSetName(baseName);
+    if (!baseName) {
+      setBaseSetMembers([]);
+      return;
     }
+    setIsLoadingBaseMembers(true);
+    try {
+      const members = await gameApi.getSetMembers(baseName, selectedSetCategory);
+      setBaseSetMembers(members || []);
+    } catch (err) {
+      console.error('[PlayerWorkshopModal] Failed to load base set members:', err);
+      setBaseSetMembers([]);
+    } finally {
+      setIsLoadingBaseMembers(false);
+    }
+  };
+
+  const handleAddAllBaseSetMembers = () => {
+    if (!baseSetMembers || baseSetMembers.length === 0) return;
+    setDraftSetItems((prev) => {
+      const existingIds = new Set(prev.map((i) => String(i.id)));
+      const toAdd = baseSetMembers.filter((m) => !existingIds.has(String(m.id)));
+      if (toAdd.length === 0) return prev;
+      return [...prev, ...toAdd];
+    });
+  };
+
+  const handleAddMemberToDraft = (m: SetMemberItem) => {
+    if (draftSetItems.some((item) => String(item.id) === String(m.id))) return;
+    setDraftSetItems((prev) => [...prev, m]);
   };
 
   const handleAddItemToDraft = (catalogItem: any) => {
@@ -2433,7 +2441,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       await gameApi.batchUpdateSetMembership(name.trim(), selectedSetCategory, []);
       await gameApi.deleteSet(selectedSetId);
       await refreshCatalogs();
-      handleNewSet();
+      handleResetSetSelection();
       setFeedback({
         type: 'success',
         message: `🗑️ Set '${name}' deleted and item references purged.`,
@@ -2459,7 +2467,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         setActiveStudioSelection({ type: 'chassis' });
         setStudioChassisType(gearDatabaseChassis);
       } else if (newType === 'set') {
-        handleNewSet();
+        handleResetSetSelection();
       } else if (newType === 'paths_abilities' || newType === 'path') {
         setActivePathSelection({ type: 'path_root' });
       }
@@ -5482,7 +5490,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-extrabold text-[11px] shadow-sm shadow-indigo-950/40 transition flex items-center gap-1 cursor-pointer shrink-0"
                 >
                   <Plus className="w-3 h-3" />
-                  <span>+ New Set</span>
+                  <span>New Set</span>
                 </button>
               </div>
 
@@ -5495,7 +5503,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     if (found) {
                       handleSelectSet(found);
                     } else if (e.target.value === '') {
-                      handleNewSet();
+                      handleResetSetSelection();
                     }
                   }}
                   className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 appearance-none focus:outline-none focus:border-indigo-500 transition cursor-pointer pr-8 font-medium"
@@ -7840,37 +7848,28 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
               )}
 
-              {/* ROUTE 1: SET ROOT METADATA EDITOR & SAVE BUTTON */}
-              {activeSetSelection.type === 'set_root' && (
+              {!isSetActive ? null : (
+                <>
+                  {/* ROUTE 1: SET ROOT METADATA EDITOR & SAVE BUTTON */}
+                  {activeSetSelection.type === 'set_root' && (
                 <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">🗂️</span>
-                      <div>
-                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
-                          {selectedSetId ? `Edit Set: ${name || 'Unnamed Set'}` : 'New Set Collection'}
-                        </h3>
-                        <p className="text-[11px] text-slate-400">
-                          Configure collection metadata, homogeneous domain category, and lore.
-                        </p>
-                      </div>
-                    </div>
-                    {selectedSetId && (
-                      <span className="px-2 py-0.5 rounded bg-amber-950 border border-amber-700/60 text-amber-300 font-mono text-[10px] font-bold">
-                        {workshopMode === 'designer' ? '👑 Canon Set' : 'Custom Set'}
-                      </span>
-                    )}
-                  </div>
-
                   {/* Row 1: Name & Collision Badge */}
                   <div className="flex flex-col gap-1 shrink-0">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
+                        <span className="text-sm shrink-0">🗂️</span>
                         <span className="font-bold text-slate-300 text-xs">Set Name</span>
                         <GuardrailBadge isValid={isNameValid} />
                         <InfoTooltip text="Unique name for this set collection." />
                       </div>
-                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                      <div className="flex items-center gap-2">
+                        {selectedSetId && (
+                          <span className="px-2 py-0.5 rounded bg-amber-950 border border-amber-700/60 text-amber-300 font-mono text-[10px] font-bold">
+                            {workshopMode === 'designer' ? '👑 Canon Set' : 'Custom Set'}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                      </div>
                     </div>
                     <input
                       type="text"
@@ -7918,90 +7917,40 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Row 3: Based-On Multi-Merge Selector */}
-                  <div className="relative flex flex-col gap-1.5 bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 shrink-0">
+                  {/* Row 3: Genres Multi-Option Pill Switch (Directly Below Category) */}
+                  <div className="flex flex-col gap-1 shrink-0">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-slate-300">Based On (Multi-Merge Clone)</span>
-                        <InfoTooltip text="Select 1 or more existing sets in this category to aggregate all their items into this draft." />
-                      </div>
-                      {basedOnSourceSets.length > 0 && (
-                        <span className="px-2 py-0.2 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">
-                          {basedOnSourceSets.length} Set(s) Selected
-                        </span>
-                      )}
+                      <span className="font-bold text-slate-300 text-xs">Genres</span>
+                      <span className="text-[10px] text-slate-500 font-mono">Setting Compatibility</span>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowBasedOnDropdown(!showBasedOnDropdown)}
-                        className="flex-1 py-1.5 px-3 bg-slate-900 border border-slate-700/80 rounded-lg text-xs text-left text-slate-300 flex items-center justify-between hover:border-slate-600 transition cursor-pointer"
-                      >
-                        <span className="truncate">
-                          {basedOnSourceSets.length === 0
-                            ? 'Choose base set(s) to merge...'
-                            : basedOnSourceSets.join(', ')}
-                        </span>
-                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleExecuteMultiMerge}
-                        disabled={basedOnSourceSets.length === 0 || isLoadingSetMembers}
-                        className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
-                          basedOnSourceSets.length > 0 && !isLoadingSetMembers
-                            ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-sm font-extrabold cursor-pointer'
-                            : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
-                        }`}
-                        title="Merge selected sets into draft"
-                      >
-                        <span>⚡</span>
-                        <span>Merge</span>
-                      </button>
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                      {GENRE_OPTIONS.map((g) => {
+                        const isSelected = selectedGenres.includes(g.id);
+                        return (
+                          <button
+                            key={g.id}
+                            type="button"
+                            onClick={() => handleToggleGenre(g.id)}
+                            className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              isSelected
+                                ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            <span>{g.icon}</span>
+                            <span>{g.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
-
-                    {showBasedOnDropdown && (
-                      <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 max-h-52 overflow-y-auto flex flex-col gap-1 backdrop-blur-md">
-                        {availableBasedOnSets.length === 0 ? (
-                          <div className="p-3 text-center text-xs text-slate-500">
-                            No other {selectedSetCategory} sets found to merge.
-                          </div>
-                        ) : (
-                          availableBasedOnSets.map((bs) => {
-                            const isChecked = basedOnSourceSets.includes(bs.name);
-                            return (
-                              <label
-                                key={bs.id || bs.name}
-                                className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-800/80 cursor-pointer text-xs text-slate-300 transition"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => handleToggleBasedOnSet(bs.name)}
-                                    className="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-0 cursor-pointer"
-                                  />
-                                  <span className="font-semibold text-slate-200">{bs.name}</span>
-                                  {bs.owner === 'Designer' && (
-                                    <span className="text-[10px] text-amber-400 font-mono">👑 Canon</span>
-                                  )}
-                                </div>
-                                <span className="text-[10px] text-slate-500 font-mono">
-                                  {bs.items_count !== undefined ? `${bs.items_count} items` : ''}
-                                </span>
-                              </label>
-                            );
-                          })
-                        )}
-                      </div>
-                    )}
                   </div>
 
-                  {/* Row 4: Description */}
+                  {/* Row 4: Description & Lore (Directly Below Genres) */}
                   <div className="flex flex-col gap-1 shrink-0">
-                    <span className="font-bold text-slate-300 text-xs">Description & Lore</span>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-300 text-xs">Description & Lore</span>
+                      <span className="text-[10px] text-slate-500 font-mono">Theme & Tactical Lore</span>
+                    </div>
                     <textarea
                       value={setDescription}
                       onChange={(e) => setSetDescription(e.target.value)}
@@ -8011,81 +7960,174 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     />
                   </div>
 
-                  {/* Row 5: Genres & Paths */}
-                  <div className="grid grid-cols-2 gap-2 shrink-0">
-                    {/* Genres */}
-                    <div className="flex flex-col gap-1">
-                      <span className="font-bold text-slate-300 text-xs">Genres</span>
-                      <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-0.5">
-                        {GENRE_OPTIONS.map((g) => {
-                          const isSelected = selectedGenres.includes(g.id);
+                  {/* Row 5: Paths Included */}
+                  <div className="relative flex flex-col gap-1 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-300 text-xs">Paths Included</span>
+                      {setPathsIncluded.length > 0 && (
+                        <span className="text-[10px] text-blue-400 font-mono">
+                          {setPathsIncluded.length} Path(s)
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowPathsDropdown(!showPathsDropdown)}
+                      className="py-1.5 px-2.5 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-left text-slate-300 flex items-center justify-between hover:border-slate-600 transition cursor-pointer"
+                    >
+                      <span className="truncate text-[11px]">
+                        {setPathsIncluded.length === 0
+                          ? 'Tag Paths...'
+                          : setPathsIncluded.join(', ')}
+                      </span>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    </button>
+
+                    {showPathsDropdown && (
+                      <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 max-h-48 overflow-y-auto flex flex-col gap-1 backdrop-blur-md">
+                        {(paths || []).map((p) => {
+                          const isChecked = setPathsIncluded.includes(p.name);
                           return (
-                            <button
-                              key={g.id}
-                              type="button"
-                              onClick={() => handleToggleGenre(g.id)}
-                              className={`flex-1 py-1 px-1.5 text-[10px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-                                isSelected
-                                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                              }`}
+                            <label
+                              key={p.id || p.name}
+                              className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer text-xs text-slate-300 transition"
                             >
-                              <span>{g.icon}</span>
-                              <span className="truncate">{g.label}</span>
-                            </button>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => handleTogglePathIncluded(p.name)}
+                                  className="rounded border-slate-700 bg-slate-950 text-blue-500 focus:ring-0 cursor-pointer"
+                                />
+                                <span className="font-semibold text-slate-200">{p.name}</span>
+                              </div>
+                              <span className="text-[10px] text-slate-500">{p.category}</span>
+                            </label>
                           );
                         })}
                       </div>
-                    </div>
+                    )}
+                  </div>
 
-                    {/* Paths Included */}
-                    <div className="relative flex flex-col gap-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-300 text-xs">Paths Included</span>
-                        {setPathsIncluded.length > 0 && (
-                          <span className="text-[10px] text-blue-400 font-mono">
-                            {setPathsIncluded.length}
-                          </span>
-                        )}
+                  {/* Row 6: Based On - Clone from Existing Set (Above Save Button) */}
+                  <div className="flex flex-col gap-2 bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 shrink-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-300">Based On (Clone From Existing Set)</span>
+                        <InfoTooltip text="Select an existing set to inspect its members. Click ⬅️ to move individual items or ⬅️ All to move all items into your set." />
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowPathsDropdown(!showPathsDropdown)}
-                        className="py-1.5 px-2.5 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-left text-slate-300 flex items-center justify-between hover:border-slate-600 transition cursor-pointer"
-                      >
-                        <span className="truncate text-[11px]">
-                          {setPathsIncluded.length === 0
-                            ? 'Tag Paths...'
-                            : setPathsIncluded.join(', ')}
+                      {selectedBaseSetName && baseSetMembers.length > 0 && (
+                        <span className="px-2 py-0.2 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[10px] font-bold">
+                          {baseSetMembers.length} {baseSetMembers.length === 1 ? 'member' : 'members'}
                         </span>
-                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      </button>
-
-                      {showPathsDropdown && (
-                        <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 max-h-48 overflow-y-auto flex flex-col gap-1 backdrop-blur-md">
-                          {(paths || []).map((p) => {
-                            const isChecked = setPathsIncluded.includes(p.name);
-                            return (
-                              <label
-                                key={p.id || p.name}
-                                className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-800/80 cursor-pointer text-xs text-slate-300 transition"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => handleTogglePathIncluded(p.name)}
-                                    className="rounded border-slate-700 bg-slate-950 text-blue-500 focus:ring-0 cursor-pointer"
-                                  />
-                                  <span className="font-semibold text-slate-200">{p.name}</span>
-                                </div>
-                                <span className="text-[10px] text-slate-500">{p.category}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
                       )}
                     </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <select
+                          value={selectedBaseSetName}
+                          onChange={(e) => handleSelectBaseSet(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-slate-200 appearance-none focus:outline-none focus:border-indigo-500 transition cursor-pointer pr-8 font-medium"
+                        >
+                          <option value="">-- Choose a {selectedSetCategory} set to inspect/pull from... --</option>
+                          {availableBasedOnSets.map((bs) => (
+                            <option key={bs.id || bs.name} value={bs.name}>
+                              {bs.name} ({bs.category}{bs.items_count !== undefined ? ` • ${bs.items_count} items` : ''})
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleAddAllBaseSetMembers}
+                        disabled={!selectedBaseSetName || baseSetMembers.length === 0 || isLoadingBaseMembers}
+                        className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shrink-0 ${
+                          selectedBaseSetName && baseSetMembers.length > 0 && !isLoadingBaseMembers
+                            ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm font-extrabold cursor-pointer active:scale-95'
+                            : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                        }`}
+                        title="Move all members from this set into your draft set"
+                      >
+                        <span>⬅️ All</span>
+                      </button>
+                    </div>
+
+                    {/* Member Elements List */}
+                    {isLoadingBaseMembers ? (
+                      <div className="p-3 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400" />
+                        <span>Loading set members...</span>
+                      </div>
+                    ) : selectedBaseSetName && baseSetMembers.length === 0 ? (
+                      <div className="p-2.5 text-center text-xs text-slate-500 bg-slate-900/40 rounded-lg border border-slate-800/80">
+                        No members found in set '{selectedBaseSetName}'.
+                      </div>
+                    ) : selectedBaseSetName && baseSetMembers.length > 0 ? (
+                      <div className="max-h-48 overflow-y-auto flex flex-col gap-1.5 pr-1 mt-1">
+                        {baseSetMembers.map((m, idx) => {
+                          const isAlreadyInDraft = draftSetItems.some((d) => String(d.id) === String(m.id));
+                          return (
+                            <div
+                              key={`${m.id}_${idx}`}
+                              className="p-2 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-2 text-xs"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <button
+                                  type="button"
+                                  disabled={isAlreadyInDraft}
+                                  onClick={() => handleAddMemberToDraft(m)}
+                                  className={`p-1 px-1.5 rounded text-xs font-bold transition flex items-center justify-center shrink-0 ${
+                                    isAlreadyInDraft
+                                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
+                                      : 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer shadow-sm active:scale-95'
+                                  }`}
+                                  title={isAlreadyInDraft ? 'Already in Set' : 'Move to Set'}
+                                >
+                                  <span>⬅️</span>
+                                </button>
+                                <span className="font-bold text-slate-200 truncate">
+                                  {m.name}
+                                </span>
+                                {m.requirement && (
+                                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-slate-300 shrink-0">
+                                    {m.requirement}
+                                  </span>
+                                )}
+                                {m.action && (
+                                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-cyan-400 shrink-0">
+                                    {m.action}
+                                  </span>
+                                )}
+                                {m.usage && (
+                                  <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-800 text-amber-300 shrink-0">
+                                    {m.usage}
+                                  </span>
+                                )}
+                                {m.effect && (
+                                  <span className="text-[10px] text-slate-400 truncate max-w-[160px] font-mono">
+                                    {m.effect}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="shrink-0">
+                                {isAlreadyInDraft ? (
+                                  <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/60 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                                    ✓ In Set
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-slate-500 font-mono">
+                                    {m.table || selectedSetCategory}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* Anti-Duplicate-Clone Alert Banner */}
@@ -8390,7 +8432,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
                 </div>
               )}
-            </div>
+            </>
+          )}
+        </div>
           ) : (
             <form onSubmit={handleSubmit} className="lg:col-span-7 flex flex-col min-h-0 bg-slate-900/60 p-5 overflow-y-auto gap-4 text-xs">
             {/* Feedback Alert */}
