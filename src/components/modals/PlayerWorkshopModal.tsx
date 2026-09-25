@@ -353,6 +353,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [draftSetItems, setDraftSetItems] = useState<SetMemberItem[]>([]);
   const [basedOnSourceSets, setBasedOnSourceSets] = useState<string[]>([]);
   const [initialBaseItemIds, setInitialBaseItemIds] = useState<Set<string>>(new Set());
+  const [initialExistingMemberIds, setInitialExistingMemberIds] = useState<Set<string>>(new Set());
   const [isCreatingNewSet, setIsCreatingNewSet] = useState<boolean>(false);
   const [selectedSetId, setSelectedSetId] = useState<string>('');
   const [activeSetSelection, setActiveSetSelection] = useState<{
@@ -977,6 +978,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setBaseSetMembers([]);
     setBasedOnSourceSets([]);
     setInitialBaseItemIds(new Set());
+    setInitialExistingMemberIds(new Set());
     setSetPathsIncluded([]);
     setSetsSearchQuery('');
     setSetsRightCatalogSearchQuery('');
@@ -2254,6 +2256,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setBaseSetMembers([]);
     setBasedOnSourceSets([]);
     setInitialBaseItemIds(new Set());
+    setInitialExistingMemberIds(new Set());
     setActiveSetSelection({ type: 'set_root' });
   };
 
@@ -2273,6 +2276,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     try {
       const members = await gameApi.getSetMembers(s.name, s.category);
       setDraftSetItems(members);
+      setInitialExistingMemberIds(new Set(members.map((m) => String(m.id))));
     } catch (err: any) {
       console.error('[PlayerWorkshopModal] Failed to load set members:', err);
       setFeedback({
@@ -2293,6 +2297,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setBaseSetMembers([]);
     setBasedOnSourceSets([]);
     setInitialBaseItemIds(new Set());
+    setInitialExistingMemberIds(new Set());
     setIsCreatingNewSet(true);
     setActiveSetSelection({ type: 'set_root' });
   };
@@ -2403,6 +2408,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
       setInitialBaseItemIds(new Set());
       setBasedOnSourceSets([]);
+      setInitialExistingMemberIds(new Set(draftSetItems.map((m) => String(m.id))));
 
       await refreshCatalogs();
       setFeedback({
@@ -2526,8 +2532,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     );
     if (!match) return { isCollision: false, isCanonMatch: false };
 
-    // If currently editing this exact item, not a collision
-    if (canonicalSelectedId && String(match.id) === String(canonicalSelectedId)) {
+    // If currently editing this exact item or set, not a collision
+    if (creationType === 'set') {
+      if (!isCreatingNewSet && selectedSetId && String(match.id) === String(selectedSetId)) {
+        return { isCollision: false, isCanonMatch: false };
+      }
+    } else if (canonicalSelectedId && String(match.id) === String(canonicalSelectedId)) {
       return { isCollision: false, isCanonMatch: false };
     }
 
@@ -2555,6 +2565,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     canonicalSelectedId,
     workshopMode,
     playerEmail,
+    creationType,
+    selectedSetId,
+    isCreatingNewSet,
   ]);
 
   // Real-time Guardrail Validation Flags
@@ -5583,6 +5596,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               <span className="font-bold text-slate-200 text-xs truncate">
                                 {item.name}
                               </span>
+                              {selectedSetId && !isCreatingNewSet && !initialExistingMemberIds.has(String(item.id)) && (
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 font-extrabold flex items-center gap-0.5 shrink-0">
+                                  ✨ New
+                                </span>
+                              )}
                               {item.requirement && (
                                 <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-bold shrink-0">
                                   {item.requirement}
@@ -7826,98 +7844,101 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 <>
                   {/* ROUTE 1: SET ROOT METADATA EDITOR & SAVE BUTTON */}
                   {activeSetSelection.type === 'set_root' && (
-                <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
-                  {/* Row 1: Name & Collision Badge */}
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm shrink-0">🗂️</span>
-                        <span className="font-bold text-slate-300 text-xs">Set Name</span>
-                        <GuardrailBadge isValid={isNameValid} />
-                        <InfoTooltip text="Unique name for this set collection." />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {selectedSetId && (
-                          <span className="px-2 py-0.5 rounded bg-amber-950 border border-amber-700/60 text-amber-300 font-mono text-[10px] font-bold">
-                            {workshopMode === 'designer' ? '👑 Canon Set' : 'Custom Set'}
-                          </span>
-                        )}
-                        <span className="text-[10px] text-slate-500 font-mono">Required</span>
-                      </div>
-                    </div>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Masterwork Blades, Dragon Knight Armory, Elemental Evocations..."
-                      className={`w-full bg-slate-950 border rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-600 focus:outline-none transition shadow-inner font-semibold ${
-                        topLevelCollision.isCollision
-                          ? 'border-rose-500/80 focus:border-rose-400'
-                          : 'border-slate-700/80 focus:border-indigo-500'
-                      }`}
-                    />
-                    {topLevelCollision.isCollision && (
-                      <p className="text-[10px] text-rose-400 font-medium">
-                        ⚠️ A {topLevelCollision.isCanonMatch ? 'canonical' : 'custom'} entry named "{topLevelCollision.existingItemName}" already exists.
-                      </p>
-                    )}
-                  </div>
+                    <div className="flex-1 flex flex-col min-h-0">
+                      {/* Scrollable Form Body */}
+                      <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
+                        {/* Row 1: Name & Collision Badge */}
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-sm shrink-0">🗂️</span>
+                              <span className="font-bold text-slate-300 text-xs whitespace-nowrap">Set Name</span>
+                              <GuardrailBadge isValid={isNameValid} />
+                              <InfoTooltip text="Unique name for this set collection." />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="e.g. Masterwork Blades, Dragon Knight Armory, Elemental Evocations..."
+                                className={`w-full bg-slate-950 border rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none transition shadow-inner font-semibold ${
+                                  topLevelCollision.isCollision
+                                    ? 'border-rose-500/80 focus:border-rose-400'
+                                    : 'border-slate-700/80 focus:border-indigo-500'
+                                }`}
+                              />
+                            </div>
+                            {selectedSetId && (
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="px-2 py-0.5 rounded bg-amber-950 border border-amber-700/60 text-amber-300 font-mono text-[10px] font-bold whitespace-nowrap">
+                                  {workshopMode === 'designer' ? '👑 Canon Set' : 'Custom Set'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {topLevelCollision.isCollision && (
+                            <p className="text-[10px] text-rose-400 font-medium pl-24">
+                              ⚠️ A {topLevelCollision.isCanonMatch ? 'canonical' : 'custom'} entry named "{topLevelCollision.existingItemName}" already exists.
+                            </p>
+                          )}
+                        </div>
 
-                  {/* Row 2: Category Multi-Option Pill Switch */}
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-300 text-xs">Category</span>
-                      <span className="text-[10px] text-slate-500 font-mono">Homogeneous Domain</span>
-                    </div>
-                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md overflow-x-auto">
-                      {SET_CATEGORIES.map((cat) => {
-                        const isCatActive = selectedSetCategory === cat.id;
-                        return (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            onClick={() => handleSwitchSetCategory(cat.id)}
-                            className={`flex-1 py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                              isCatActive
-                                ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                          >
-                            <span>{cat.icon}</span>
-                            <span>{cat.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                        {/* Row 2: Category Multi-Option Pill Switch */}
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="flex items-center gap-1.5 w-24 shrink-0">
+                            <span className="font-bold text-slate-300 text-xs whitespace-nowrap">Category</span>
+                            <InfoTooltip text="Homogeneous domain for all elements in this set." />
+                          </div>
+                          <div className="flex-1 bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md overflow-x-auto">
+                            {SET_CATEGORIES.map((cat) => {
+                              const isCatActive = selectedSetCategory === cat.id;
+                              return (
+                                <button
+                                  key={cat.id}
+                                  type="button"
+                                  onClick={() => handleSwitchSetCategory(cat.id)}
+                                  className={`flex-1 py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
+                                    isCatActive
+                                      ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                  }`}
+                                >
+                                  <span>{cat.icon}</span>
+                                  <span>{cat.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
 
-                  {/* Row 3: Genres Multi-Option Pill Switch (Directly Below Category) */}
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-300 text-xs">Genres</span>
-                      <span className="text-[10px] text-slate-500 font-mono">Setting Compatibility</span>
-                    </div>
-                    <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                      {GENRE_OPTIONS.map((g) => {
-                        const isSelected = selectedGenres.includes(g.id);
-                        return (
-                          <button
-                            key={g.id}
-                            type="button"
-                            onClick={() => handleToggleGenre(g.id)}
-                            className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                              isSelected
-                                ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                          >
-                            <span>{g.icon}</span>
-                            <span>{g.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                        {/* Row 3: Genres Multi-Option Pill Switch (Directly Below Category) */}
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="flex items-center gap-1.5 w-24 shrink-0">
+                            <span className="font-bold text-slate-300 text-xs whitespace-nowrap">Genres</span>
+                            <InfoTooltip text="Compatible campaign genres for this set." />
+                          </div>
+                          <div className="flex-1 bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                            {GENRE_OPTIONS.map((g) => {
+                              const isSelected = selectedGenres.includes(g.id);
+                              return (
+                                <button
+                                  key={g.id}
+                                  type="button"
+                                  onClick={() => handleToggleGenre(g.id)}
+                                  className={`flex-1 py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                                  }`}
+                                >
+                                  <span>{g.icon}</span>
+                                  <span>{g.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
 
                   {/* Row 4: Description & Lore (Directly Below Genres) */}
                   <div className="flex flex-col gap-1 shrink-0">
@@ -8064,9 +8085,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       </span>
                     </div>
                   )}
+                      </div>
 
-                  {/* SAVE SET ACTION BAR - EXCLUSIVELY IN RIGHT PANE */}
-                  <div className="mt-auto pt-3 border-t border-slate-800 flex items-center justify-end gap-3 shrink-0">
+                      {/* SAVE SET ACTION BAR - EXCLUSIVELY IN RIGHT PANE (FROZEN FOOTER) */}
+                      <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3 shrink-0">
                     <button
                       type="button"
                       onClick={handleSaveSet}
