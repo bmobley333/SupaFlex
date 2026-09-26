@@ -58,6 +58,7 @@ const AOE_PRESETS = [
   { id: 'AoE 2x2', text: 'AoE 2x2; ' },
   { id: 'AoE 3x3', text: 'AoE 3x3; ' },
   { id: 'AoE 4x4', text: 'AoE 4x4; ' },
+  { id: 'AoE 5x5', text: 'AoE 5x5; ' },
 ];
 
 // Attributes Without Labels per Directive
@@ -4301,57 +4302,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     return 'power';
   }, [setsCatalog]);
 
-  const getElementSkillStats = useCallback((el?: PathLinkedElement | null) => {
-    if (!el) return {};
-    const cat = getLinkedElementCategory(el);
-    const cleanName = (el.name || '').toLowerCase().trim();
-
-    if (cat === 'weapon') {
-      const found = (weaponsCatalog || []).find(
-        (w) => (w.name || '').toLowerCase().trim() === cleanName || String(w.id) === String(el.id)
-      );
-      return {
-        req: found?.requirement || el.item_data?.requirement,
-        damage: found?.dmg || (found as any)?.damage || el.item_data?.damage || el.item_data?.dmg,
-        type: found?.type || el.item_data?.type || 'Melee',
-        action: (found as any)?.atk || (found as any)?.action || el.item_data?.action || el.item_data?.atk,
-      };
-    }
-    if (cat === 'armor_shield') {
-      const foundArmor = (armorCatalog || []).find(
-        (a) => (a.name || '').toLowerCase().trim() === cleanName || String(a.id) === String(el.id)
-      );
-      const foundShield = (shieldsCatalog || []).find(
-        (s) => (s.name || '').toLowerCase().trim() === cleanName || String(s.id) === String(el.id)
-      );
-      return {
-        req: foundArmor?.requirement || foundShield?.requirement || el.item_data?.requirement,
-        ar: foundArmor?.ar || el.item_data?.ar,
-        max_block: foundShield?.max_block || el.item_data?.max_block,
-      };
-    }
-    if (cat === 'power') {
-      const found = (powers || []).find(
-        (p) => (p.name || '').toLowerCase().trim() === cleanName || String(p.id) === String(el.id)
-      );
-      return {
-        action: found?.action || el.item_data?.action,
-        usage: found?.usage || el.item_data?.usage,
-        req: (found as any)?.requirement || el.item_data?.requirement,
-      };
-    }
-    if (cat === 'skill') {
-      const found = (skills || []).find(
-        (s) => (s.name || '').toLowerCase().trim() === cleanName || String(s.id) === String(el.id)
-      );
-      return {
-        attribute: found?.attribute || el.item_data?.attribute,
-        discipline: found?.discipline || el.item_data?.discipline,
-      };
-    }
-    return {};
-  }, [getLinkedElementCategory, weaponsCatalog, armorCatalog, shieldsCatalog, powers, skills]);
-
   const pathCategoryMembers = useMemo(() => {
     const groups: Record<
       'trait' | 'power' | 'skill' | 'weapon' | 'armor_shield',
@@ -4457,6 +4407,326 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       return n.includes(q) || e.includes(q) || d.includes(q) || req.includes(q);
     });
   }, [availableElementsForPathCategory, pathAddElementSearch]);
+
+  // --- PATH ELEMENT EDITOR (ROUTE 3) STATE & HYDRATION ---
+  const [pathElementFormName, setPathElementFormName] = useState<string>('');
+  const [pathElementFormAction, setPathElementFormAction] = useState<string>('AM');
+  const [pathElementFormUsage, setPathElementFormUsage] = useState<string>('1-Enc');
+  const [pathElementFormEffect, setPathElementFormEffect] = useState<string>('');
+  const [pathElementFormNotes, setPathElementFormNotes] = useState<string>('');
+  const [pathElementFormGenres, setPathElementFormGenres] = useState<string[]>(['Medieval']);
+  const [pathElementFormDiscipline, setPathElementFormDiscipline] = useState<string>('General');
+  const [pathElementFormAttribute, setPathElementFormAttribute] = useState<string>('💪');
+  const [pathElementFormType, setPathElementFormType] = useState<string>('Melee');
+  const [pathElementFormReq, setPathElementFormReq] = useState<number>(4);
+  const [pathElementFormCost, setPathElementFormCost] = useState<string>('0s');
+  const [pathElementFormDomain, setPathElementFormDomain] = useState<string>('Archaic');
+  const [isSavingPathElement, setIsSavingPathElement] = useState<boolean>(false);
+  const pathElementEffectTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertPathElementTextAtCursor = (insertStr: string) => {
+    const textarea = pathElementEffectTextareaRef.current;
+    if (!textarea) {
+      setPathElementFormEffect((prev) => (prev ? prev + insertStr : insertStr));
+      return;
+    }
+    const start = textarea.selectionStart ?? 0;
+    const end = textarea.selectionEnd ?? 0;
+    const currentVal = pathElementFormEffect;
+    const nextVal = currentVal.substring(0, start) + insertStr + currentVal.substring(end);
+    setPathElementFormEffect(nextVal);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + insertStr.length, start + insertStr.length);
+    }, 0);
+  };
+
+  const activePathElementCategory = useMemo<'power' | 'trait' | 'skill' | 'weapon' | 'armor' | 'shield' | null>(() => {
+    if (activePathSelection.type !== 'path_element' || !activePathSelection.element) return null;
+    const el = activePathSelection.element;
+    const baseCat = getLinkedElementCategory(el);
+    if (baseCat === 'armor_shield') {
+      const cleanName = (el.name || '').toLowerCase().trim();
+      const isShield =
+        (shieldsCatalog || []).some(
+          (s) => String(s.id) === String(el.id) || (s.name || '').toLowerCase().trim() === cleanName
+        ) ||
+        (el.type || '').toLowerCase() === 'shield' ||
+        el.item_data?.max_block !== undefined;
+      return isShield ? 'shield' : 'armor';
+    }
+    return baseCat;
+  }, [activePathSelection, getLinkedElementCategory, shieldsCatalog]);
+
+  useEffect(() => {
+    if (activePathSelection.type !== 'path_element' || !activePathSelection.element) return;
+    const el = activePathSelection.element;
+    const cleanName = (el.name || '').toLowerCase().trim();
+    const cat = getLinkedElementCategory(el);
+
+    let rawRecord: any = el;
+    if (cat === 'power') {
+      rawRecord =
+        (powers || []).find(
+          (p) => String(p.id) === String(el.id) || (p.name || '').toLowerCase().trim() === cleanName
+        ) || el;
+    } else if (cat === 'trait') {
+      rawRecord =
+        (traits || []).find(
+          (t) => String(t.id) === String(el.id) || (t.name || '').toLowerCase().trim() === cleanName
+        ) || el;
+    } else if (cat === 'skill') {
+      rawRecord =
+        (skills || []).find(
+          (s) => String(s.id) === String(el.id) || (s.name || '').toLowerCase().trim() === cleanName
+        ) || el;
+    } else if (cat === 'weapon') {
+      rawRecord =
+        (weaponsCatalog || []).find(
+          (w) => String(w.id) === String(el.id) || (w.name || '').toLowerCase().trim() === cleanName
+        ) || el;
+    } else if (cat === 'armor_shield') {
+      const foundShield = (shieldsCatalog || []).find(
+        (s) => String(s.id) === String(el.id) || (s.name || '').toLowerCase().trim() === cleanName
+      );
+      const foundArmor = (armorCatalog || []).find(
+        (a) => String(a.id) === String(el.id) || (a.name || '').toLowerCase().trim() === cleanName
+      );
+      rawRecord = foundShield || foundArmor || el;
+    }
+
+    setPathElementFormName(rawRecord.name || el.name || '');
+    setPathElementFormAction(rawRecord.action || el.item_data?.action || 'AM');
+    setPathElementFormUsage(rawRecord.usage || el.item_data?.usage || '1-Enc');
+    setPathElementFormEffect(
+      rawRecord.effect || rawRecord.item_data?.effect || el.item_data?.effect || el.details || ''
+    );
+    setPathElementFormNotes(rawRecord.notes || rawRecord.item_data?.notes || el.item_data?.notes || '');
+    setPathElementFormGenres(
+      Array.isArray(rawRecord.genres) && rawRecord.genres.length > 0
+        ? rawRecord.genres
+        : Array.isArray(el.item_data?.genres) && el.item_data.genres.length > 0
+        ? el.item_data.genres
+        : ['Medieval']
+    );
+    setPathElementFormDiscipline(rawRecord.discipline || el.item_data?.discipline || 'General');
+    setPathElementFormAttribute(rawRecord.attribute || el.item_data?.attribute || '💪');
+    setPathElementFormType(rawRecord.type || el.item_data?.type || 'Melee');
+
+    const reqStr = String(rawRecord.requirement || el.item_data?.requirement || '4');
+    const reqMatch = reqStr.match(/\d+/);
+    const reqNum = reqMatch ? parseInt(reqMatch[0], 10) : 4;
+    setPathElementFormReq([4, 6, 8, 10, 12].includes(reqNum) ? reqNum : 4);
+
+    setPathElementFormCost(rawRecord.cost || el.item_data?.cost || '0s');
+    setPathElementFormDomain(rawRecord.domain || el.item_data?.domain || 'Archaic');
+  }, [
+    activePathSelection,
+    powers,
+    traits,
+    skills,
+    weaponsCatalog,
+    armorCatalog,
+    shieldsCatalog,
+    getLinkedElementCategory,
+  ]);
+
+  const handleSavePathElement = async () => {
+    if (!activePathSelection.element || !pathElementFormName.trim()) return;
+    const el = activePathSelection.element;
+    const cleanName = (el.name || '').toLowerCase().trim();
+    const cat = activePathElementCategory;
+    setIsSavingPathElement(true);
+
+    try {
+      if (workshopMode === 'designer') {
+        if (cat === 'power') {
+          const found = (powers || []).find(
+            (p) => String(p.id) === String(el.id) || (p.name || '').toLowerCase().trim() === cleanName
+          );
+          const targetId = found?.id || el.id;
+          const payload: any = {
+            name: pathElementFormName.trim(),
+            action: pathElementFormAction,
+            usage: pathElementFormUsage,
+            effect: pathElementFormEffect.trim(),
+            discipline: pathElementFormDiscipline.trim() || 'General',
+            notes: pathElementFormNotes.trim() || null,
+            genres: pathElementFormGenres,
+          };
+          const updated = await gameApi.updateCanonicalPower(targetId, payload);
+          updateCanonicalCatalogItem('power', updated);
+          await gameApi.propagateCanonicalUpdateToAllCharacters({
+            entityType: 'power',
+            oldName: el.name,
+            updatedItem: updated,
+          });
+        } else if (cat === 'trait') {
+          const found = (traits || []).find(
+            (t) => String(t.id) === String(el.id) || (t.name || '').toLowerCase().trim() === cleanName
+          );
+          const targetId = found?.id || el.id;
+          const payload: any = {
+            name: pathElementFormName.trim(),
+            effect: pathElementFormEffect.trim(),
+            cost: pathElementFormCost || '0s',
+            discipline: pathElementFormDiscipline.trim() || 'General',
+            notes: pathElementFormNotes.trim() || '',
+            genres: pathElementFormGenres,
+          };
+          const updated = await gameApi.updateCanonicalTrait(targetId, payload);
+          updateCanonicalCatalogItem('trait', updated);
+          await gameApi.propagateCanonicalUpdateToAllCharacters({
+            entityType: 'trait',
+            oldName: el.name,
+            updatedItem: updated,
+          });
+        } else if (cat === 'skill') {
+          const found = (skills || []).find(
+            (s) => String(s.id) === String(el.id) || (s.name || '').toLowerCase().trim() === cleanName
+          );
+          const targetId = found?.id || el.id;
+          const payload: any = {
+            name: pathElementFormName.trim(),
+            attribute: pathElementFormAttribute,
+            discipline: pathElementFormDiscipline.trim() || 'General',
+            notes: pathElementFormNotes.trim() || '',
+            genres: pathElementFormGenres,
+          };
+          const updated = await gameApi.updateCanonicalSkill(targetId, payload);
+          updateCanonicalCatalogItem('skill', updated);
+          await gameApi.propagateCanonicalUpdateToAllCharacters({
+            entityType: 'skill',
+            oldName: el.name,
+            updatedItem: updated,
+          });
+        } else if (cat === 'weapon') {
+          const found = (weaponsCatalog || []).find(
+            (w) => String(w.id) === String(el.id) || (w.name || '').toLowerCase().trim() === cleanName
+          );
+          const targetId = found?.id || el.id;
+          const atkDmg = getWeaponAtkDmg(pathElementFormType);
+          const maxBlock = pathElementFormType.includes('Melee') ? String(pathElementFormReq * 2) : null;
+          const reqEmoji = pathElementFormType === 'Hurled' ? '🏃' : pathElementFormType === 'Shot' ? '👁️' : '💪';
+          const payload: any = {
+            name: pathElementFormName.trim(),
+            type: pathElementFormType,
+            requirement: `${reqEmoji} ${pathElementFormReq}`,
+            atk: atkDmg,
+            dmg: atkDmg,
+            max_block: maxBlock,
+            cost: pathElementFormCost || '1g',
+            domain: pathElementFormDomain || 'Archaic',
+            notes: pathElementFormNotes.trim() || '',
+            genres: pathElementFormGenres,
+          };
+          const updated = await gameApi.updateCanonicalWeapon(targetId, payload);
+          updateCanonicalCatalogItem('weapon', updated);
+          await gameApi.propagateCanonicalUpdateToAllCharacters({
+            entityType: 'weapon',
+            oldName: el.name,
+            updatedItem: updated,
+          });
+        } else if (cat === 'armor') {
+          const found = (armorCatalog || []).find(
+            (a) => String(a.id) === String(el.id) || (a.name || '').toLowerCase().trim() === cleanName
+          );
+          const targetId = found?.id || el.id;
+          const arStr = `🧥${pathElementFormReq}`;
+          const mrMap: Record<number, string> = { 4: '👣12', 6: '👣11', 8: '👣10', 10: '👣9', 12: '👣8' };
+          const payload: any = {
+            name: pathElementFormName.trim(),
+            requirement: `💪 ${pathElementFormReq}`,
+            ar: arStr,
+            mr: mrMap[pathElementFormReq] || '👣10',
+            cost: pathElementFormCost || '1g',
+            domain: pathElementFormDomain || 'Archaic',
+            notes: pathElementFormNotes.trim() || '',
+            genres: pathElementFormGenres,
+          };
+          const updated = await gameApi.updateCanonicalArmor(targetId, payload);
+          updateCanonicalCatalogItem('armor', updated);
+          await gameApi.propagateCanonicalUpdateToAllCharacters({
+            entityType: 'armor',
+            oldName: el.name,
+            updatedItem: updated,
+          });
+        } else if (cat === 'shield') {
+          const found = (shieldsCatalog || []).find(
+            (s) => String(s.id) === String(el.id) || (s.name || '').toLowerCase().trim() === cleanName
+          );
+          const targetId = found?.id || el.id;
+          const blockMap: Record<number, string> = { 4: '🛡️12', 6: '🛡️16', 8: '🛡️20', 10: '🛡️24', 12: '🛡️28' };
+          const mrMap: Record<number, string> = { 4: '👣0', 6: '👣-1', 8: '👣-2', 10: '👣-3', 12: '👣-4' };
+          const payload: any = {
+            name: pathElementFormName.trim(),
+            requirement: `💪 ${pathElementFormReq}`,
+            max_block: blockMap[pathElementFormReq] || '🛡️16',
+            mr: mrMap[pathElementFormReq] || '👣-1',
+            cost: pathElementFormCost || '2g',
+            domain: pathElementFormDomain || 'Archaic',
+            notes: pathElementFormNotes.trim() || '',
+            genres: pathElementFormGenres,
+          };
+          const updated = await gameApi.updateCanonicalShield(targetId, payload);
+          updateCanonicalCatalogItem('shield', updated);
+          await gameApi.propagateCanonicalUpdateToAllCharacters({
+            entityType: 'shield',
+            oldName: el.name,
+            updatedItem: updated,
+          });
+        }
+      }
+
+      // Update in local linkedElements state so the left pane card immediately reflects the new name/details
+      setLinkedElements((prev) =>
+        (prev || []).map((item) =>
+          String(item.id) === String(el.id)
+            ? {
+                ...item,
+                name: pathElementFormName.trim(),
+                item_data: {
+                  ...(item.item_data || {}),
+                  name: pathElementFormName.trim(),
+                  notes: pathElementFormNotes.trim(),
+                  effect: pathElementFormEffect.trim(),
+                  action: pathElementFormAction,
+                  usage: pathElementFormUsage,
+                  attribute: pathElementFormAttribute,
+                  discipline: pathElementFormDiscipline,
+                  genres: pathElementFormGenres,
+                  cost: pathElementFormCost,
+                  domain: pathElementFormDomain,
+                  type: pathElementFormType,
+                  requirement: `${
+                    cat === 'weapon' && pathElementFormType === 'Hurled'
+                      ? '🏃'
+                      : cat === 'weapon' && pathElementFormType === 'Shot'
+                      ? '👁️'
+                      : '💪'
+                  } ${pathElementFormReq}`,
+                },
+              }
+            : item
+        )
+      );
+
+      setFeedback({
+        type: 'success',
+        message: `✨ Updated '${pathElementFormName.trim()}' in ${
+          workshopMode === 'designer' ? 'Master Database' : 'Path'
+        } successfully.`,
+      });
+    } catch (err: any) {
+      console.error('Error saving path element:', err);
+      setFeedback({
+        type: 'error',
+        message: `Failed to save changes: ${err.message || err}`,
+      });
+    } finally {
+      setIsSavingPathElement(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -7074,134 +7344,490 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
                 </div>
               ) : activePathSelection.type === 'path_element' ? (
-                /* ROUTE 3: ABILITY INSPECTOR & PERMISSIONED EDIT */
-                <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
-                  {/* Header */}
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">{getCategoryEmoji(activePathSelection.element?.type)}</span>
-                      <div>
-                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
-                          {activePathSelection.element?.name || 'Linked Ability'}
-                        </h3>
-                        <p className="text-[11px] text-slate-400">
-                          Inspect ability mechanics, requirements, and rules text.
-                        </p>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px] font-bold capitalize">
-                      {activePathSelection.element?.type || 'Ability'}
-                    </span>
-                  </div>
-
-                  {/* Path Tag Assignment */}
-                  <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800 shrink-0">
-                    <span className="text-xs font-bold text-slate-300">Path Acquisition Tag</span>
-                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md max-w-xs">
-                      <button
-                        type="button"
-                        onClick={() => activePathSelection.element && handleToggleLinkedTag(activePathSelection.element.id, 'Free')}
-                        className={`flex-1 py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          activePathSelection.element?.tag === 'Free'
-                            ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                      >
-                        <span>🎁</span>
-                        <span>Free (0 AP)</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => activePathSelection.element && handleToggleLinkedTag(activePathSelection.element.id, '1 AP')}
-                        className={`flex-1 py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                          activePathSelection.element?.tag === '1 AP'
-                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                        }`}
-                      >
-                        <span>🧩</span>
-                        <span>1 AP</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Full Mechanics Inspection Card */}
-                  {(() => {
-                    const stats = getElementSkillStats(activePathSelection.element);
-                    return (
-                      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex flex-col gap-3">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                          <span className="font-bold text-slate-200 text-sm">{activePathSelection.element?.name}</span>
-                          <span className="text-[10px] font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
-                            🔒 Canonical Record (Read-Only)
+                /* ROUTE 3: ABILITY INSPECTOR & PERMISSIONED EDIT (CHAOS GEM PARITY) */
+                (() => {
+                  const cat = activePathElementCategory;
+                  return (
+                    <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
+                      {/* Header */}
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{getCategoryEmoji(cat || activePathSelection.element?.type)}</span>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                                {pathElementFormName || activePathSelection.element?.name || 'Linked Ability'}
+                              </h3>
+                              <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px] font-bold capitalize">
+                                {cat || activePathSelection.element?.type || 'Ability'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-400">
+                              {workshopMode === 'designer' ? '👑 Master Database In-Place Editor' : '🧭 Path Ability Inspector & Tuning'}
+                            </p>
+                          </div>
+                        </div>
+                        {workshopMode === 'designer' ? (
+                          <span className="text-[10px] font-mono text-amber-300 px-2 py-0.5 rounded bg-amber-950/60 border border-amber-500/40 font-bold">
+                            👑 Designer Mode
                           </span>
-                        </div>
+                        ) : (
+                          <span className="text-[10px] font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+                            🔒 Player Mode
+                          </span>
+                        )}
+                      </div>
 
-                        {/* Stats Badges Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                          {stats.req && (
-                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-                              <span className="text-[10px] text-slate-500 block">Requirement</span>
-                              <span className="font-bold text-slate-300 font-mono">{stats.req}</span>
-                            </div>
-                          )}
-                          {stats.action && (
-                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-                              <span className="text-[10px] text-slate-500 block">Action</span>
-                              <span className="font-bold text-cyan-400">{stats.action}</span>
-                            </div>
-                          )}
-                          {stats.usage && (
-                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-                              <span className="text-[10px] text-slate-500 block">Usage</span>
-                              <span className="font-bold text-amber-300">{stats.usage}</span>
-                            </div>
-                          )}
-                          {stats.damage && (
-                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-                              <span className="text-[10px] text-slate-500 block">Damage</span>
-                              <span className="font-bold text-rose-300 font-mono">{stats.damage}</span>
-                            </div>
-                          )}
-                          {stats.ar && (
-                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-                              <span className="text-[10px] text-slate-500 block">AR Rating</span>
-                              <span className="font-bold text-purple-300 font-mono">{stats.ar}</span>
-                            </div>
-                          )}
-                          {stats.attribute && (
-                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-                              <span className="text-[10px] text-slate-500 block">Attribute</span>
-                              <span className="font-bold text-cyan-300">{stats.attribute}</span>
-                            </div>
-                          )}
-                          {stats.discipline && (
-                            <div className="p-2 rounded-lg bg-slate-900/60 border border-slate-800">
-                              <span className="text-[10px] text-slate-500 block">Discipline</span>
-                              <span className="font-bold text-indigo-300">{stats.discipline}</span>
-                            </div>
-                          )}
+                      {/* Path Tag Assignment */}
+                      <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800 shrink-0">
+                        <span className="text-xs font-bold text-slate-300">Path Acquisition Tag</span>
+                        <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md max-w-xs">
+                          <button
+                            type="button"
+                            onClick={() => activePathSelection.element && handleToggleLinkedTag(activePathSelection.element.id, 'Free')}
+                            className={`flex-1 py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              activePathSelection.element?.tag === 'Free'
+                                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            <span>🎁</span>
+                            <span>Free (0 AP)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => activePathSelection.element && handleToggleLinkedTag(activePathSelection.element.id, '1 AP')}
+                            className={`flex-1 py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              activePathSelection.element?.tag === '1 AP'
+                                ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                            }`}
+                          >
+                            <span>🧩</span>
+                            <span>1 AP</span>
+                          </button>
                         </div>
+                      </div>
 
-                        {/* Rules Effect */}
-                        {(activePathSelection.element?.details || activePathSelection.element?.item_data?.effect) && (
+                      {/* Name Input */}
+                      <div className="flex items-center gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 shrink-0">
+                        <label className="text-xs font-bold text-slate-300 shrink-0 flex items-center gap-1.5">
+                          <span>Name:</span>
+                          <GuardrailBadge isValid={Boolean(pathElementFormName.trim())} />
+                        </label>
+                        <input
+                          type="text"
+                          value={pathElementFormName}
+                          onChange={(e) => setPathElementFormName(e.target.value)}
+                          placeholder="Ability Name"
+                          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-100 font-bold focus:border-amber-400 outline-none"
+                        />
+                      </div>
+
+                      {/* Category-Specific Form Fields */}
+                      {cat === 'power' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0">
                           <div className="flex flex-col gap-1">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rules Effect</span>
-                            <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 text-xs font-mono text-slate-200 whitespace-pre-wrap leading-relaxed">
-                              {activePathSelection.element?.item_data?.effect || activePathSelection.element?.details}
+                            <label className="text-[10px] font-bold text-slate-400">Action</label>
+                            <select
+                              value={pathElementFormAction}
+                              onChange={(e) => setPathElementFormAction(e.target.value)}
+                              className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                            >
+                              {ACTION_OPTIONS.map((opt) => (
+                                <option key={opt.id} value={opt.id}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-slate-400">Usage</label>
+                            <select
+                              value={pathElementFormUsage}
+                              onChange={(e) => setPathElementFormUsage(e.target.value)}
+                              className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                            >
+                              {USAGE_OPTIONS.map((opt) => (
+                                <option key={opt.id} value={opt.id}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-slate-400">Discipline</label>
+                            <input
+                              type="text"
+                              value={pathElementFormDiscipline}
+                              onChange={(e) => setPathElementFormDiscipline(e.target.value)}
+                              placeholder="General, Psionics, etc."
+                              className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {cat === 'trait' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 shrink-0">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-slate-400">Discipline</label>
+                            <input
+                              type="text"
+                              value={pathElementFormDiscipline}
+                              onChange={(e) => setPathElementFormDiscipline(e.target.value)}
+                              placeholder="General, Ancestry, etc."
+                              className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-slate-400">Cost</label>
+                            <input
+                              type="text"
+                              value={pathElementFormCost}
+                              onChange={(e) => setPathElementFormCost(e.target.value)}
+                              placeholder="e.g. 0s or 1g"
+                              className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {cat === 'skill' && (
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-slate-400">Governing Attribute</label>
+                            <div className="flex items-center gap-1.5">
+                              {ATTRIBUTE_CHIPS.map((attr) => (
+                                <button
+                                  key={attr}
+                                  type="button"
+                                  onClick={() => setPathElementFormAttribute(attr)}
+                                  className={`px-3 py-1.5 rounded-lg border text-sm transition-all cursor-pointer ${
+                                    pathElementFormAttribute === attr
+                                      ? 'bg-amber-600 border-amber-400 text-white shadow-sm font-extrabold scale-105'
+                                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                                  }`}
+                                >
+                                  {attr}
+                                </button>
+                              ))}
                             </div>
                           </div>
-                        )}
+                          <div className="flex flex-col gap-1">
+                            <label className="text-[10px] font-bold text-slate-400">Discipline</label>
+                            <input
+                              type="text"
+                              value={pathElementFormDiscipline}
+                              onChange={(e) => setPathElementFormDiscipline(e.target.value)}
+                              placeholder="e.g. Martial, Academic, Rogue..."
+                              className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
+                            />
+                          </div>
+                        </div>
+                      )}
 
-                        {activePathSelection.element?.item_data?.notes && (
-                          <p className="text-[11px] text-slate-500 italic">
-                            "{activePathSelection.element?.item_data?.notes}"
-                          </p>
-                        )}
+                      {cat === 'weapon' && (
+                        <div className="flex flex-col gap-2.5 shrink-0">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold text-slate-400">Weapon Type</label>
+                              <select
+                                value={pathElementFormType}
+                                onChange={(e) => setPathElementFormType(e.target.value)}
+                                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                              >
+                                {['Melee', 'Hurled', 'Shot', 'Melee, Hurled', 'Melee, Shot'].map((t) => (
+                                  <option key={t} value={t}>
+                                    {t}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold text-slate-400">Requirement</label>
+                              <select
+                                value={pathElementFormReq}
+                                onChange={(e) => setPathElementFormReq(parseInt(e.target.value, 10))}
+                                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                              >
+                                {WEAPON_REQ_NUMBERS.map((n) => (
+                                  <option key={n} value={n}>
+                                    {pathElementFormType === 'Hurled'
+                                      ? `🏃 ${n}`
+                                      : pathElementFormType === 'Shot'
+                                      ? `👁️ ${n}`
+                                      : `💪 ${n}`}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold text-slate-400">Cost</label>
+                              <input
+                                type="text"
+                                value={pathElementFormCost}
+                                onChange={(e) => setPathElementFormCost(e.target.value)}
+                                placeholder="e.g. 1g"
+                                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Derived Stat Badges */}
+                          <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center gap-3">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Derived:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded bg-rose-950/60 border border-rose-800/60 text-rose-300 font-mono text-[11px] font-bold">
+                                Atk & Dmg: {getWeaponAtkDmg(pathElementFormType)}
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 font-mono text-[11px] font-bold">
+                                Max Block: {getWeaponMaxBlock(pathElementFormType, pathElementFormReq)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {cat === 'armor' && (
+                        <div className="flex flex-col gap-2.5 shrink-0">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold text-slate-400">Requirement</label>
+                              <select
+                                value={pathElementFormReq}
+                                onChange={(e) => setPathElementFormReq(parseInt(e.target.value, 10))}
+                                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                              >
+                                {[4, 6, 8, 10, 12].map((n) => (
+                                  <option key={n} value={n}>
+                                    💪 {n}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold text-slate-400">Cost</label>
+                              <input
+                                type="text"
+                                value={pathElementFormCost}
+                                onChange={(e) => setPathElementFormCost(e.target.value)}
+                                placeholder="e.g. 1g"
+                                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Derived Stat Badges */}
+                          <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center gap-3">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Derived:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800/60 text-purple-300 font-mono text-[11px] font-bold">
+                                AR: 🧥{pathElementFormReq}
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 font-mono text-[11px] font-bold">
+                                MR: {getArmorMrStr(String(pathElementFormReq))}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {cat === 'shield' && (
+                        <div className="flex flex-col gap-2.5 shrink-0">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold text-slate-400">Requirement</label>
+                              <select
+                                value={pathElementFormReq}
+                                onChange={(e) => setPathElementFormReq(parseInt(e.target.value, 10))}
+                                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                              >
+                                {[4, 6, 8, 10, 12].map((n) => (
+                                  <option key={n} value={n}>
+                                    💪 {n}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold text-slate-400">Cost</label>
+                              <input
+                                type="text"
+                                value={pathElementFormCost}
+                                onChange={(e) => setPathElementFormCost(e.target.value)}
+                                placeholder="e.g. 2g"
+                                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Derived Stat Badges */}
+                          <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center gap-3">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Derived:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 font-mono text-[11px] font-bold">
+                                Max Block: {getShieldMaxBlockStr(String(pathElementFormReq))}
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 font-mono text-[11px] font-bold">
+                                MR: {getShieldMrStr(String(pathElementFormReq))}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Rules Effect (Powers, Traits, or Any Element with Rules Text) */}
+                      {(cat === 'power' || cat === 'trait' || pathElementFormEffect) && (
+                        <div className="flex flex-col gap-1.5 shrink-0">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                              <span>Rules Effect</span>
+                              {cat === 'power' && <GuardrailBadge isValid={Boolean(pathElementFormEffect.trim())} />}
+                            </label>
+                            <span className="text-[10px] text-slate-500 font-mono">Canonical rules syntax</span>
+                          </div>
+
+                          {/* Quick Insert Ribbon */}
+                          <div className="p-2 rounded-xl bg-slate-950 border border-slate-800 flex flex-col gap-2">
+                            {/* Attributes Quick Chips */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-bold text-slate-400 shrink-0">Attributes:</span>
+                              {ATTRIBUTE_CHIPS.map((icon) => (
+                                <button
+                                  key={icon}
+                                  type="button"
+                                  onClick={() => insertPathElementTextAtCursor(icon)}
+                                  className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
+                                  title={`Insert ${icon}`}
+                                >
+                                  {icon}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Range Bands Quick Chips */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-bold text-slate-400 shrink-0">Range:</span>
+                              {RANGE_BANDS.map((rng) => (
+                                <button
+                                  key={rng.id}
+                                  type="button"
+                                  onClick={() => insertPathElementTextAtCursor(rng.text)}
+                                  className="px-2 py-0.5 rounded bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-500/50 text-cyan-300 text-[10px] font-mono transition cursor-pointer"
+                                  title={`Insert ${rng.label}`}
+                                >
+                                  {rng.id}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* AoE Quick Chips */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-bold text-slate-400 shrink-0">AoE:</span>
+                              {AOE_PRESETS.map((aoe) => (
+                                <button
+                                  key={aoe.id}
+                                  type="button"
+                                  onClick={() => insertPathElementTextAtCursor(aoe.text)}
+                                  className="px-2 py-0.5 rounded bg-slate-900 hover:bg-rose-950/70 border border-slate-700 hover:border-rose-500/50 text-rose-300 text-[10px] font-mono transition cursor-pointer"
+                                >
+                                  {aoe.id}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <textarea
+                            ref={pathElementEffectTextareaRef}
+                            rows={3}
+                            value={pathElementFormEffect}
+                            onChange={(e) => setPathElementFormEffect(e.target.value)}
+                            placeholder="e.g. Rng Short; target makes 🏃^14 save or suffers d💪 dmg and Prone."
+                            className="bg-slate-950 text-slate-100 text-xs font-mono px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
+                          />
+                        </div>
+                      )}
+
+                      {/* Notes Field */}
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <label className="text-xs font-bold text-slate-300">Notes</label>
+                        <textarea
+                          rows={2}
+                          value={pathElementFormNotes}
+                          onChange={(e) => setPathElementFormNotes(e.target.value)}
+                          placeholder="Optional lore, tactical notes, or historical context..."
+                          className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 font-serif italic resize-y min-h-[44px]"
+                        />
                       </div>
-                    );
-                  })()}
-                </div>
+
+                      {/* Genres Multi-Select */}
+                      <div className="flex flex-col gap-1.5 shrink-0">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-300">Genres</label>
+                          <span className="text-[10px] text-slate-500 font-mono">Select at least 1</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {GENRE_OPTIONS.map((g) => {
+                            const isSelected = pathElementFormGenres.includes(g.id);
+                            return (
+                              <button
+                                key={g.id}
+                                type="button"
+                                onClick={() => {
+                                  setPathElementFormGenres((prev) =>
+                                    isSelected
+                                      ? prev.length > 1
+                                        ? prev.filter((id) => id !== g.id)
+                                        : prev
+                                      : [...prev, g.id]
+                                  );
+                                }}
+                                className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
+                                  isSelected
+                                    ? 'bg-amber-600 border-amber-500 text-white shadow-sm'
+                                    : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200'
+                                }`}
+                              >
+                                <span>{g.icon}</span>
+                                <span>{g.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Action Save Button */}
+                      <div className="pt-2 border-t border-slate-800 shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleSavePathElement}
+                          disabled={
+                            !pathElementFormName.trim() ||
+                            (cat === 'power' && !pathElementFormEffect.trim()) ||
+                            isSavingPathElement
+                          }
+                          className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+                            pathElementFormName.trim() &&
+                            (cat !== 'power' || pathElementFormEffect.trim()) &&
+                            !isSavingPathElement
+                              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white cursor-pointer shadow-purple-900/40'
+                              : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+                          }`}
+                        >
+                          <Check className="w-4 h-4" />
+                          <span>
+                            {isSavingPathElement
+                              ? 'Saving Changes...'
+                              : workshopMode === 'designer'
+                              ? `💾 Save Changes to Master Database`
+                              : `💾 Save Changes to Path`}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()
               ) : activePathSelection.type === 'path_add_set' ? (
                 /* ROUTE 4: FILTERED SET PICKER */
                 <div className="flex-1 flex flex-col min-h-0 gap-3">
