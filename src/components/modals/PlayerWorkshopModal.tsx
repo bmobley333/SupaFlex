@@ -5342,7 +5342,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto pr-1">
                   {/* Tier 1: Path Root Card */}
                   <div
-                    onClick={() => setActivePathSelection({ type: 'path_root' })}
+                    onClick={() => {
+                      setPathAddElementSearch('');
+                      setPathAddSetSearch('');
+                      setIsAuthoringPathCustomAbility(false);
+                      setActivePathSelection({ type: 'path_root' });
+                    }}
                     className={`p-2.5 rounded-xl border transition flex items-center justify-between gap-2 cursor-pointer shadow-sm ${
                       activePathSelection.type === 'path_root'
                         ? 'bg-blue-950/40 border-blue-500/80 ring-1 ring-blue-500/40'
@@ -5417,7 +5422,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               return (
                                 <div
                                   key={String(setItem.id)}
-                                  onClick={() => setActivePathSelection({ type: 'path_set', setItem, setRecord: setRec })}
+                                  onClick={() => {
+                                    setPathAddElementSearch('');
+                                    setPathAddSetSearch('');
+                                    setIsAuthoringPathCustomAbility(false);
+                                    setActivePathSelection({ type: 'path_set', setItem, setRecord: setRec });
+                                  }}
                                   className={`p-2 rounded-lg border transition flex items-center justify-between gap-2 cursor-pointer ${
                                     isSelected
                                       ? 'bg-blue-950/40 border-blue-500/80 ring-1 ring-blue-500/40'
@@ -5502,9 +5512,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               return (
                                 <div
                                   key={String(element.id)}
-                                  onClick={() =>
-                                    setActivePathSelection({ type: 'path_element', element, category: cat.id })
-                                  }
+                                  onClick={() => {
+                                    setPathAddElementSearch('');
+                                    setPathAddSetSearch('');
+                                    setIsAuthoringPathCustomAbility(false);
+                                    setActivePathSelection({ type: 'path_element', element, category: cat.id });
+                                  }}
                                   className={`p-2 rounded-lg border transition flex items-center justify-between gap-2 cursor-pointer ${
                                     isSelected
                                       ? 'bg-blue-950/40 border-blue-500/80 ring-1 ring-blue-500/40'
@@ -5575,9 +5588,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             <div className="flex items-center gap-2 pt-0.5">
                               <button
                                 type="button"
-                                onClick={() =>
-                                  setActivePathSelection({ type: 'path_add_set', category: cat.id })
-                                }
+                                onClick={() => {
+                                  setPathAddSetSearch('');
+                                  setActivePathSelection({ type: 'path_add_set', category: cat.id });
+                                }}
                                 className="flex-1 py-1 px-2 rounded-lg border border-dashed border-slate-700 hover:border-blue-500/60 bg-slate-950/60 hover:bg-slate-900 text-[11px] font-bold text-slate-400 hover:text-blue-300 transition flex items-center justify-center gap-1 cursor-pointer select-none"
                               >
                                 <Plus className="w-3 h-3" />
@@ -5585,9 +5599,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               </button>
                               <button
                                 type="button"
-                                onClick={() =>
-                                  setActivePathSelection({ type: 'path_add_element', category: cat.id })
-                                }
+                                onClick={() => {
+                                  setPathAddElementSearch('');
+                                  setIsAuthoringPathCustomAbility(false);
+                                  setActivePathSelection({ type: 'path_add_element', category: cat.id });
+                                }}
                                 className="flex-1 py-1 px-2 rounded-lg border border-dashed border-slate-700 hover:border-blue-500/60 bg-slate-950/60 hover:bg-slate-900 text-[11px] font-bold text-slate-400 hover:text-blue-300 transition flex items-center justify-center gap-1 cursor-pointer select-none"
                               >
                                 <Plus className="w-3 h-3" />
@@ -7150,7 +7166,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
               ) : activePathSelection.type === 'path_root' || activePathSelection.type === 'path' ? (
                 /* ROUTE 1: PATH METADATA EDITOR & PERSISTENCE */
-                <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
+                <div
+                  key={`path_root_${selectedPathId || canonicalSelectedId || 'new'}`}
+                  className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1"
+                >
                   {/* Header */}
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
                     <div className="flex items-center gap-2">
@@ -7293,7 +7312,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
               ) : activePathSelection.type === 'path_set' ? (
                 /* ROUTE 2: LINKED SET INSPECTOR & REDIRECT NOTICE */
-                <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
+                <div
+                  key={`path_set_${activePathSelection.setItem?.id || activePathSelection.setItem?.name || 'set'}`}
+                  className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1"
+                >
                   {/* Header */}
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
                     <div className="flex items-center gap-2">
@@ -7423,7 +7445,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       : `💪 ${pathElementFormReq}`;
 
                   return (
-                    <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
+                    <div
+                      key={`path_element_${activePathSelection.element?.id || 'element'}`}
+                      className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1"
+                    >
                       {/* Header */}
                       <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
                         <div className="flex items-center gap-2">
@@ -7921,7 +7946,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 })()
               ) : activePathSelection.type === 'path_add_set' ? (
                 /* ROUTE 4: FILTERED SET PICKER */
-                <div className="flex-1 flex flex-col min-h-0 gap-3">
+                <div
+                  key={`path_add_set_${activePathSelection.category || 'all'}`}
+                  className="flex-1 flex flex-col min-h-0 gap-3"
+                >
                   {/* Header */}
                   <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-800 shrink-0">
                     <div className="flex items-center gap-2">
@@ -8049,7 +8077,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   <div className="shrink-0 flex items-center justify-end pt-2 border-t border-slate-800/80">
                     <button
                       type="button"
-                      onClick={() => setActivePathSelection({ type: 'path_root' })}
+                      onClick={() => {
+                        setPathAddSetSearch('');
+                        setActivePathSelection({ type: 'path_root' });
+                      }}
                       className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
                     >
                       Done
@@ -8058,7 +8089,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 </div>
               ) : activePathSelection.type === 'path_add_element' ? (
                 /* ROUTE 5: FILTERED ABILITY PICKER & IN-PLACE AUTHOR FORM */
-                <div className="flex-1 flex flex-col min-h-0 gap-3">
+                <div
+                  key={`path_add_element_${activePathSelection.category || 'all'}`}
+                  className="flex-1 flex flex-col min-h-0 gap-3"
+                >
                   {/* Header */}
                   <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-800 shrink-0">
                     <div className="flex items-center gap-2">
@@ -8449,7 +8483,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   <div className="shrink-0 flex items-center justify-end pt-2 border-t border-slate-800/80">
                     <button
                       type="button"
-                      onClick={() => setActivePathSelection({ type: 'path_root' })}
+                      onClick={() => {
+                        setPathAddElementSearch('');
+                        setIsAuthoringPathCustomAbility(false);
+                        setActivePathSelection({ type: 'path_root' });
+                      }}
                       className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
                     >
                       Done
@@ -8483,7 +8521,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 <>
                   {/* ROUTE 1: SET ROOT METADATA EDITOR */}
                   {activeSetSelection.type === 'set_root' && (
-                    <div className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3">
+                    <div
+                      key={`set_root_${selectedSetId || 'new'}`}
+                      className="flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-3"
+                    >
                         {/* Row 1: Name & Collision Badge */}
                         <div className="flex flex-col gap-1 shrink-0">
                           <div className="flex items-center gap-3">
@@ -8727,7 +8768,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
               {/* ROUTE 2: SET MEMBER INSPECTOR / EDITOR */}
               {activeSetSelection.type === 'set_member' && activeSetSelection.item && (
-                <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
+                <div
+                  key={`set_member_${activeSetSelection.item?.id || 'member'}`}
+                  className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1"
+                >
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
                     <div className="flex items-center gap-2">
                       <span className="text-base">
@@ -8839,7 +8883,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
               {/* ROUTE 3: CATEGORY CATALOG BROWSER (ADD TO SET) */}
               {activeSetSelection.type === 'set_add_member' && (
-                <div className="flex-1 flex flex-col min-h-0 gap-3">
+                <div
+                  key={`set_add_member_${selectedSetCategory || 'all'}`}
+                  className="flex-1 flex flex-col min-h-0 gap-3"
+                >
                   {/* Header: Category Title, Counter, and Search */}
                   <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-800 shrink-0">
                     <div className="flex items-center gap-2">
