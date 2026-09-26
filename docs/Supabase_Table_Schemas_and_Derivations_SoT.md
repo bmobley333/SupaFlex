@@ -11,29 +11,34 @@
 
 Scanned directly from Supabase master database:
 
-| Table | All Supabase Columns | System / Generated Columns | Human-Editable Columns in UI Editor |
-| :--- | :--- | :--- | :--- |
-| **`powers`** | `id, name, action, usage, effect, notes, genres, discipline, path, sets, stat_hook, created_at, owner` | `id, created_at, owner, path, sets, stat_hook` | `name`, `action`, `usage`, `effect`, `discipline`, `notes`, `genres` |
-| **`traits`** | `id, name, effect, notes, genres, cost, discipline, path, sets, belongs_to, stat_hook, created_at, owner` | `id, created_at, owner, path, sets, belongs_to, stat_hook` | `name`, `effect`, `cost`, `discipline`, `notes`, `genres` |
-| **`skills`** | `id, name, attribute, discipline, notes, genres, path, sets, created_at, owner` | `id, created_at, owner, path, sets` | `name`, `attribute`, `discipline`, `notes`, `genres` |
-| **`weapons`** | `id, name, type, requirement, atk, dmg, max_block, cost, domain, notes, genres, pic, path, sets, belongs_to, created_at, owner` | `id, created_at, owner, path, sets, belongs_to, pic` | `name`, `type`, `requirement` *(auto-derives `atk, dmg, max_block`)*, `cost`, `domain`, `notes`, `genres` |
-| **`armor`** | `id, name, requirement, ar, mr, cost, domain, notes, genres, pic, path, sets, belongs_to, created_at, owner` | `id, created_at, owner, path, sets, belongs_to, pic` | `name`, `requirement` *(auto-derives `ar, mr`)*, `cost`, `domain`, `notes`, `genres` |
-| **`shields`** | `id, name, requirement, max_block, mr, cost, domain, notes, genres, path, sets, belongs_to, created_at, owner` | `id, created_at, owner, path, sets, belongs_to` | `name`, `requirement` *(auto-derives `max_block, mr`)*, `cost`, `domain`, `notes`, `genres` |
+| Table | All Supabase Columns | System / Generated Columns | Human-Editable Columns in UI Editor | Effect vs Notes UI Display Rule |
+| :--- | :--- | :--- | :--- | :--- |
+| **`powers`** | `id, name, action, usage, effect, notes, genres, discipline, path, sets, stat_hook, created_at, owner` | `id, created_at, owner, path, sets, stat_hook` | `name`, `action`, `usage`, `effect`, `discipline`, `notes`, `genres` | Displays **BOTH** `Effect` and `Notes` |
+| **`traits`** | `id, name, effect, notes, genres, cost, discipline, path, sets, belongs_to, stat_hook, created_at, owner` | `id, created_at, owner, path, sets, belongs_to, stat_hook, cost` *(cost omitted from UI)* | `name`, `effect`, `discipline`, `notes`, `genres` | Displays **BOTH** `Effect` and `Notes` |
+| **`skills`** | `id, name, attribute, discipline, notes, genres, path, sets, created_at, owner` | `id, created_at, owner, path, sets` | `name`, `attribute`, `discipline`, `notes`, `genres` | Displays **ONLY** `Notes` *(No `effect` in Supabase)* |
+| **`weapons`** | `id, name, type, requirement, atk, dmg, max_block, cost, domain, notes, genres, pic, path, sets, belongs_to, created_at, owner` | `id, created_at, owner, path, sets, belongs_to, pic` | `name`, `type`, `requirement` *(auto-derives `atk, dmg, max_block`)*, `cost`, `domain`, `notes`, `genres` | Displays **ONLY** `Notes` *(No `effect` in Supabase)* |
+| **`armor`** | `id, name, requirement, ar, mr, cost, domain, notes, genres, pic, path, sets, belongs_to, created_at, owner` | `id, created_at, owner, path, sets, belongs_to, pic` | `name`, `requirement` *(auto-derives `ar, mr`)*, `cost`, `domain`, `notes`, `genres` | Displays **ONLY** `Notes` *(No `effect` in Supabase)* |
+| **`shields`** | `id, name, requirement, max_block, mr, cost, domain, notes, genres, path, sets, belongs_to, created_at, owner` | `id, created_at, owner, path, sets, belongs_to` | `name`, `requirement` *(auto-derives `max_block, mr`)*, `cost`, `domain`, `notes`, `genres` | Displays **ONLY** `Notes` *(No `effect` in Supabase)* |
 
 ---
 
-## 2. Standardized UI Labels
+## 2. Standardized UI Labels & Form Patterns
 
-- **`Notes`**: Always labeled "Notes" (never "Lore & Notes" or "Rule Notes").
-- **`Usage`**: Always labeled "Usage" (never "Usage Cadence").
-- **`Action`**: Always labeled "Action" (never "Action Speed").
+- **`Effect`**: Always labeled **"Effect"** (never "Rules Effect" or "Rules / Effect"). Rendered exclusively for `powers` and `traits`.
+- **`Notes`**: Always labeled **"Notes"** (never "Lore & Notes" or "Rule Notes"). Rendered for all entity types.
+- **`Usage`**: Always labeled **"Usage"** (never "Usage Cadence").
+- **`Action`**: Always labeled **"Action"** (never "Action Speed").
+- **`Cost`**: Handled via dual integer Gold (`g`) and Silver (`s`) inputs for Equipment (`weapons`, `armor`, `shields`). Formatted into canonical string representation (e.g. `2g 5s`, `50g`, `8s`, or `0s`). Note that `traits` do NOT display or use cost.
+- **Dynamic Dropdowns**:
+  - `Discipline`: Populated with distinct values from Supabase tables (`traits.discipline`, `powers.discipline`, `skills.discipline`).
+  - `Domain`: Populated with distinct values from Supabase tables (`weapons.domain`, `armor.domain`, `shields.domain`).
 
 ---
 
 ## 3. Strict 1-to-1 Stat Derivation Matrices
 
 ### A. Armor Requirement Matrix (1-to-1)
-Selecting `Requirement` automatically sets and locks `ar` and `mr`:
+Selecting `Requirement` (integer `4, 6, 8, 10, 12`) automatically sets and locks `ar` and `mr`:
 * `💪 4`  -> `ar: 🧥4`,  `mr: 👣12`
 * `💪 6`  -> `ar: 🧥6`,  `mr: 👣11`
 * `💪 8`  -> `ar: 🧥8`,  `mr: 👣10`
@@ -41,7 +46,7 @@ Selecting `Requirement` automatically sets and locks `ar` and `mr`:
 * `💪 12` -> `ar: 🧥12`, `mr: 👣8`
 
 ### B. Shields Requirement Matrix (1-to-1)
-Selecting `Requirement` automatically sets and locks `max_block` and `mr`:
+Selecting `Requirement` (integer `4, 6, 8, 10, 12`) automatically sets and locks `max_block` and `mr`:
 * `💪 4`  -> `max_block: 🛡️12`, `mr: 👣0`
 * `💪 6`  -> `max_block: 🛡️16`, `mr: 👣-1`
 * `💪 8`  -> `max_block: 🛡️20`, `mr: 👣-2`
@@ -49,8 +54,16 @@ Selecting `Requirement` automatically sets and locks `max_block` and `mr`:
 * `💪 12` -> `max_block: 🛡️28`, `mr: 👣-4`
 
 ### C. Weapons Type & Requirement Matrix (1-to-1)
-* **Allowed Types**: `Melee`, `Hurled`, `Shot`, `Melee, Hurled`, `Melee, Shot`
-* **Allowed Requirements**: `4`, `6`, `8`, `10`, `12`
+* **Allowed Types**:
+  * `💪 Melee`
+  * `🏃 Hurled`
+  * `👁️ Shot`
+  * `💪 Melee, 🏃 Hurled`
+  * `💪 Melee, 👁️ Shot`
+* **Allowed Requirements**: `4, 6, 8, 10, 12`
+* **Requirement String & Badges**:
+  * Single Type: e.g. `💪6` or `🏃6` or `👁️6`
+  * Dual Type: e.g. `💪6, 🏃6` or `💪6, 👁️6`
 * **Derived Stats**:
   * `atk` & `dmg`:
     * `Melee` -> `💪`

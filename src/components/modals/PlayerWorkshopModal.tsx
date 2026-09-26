@@ -4419,10 +4419,46 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [pathElementFormAttribute, setPathElementFormAttribute] = useState<string>('💪');
   const [pathElementFormType, setPathElementFormType] = useState<string>('Melee');
   const [pathElementFormReq, setPathElementFormReq] = useState<number>(4);
-  const [pathElementFormCost, setPathElementFormCost] = useState<string>('0s');
+  const [pathElementCostGold, setPathElementCostGold] = useState<number>(0);
+  const [pathElementCostSilver, setPathElementCostSilver] = useState<number>(0);
   const [pathElementFormDomain, setPathElementFormDomain] = useState<string>('Archaic');
   const [isSavingPathElement, setIsSavingPathElement] = useState<boolean>(false);
   const pathElementEffectTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const parseCostString = (costStr?: string | null): { gold: number; silver: number } => {
+    if (!costStr) return { gold: 0, silver: 0 };
+    const gMatch = String(costStr).match(/(\d+)\s*g/i);
+    const sMatch = String(costStr).match(/(\d+)\s*s/i);
+    return {
+      gold: gMatch ? parseInt(gMatch[1], 10) : 0,
+      silver: sMatch ? parseInt(sMatch[1], 10) : 0,
+    };
+  };
+
+  const formatCostString = (gold: number, silver: number): string => {
+    if (gold > 0 && silver > 0) return `${gold}g ${silver}s`;
+    if (gold > 0) return `${gold}g`;
+    if (silver > 0) return `${silver}s`;
+    return '0s';
+  };
+
+  const availableTraitDisciplines = useMemo(() => {
+    const defaultList = ['Archaic', 'BioTech', 'CyberTech', 'General', 'Martial', 'Psionics', 'Somatics', 'Tech', 'Universal', 'Void Magic'];
+    const fromCatalog = (traits || []).map((t) => (t.discipline || '').trim()).filter(Boolean);
+    return Array.from(new Set([...defaultList, ...fromCatalog])).sort();
+  }, [traits]);
+
+  const availablePowerDisciplines = useMemo(() => {
+    const defaultList = ['BioTech', 'CyberTech', 'Martial', 'Mental', 'Physical', 'Psionics', 'Social', 'Somatics', 'Sorce', 'Tech', 'Universal'];
+    const fromCatalog = (powers || []).map((p) => (p.discipline || '').trim()).filter(Boolean);
+    return Array.from(new Set([...defaultList, ...fromCatalog])).sort();
+  }, [powers]);
+
+  const availableArmorDomains = useMemo(() => {
+    const defaultList = ['Archaic', 'BioTech', 'CyberTech', 'Tech'];
+    const fromCatalog = (armorCatalog || []).map((a) => (a.domain || '').trim()).filter(Boolean);
+    return Array.from(new Set([...defaultList, ...fromCatalog])).sort();
+  }, [armorCatalog]);
 
   const insertPathElementTextAtCursor = (insertStr: string) => {
     const textarea = pathElementEffectTextareaRef.current;
@@ -4462,46 +4498,56 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (activePathSelection.type !== 'path_element' || !activePathSelection.element) return;
     const el = activePathSelection.element;
     const cleanName = (el.name || '').toLowerCase().trim();
-    const cat = getLinkedElementCategory(el);
+    const cleanId = String(el.id || '').replace(/^(power|trait|skill|weapon|armor|shield)_/, '');
+    const cat = activePathElementCategory;
 
     let rawRecord: any = el;
     if (cat === 'power') {
       rawRecord =
         (powers || []).find(
-          (p) => String(p.id) === String(el.id) || (p.name || '').toLowerCase().trim() === cleanName
+          (p) => String(p.id) === String(el.id) || String(p.id) === cleanId || (p.name || '').toLowerCase().trim() === cleanName
         ) || el;
     } else if (cat === 'trait') {
       rawRecord =
         (traits || []).find(
-          (t) => String(t.id) === String(el.id) || (t.name || '').toLowerCase().trim() === cleanName
+          (t) => String(t.id) === String(el.id) || String(t.id) === cleanId || (t.name || '').toLowerCase().trim() === cleanName
         ) || el;
     } else if (cat === 'skill') {
       rawRecord =
         (skills || []).find(
-          (s) => String(s.id) === String(el.id) || (s.name || '').toLowerCase().trim() === cleanName
+          (s) => String(s.id) === String(el.id) || String(s.id) === cleanId || (s.name || '').toLowerCase().trim() === cleanName
         ) || el;
     } else if (cat === 'weapon') {
       rawRecord =
         (weaponsCatalog || []).find(
-          (w) => String(w.id) === String(el.id) || (w.name || '').toLowerCase().trim() === cleanName
+          (w) => String(w.id) === String(el.id) || String(w.id) === cleanId || (w.name || '').toLowerCase().trim() === cleanName
         ) || el;
-    } else if (cat === 'armor_shield') {
-      const foundShield = (shieldsCatalog || []).find(
-        (s) => String(s.id) === String(el.id) || (s.name || '').toLowerCase().trim() === cleanName
-      );
-      const foundArmor = (armorCatalog || []).find(
-        (a) => String(a.id) === String(el.id) || (a.name || '').toLowerCase().trim() === cleanName
-      );
-      rawRecord = foundShield || foundArmor || el;
+    } else if (cat === 'shield') {
+      rawRecord =
+        (shieldsCatalog || []).find(
+          (s) => String(s.id) === String(el.id) || String(s.id) === cleanId || (s.name || '').toLowerCase().trim() === cleanName
+        ) || el;
+    } else if (cat === 'armor') {
+      rawRecord =
+        (armorCatalog || []).find(
+          (a) => String(a.id) === String(el.id) || String(a.id) === cleanId || (a.name || '').toLowerCase().trim() === cleanName
+        ) || el;
     }
 
     setPathElementFormName(rawRecord.name || el.name || '');
     setPathElementFormAction(rawRecord.action || el.item_data?.action || 'AM');
     setPathElementFormUsage(rawRecord.usage || el.item_data?.usage || '1-Enc');
-    setPathElementFormEffect(
-      rawRecord.effect || rawRecord.item_data?.effect || el.item_data?.effect || el.details || ''
-    );
-    setPathElementFormNotes(rawRecord.notes || rawRecord.item_data?.notes || el.item_data?.notes || '');
+    
+    // Powers & Traits have Effect. Skills, Weapons, Armor, Shields have NO Effect.
+    if (cat === 'power' || cat === 'trait') {
+      setPathElementFormEffect(rawRecord.effect || rawRecord.item_data?.effect || el.item_data?.effect || el.effect || '');
+    } else {
+      setPathElementFormEffect('');
+    }
+
+    // Notes: for all types, populated from rawRecord.notes
+    setPathElementFormNotes(rawRecord.notes || rawRecord.item_data?.notes || el.item_data?.notes || el.notes || '');
+
     setPathElementFormGenres(
       Array.isArray(rawRecord.genres) && rawRecord.genres.length > 0
         ? rawRecord.genres
@@ -4509,40 +4555,66 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         ? el.item_data.genres
         : ['Medieval']
     );
+
     setPathElementFormDiscipline(rawRecord.discipline || el.item_data?.discipline || 'General');
     setPathElementFormAttribute(rawRecord.attribute || el.item_data?.attribute || '💪');
-    setPathElementFormType(rawRecord.type || el.item_data?.type || 'Melee');
+
+    // Weapon Type: strip emoji for internal state
+    const rawType = rawRecord.type || el.item_data?.type || 'Melee';
+    const cleanType = rawType.replace(/[💪🏃👁️]/g, '').trim();
+    setPathElementFormType(cleanType || 'Melee');
 
     const reqStr = String(rawRecord.requirement || el.item_data?.requirement || '4');
     const reqMatch = reqStr.match(/\d+/);
     const reqNum = reqMatch ? parseInt(reqMatch[0], 10) : 4;
     setPathElementFormReq([4, 6, 8, 10, 12].includes(reqNum) ? reqNum : 4);
 
-    setPathElementFormCost(rawRecord.cost || el.item_data?.cost || '0s');
+    const costStr = rawRecord.cost || el.item_data?.cost || '0s';
+    const parsedCost = parseCostString(costStr);
+    setPathElementCostGold(parsedCost.gold);
+    setPathElementCostSilver(parsedCost.silver);
+
     setPathElementFormDomain(rawRecord.domain || el.item_data?.domain || 'Archaic');
   }, [
     activePathSelection,
+    activePathElementCategory,
     powers,
     traits,
     skills,
     weaponsCatalog,
     armorCatalog,
     shieldsCatalog,
-    getLinkedElementCategory,
   ]);
 
   const handleSavePathElement = async () => {
     if (!activePathSelection.element || !pathElementFormName.trim()) return;
     const el = activePathSelection.element;
     const cleanName = (el.name || '').toLowerCase().trim();
+    const cleanId = String(el.id || '').replace(/^(power|trait|skill|weapon|armor|shield)_/, '');
     const cat = activePathElementCategory;
     setIsSavingPathElement(true);
+
+    const formattedCost = formatCostString(pathElementCostGold, pathElementCostSilver);
+    let compositeReq = `💪 ${pathElementFormReq}`;
+    if (cat === 'weapon') {
+      if (pathElementFormType === 'Melee, Hurled') {
+        compositeReq = `💪${pathElementFormReq}, 🏃${pathElementFormReq}`;
+      } else if (pathElementFormType === 'Melee, Shot') {
+        compositeReq = `💪${pathElementFormReq}, 👁️${pathElementFormReq}`;
+      } else if (pathElementFormType === 'Hurled') {
+        compositeReq = `🏃 ${pathElementFormReq}`;
+      } else if (pathElementFormType === 'Shot') {
+        compositeReq = `👁️ ${pathElementFormReq}`;
+      } else {
+        compositeReq = `💪 ${pathElementFormReq}`;
+      }
+    }
 
     try {
       if (workshopMode === 'designer') {
         if (cat === 'power') {
           const found = (powers || []).find(
-            (p) => String(p.id) === String(el.id) || (p.name || '').toLowerCase().trim() === cleanName
+            (p) => String(p.id) === String(el.id) || String(p.id) === cleanId || (p.name || '').toLowerCase().trim() === cleanName
           );
           const targetId = found?.id || el.id;
           const payload: any = {
@@ -4550,7 +4622,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             action: pathElementFormAction,
             usage: pathElementFormUsage,
             effect: pathElementFormEffect.trim(),
-            discipline: pathElementFormDiscipline.trim() || 'General',
+            discipline: pathElementFormDiscipline || 'General',
             notes: pathElementFormNotes.trim() || null,
             genres: pathElementFormGenres,
           };
@@ -4563,14 +4635,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           });
         } else if (cat === 'trait') {
           const found = (traits || []).find(
-            (t) => String(t.id) === String(el.id) || (t.name || '').toLowerCase().trim() === cleanName
+            (t) => String(t.id) === String(el.id) || String(t.id) === cleanId || (t.name || '').toLowerCase().trim() === cleanName
           );
           const targetId = found?.id || el.id;
           const payload: any = {
             name: pathElementFormName.trim(),
             effect: pathElementFormEffect.trim(),
-            cost: pathElementFormCost || '0s',
-            discipline: pathElementFormDiscipline.trim() || 'General',
+            discipline: pathElementFormDiscipline || 'General',
             notes: pathElementFormNotes.trim() || '',
             genres: pathElementFormGenres,
           };
@@ -4583,13 +4654,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           });
         } else if (cat === 'skill') {
           const found = (skills || []).find(
-            (s) => String(s.id) === String(el.id) || (s.name || '').toLowerCase().trim() === cleanName
+            (s) => String(s.id) === String(el.id) || String(s.id) === cleanId || (s.name || '').toLowerCase().trim() === cleanName
           );
           const targetId = found?.id || el.id;
           const payload: any = {
             name: pathElementFormName.trim(),
             attribute: pathElementFormAttribute,
-            discipline: pathElementFormDiscipline.trim() || 'General',
+            discipline: pathElementFormDiscipline || 'General',
             notes: pathElementFormNotes.trim() || '',
             genres: pathElementFormGenres,
           };
@@ -4602,20 +4673,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           });
         } else if (cat === 'weapon') {
           const found = (weaponsCatalog || []).find(
-            (w) => String(w.id) === String(el.id) || (w.name || '').toLowerCase().trim() === cleanName
+            (w) => String(w.id) === String(el.id) || String(w.id) === cleanId || (w.name || '').toLowerCase().trim() === cleanName
           );
           const targetId = found?.id || el.id;
           const atkDmg = getWeaponAtkDmg(pathElementFormType);
           const maxBlock = pathElementFormType.includes('Melee') ? String(pathElementFormReq * 2) : null;
-          const reqEmoji = pathElementFormType === 'Hurled' ? '🏃' : pathElementFormType === 'Shot' ? '👁️' : '💪';
           const payload: any = {
             name: pathElementFormName.trim(),
             type: pathElementFormType,
-            requirement: `${reqEmoji} ${pathElementFormReq}`,
+            requirement: compositeReq,
             atk: atkDmg,
             dmg: atkDmg,
             max_block: maxBlock,
-            cost: pathElementFormCost || '1g',
+            cost: formattedCost,
             domain: pathElementFormDomain || 'Archaic',
             notes: pathElementFormNotes.trim() || '',
             genres: pathElementFormGenres,
@@ -4629,7 +4699,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           });
         } else if (cat === 'armor') {
           const found = (armorCatalog || []).find(
-            (a) => String(a.id) === String(el.id) || (a.name || '').toLowerCase().trim() === cleanName
+            (a) => String(a.id) === String(el.id) || String(a.id) === cleanId || (a.name || '').toLowerCase().trim() === cleanName
           );
           const targetId = found?.id || el.id;
           const arStr = `🧥${pathElementFormReq}`;
@@ -4639,7 +4709,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             requirement: `💪 ${pathElementFormReq}`,
             ar: arStr,
             mr: mrMap[pathElementFormReq] || '👣10',
-            cost: pathElementFormCost || '1g',
+            cost: formattedCost,
             domain: pathElementFormDomain || 'Archaic',
             notes: pathElementFormNotes.trim() || '',
             genres: pathElementFormGenres,
@@ -4653,7 +4723,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           });
         } else if (cat === 'shield') {
           const found = (shieldsCatalog || []).find(
-            (s) => String(s.id) === String(el.id) || (s.name || '').toLowerCase().trim() === cleanName
+            (s) => String(s.id) === String(el.id) || String(s.id) === cleanId || (s.name || '').toLowerCase().trim() === cleanName
           );
           const targetId = found?.id || el.id;
           const blockMap: Record<number, string> = { 4: '🛡️12', 6: '🛡️16', 8: '🛡️20', 10: '🛡️24', 12: '🛡️28' };
@@ -4663,7 +4733,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             requirement: `💪 ${pathElementFormReq}`,
             max_block: blockMap[pathElementFormReq] || '🛡️16',
             mr: mrMap[pathElementFormReq] || '👣-1',
-            cost: pathElementFormCost || '2g',
+            cost: formattedCost,
             domain: pathElementFormDomain || 'Archaic',
             notes: pathElementFormNotes.trim() || '',
             genres: pathElementFormGenres,
@@ -4695,16 +4765,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   attribute: pathElementFormAttribute,
                   discipline: pathElementFormDiscipline,
                   genres: pathElementFormGenres,
-                  cost: pathElementFormCost,
+                  cost: formattedCost,
                   domain: pathElementFormDomain,
                   type: pathElementFormType,
-                  requirement: `${
-                    cat === 'weapon' && pathElementFormType === 'Hurled'
-                      ? '🏃'
-                      : cat === 'weapon' && pathElementFormType === 'Shot'
-                      ? '👁️'
-                      : '💪'
-                  } ${pathElementFormReq}`,
+                  requirement: compositeReq,
                 },
               }
             : item
@@ -7347,6 +7411,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 /* ROUTE 3: ABILITY INSPECTOR & PERMISSIONED EDIT (CHAOS GEM PARITY) */
                 (() => {
                   const cat = activePathElementCategory;
+                  const weaponCompositeReq =
+                    pathElementFormType === 'Melee, Hurled'
+                      ? `💪${pathElementFormReq}, 🏃${pathElementFormReq}`
+                      : pathElementFormType === 'Melee, Shot'
+                      ? `💪${pathElementFormReq}, 👁️${pathElementFormReq}`
+                      : pathElementFormType === 'Hurled'
+                      ? `🏃 ${pathElementFormReq}`
+                      : pathElementFormType === 'Shot'
+                      ? `👁️ ${pathElementFormReq}`
+                      : `💪 ${pathElementFormReq}`;
+
                   return (
                     <div className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1">
                       {/* Header */}
@@ -7376,37 +7451,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             🔒 Player Mode
                           </span>
                         )}
-                      </div>
-
-                      {/* Path Tag Assignment */}
-                      <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-950/70 border border-slate-800 shrink-0">
-                        <span className="text-xs font-bold text-slate-300">Path Acquisition Tag</span>
-                        <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md max-w-xs">
-                          <button
-                            type="button"
-                            onClick={() => activePathSelection.element && handleToggleLinkedTag(activePathSelection.element.id, 'Free')}
-                            className={`flex-1 py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                              activePathSelection.element?.tag === 'Free'
-                                ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                          >
-                            <span>🎁</span>
-                            <span>Free (0 AP)</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => activePathSelection.element && handleToggleLinkedTag(activePathSelection.element.id, '1 AP')}
-                            className={`flex-1 py-1 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                              activePathSelection.element?.tag === '1 AP'
-                                ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                            }`}
-                          >
-                            <span>🧩</span>
-                            <span>1 AP</span>
-                          </button>
-                        </div>
                       </div>
 
                       {/* Name Input */}
@@ -7457,39 +7501,35 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           </div>
                           <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-bold text-slate-400">Discipline</label>
-                            <input
-                              type="text"
+                            <select
                               value={pathElementFormDiscipline}
                               onChange={(e) => setPathElementFormDiscipline(e.target.value)}
-                              placeholder="General, Psionics, etc."
                               className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
-                            />
+                            >
+                              {availablePowerDisciplines.map((d) => (
+                                <option key={d} value={d}>
+                                  {d}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         </div>
                       )}
 
                       {cat === 'trait' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 shrink-0">
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-slate-400">Discipline</label>
-                            <input
-                              type="text"
-                              value={pathElementFormDiscipline}
-                              onChange={(e) => setPathElementFormDiscipline(e.target.value)}
-                              placeholder="General, Ancestry, etc."
-                              className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-slate-400">Cost</label>
-                            <input
-                              type="text"
-                              value={pathElementFormCost}
-                              onChange={(e) => setPathElementFormCost(e.target.value)}
-                              placeholder="e.g. 0s or 1g"
-                              className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                            />
-                          </div>
+                        <div className="flex flex-col gap-1 shrink-0">
+                          <label className="text-[10px] font-bold text-slate-400">Discipline</label>
+                          <select
+                            value={pathElementFormDiscipline}
+                            onChange={(e) => setPathElementFormDiscipline(e.target.value)}
+                            className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
+                          >
+                            {availableTraitDisciplines.map((d) => (
+                              <option key={d} value={d}>
+                                {d}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       )}
 
@@ -7516,13 +7556,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           </div>
                           <div className="flex flex-col gap-1">
                             <label className="text-[10px] font-bold text-slate-400">Discipline</label>
-                            <input
-                              type="text"
+                            <select
                               value={pathElementFormDiscipline}
                               onChange={(e) => setPathElementFormDiscipline(e.target.value)}
-                              placeholder="e.g. Martial, Academic, Rogue..."
                               className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
-                            />
+                            >
+                              {availableSkillDisciplines.map((d) => (
+                                <option key={d} value={d}>
+                                  {d}
+                                </option>
+                              ))}
+                            </select>
                           </div>
                         </div>
                       )}
@@ -7537,11 +7581,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                 onChange={(e) => setPathElementFormType(e.target.value)}
                                 className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
                               >
-                                {['Melee', 'Hurled', 'Shot', 'Melee, Hurled', 'Melee, Shot'].map((t) => (
-                                  <option key={t} value={t}>
-                                    {t}
-                                  </option>
-                                ))}
+                                <option value="Melee">💪 Melee</option>
+                                <option value="Hurled">🏃 Hurled</option>
+                                <option value="Shot">👁️ Shot</option>
+                                <option value="Melee, Hurled">💪 Melee, 🏃 Hurled</option>
+                                <option value="Melee, Shot">💪 Melee, 👁️ Shot</option>
                               </select>
                             </div>
                             <div className="flex flex-col gap-1">
@@ -7553,31 +7597,44 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               >
                                 {WEAPON_REQ_NUMBERS.map((n) => (
                                   <option key={n} value={n}>
-                                    {pathElementFormType === 'Hurled'
-                                      ? `🏃 ${n}`
-                                      : pathElementFormType === 'Shot'
-                                      ? `👁️ ${n}`
-                                      : `💪 ${n}`}
+                                    {n}
                                   </option>
                                 ))}
                               </select>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-slate-400">Cost</label>
-                              <input
-                                type="text"
-                                value={pathElementFormCost}
-                                onChange={(e) => setPathElementFormCost(e.target.value)}
-                                placeholder="e.g. 1g"
+                              <label className="text-[10px] font-bold text-slate-400">Domain</label>
+                              <select
+                                value={pathElementFormDomain}
+                                onChange={(e) => setPathElementFormDomain(e.target.value)}
                                 className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                              />
+                              >
+                                {availableWeaponDomains.map((d) => (
+                                  <option key={d} value={d}>
+                                    {d}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
                           </div>
 
-                          {/* Derived Stat Badges */}
-                          <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center gap-3">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Derived:</span>
+                          {/* Row 2: Cost and Derived Badges */}
+                          <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
                             <div className="flex items-center gap-2">
+                              <label className="text-[10px] font-bold text-slate-400">Cost:</label>
+                              <CompactCostInput
+                                gold={pathElementCostGold}
+                                silver={pathElementCostSilver}
+                                onGoldChange={setPathElementCostGold}
+                                onSilverChange={setPathElementCostSilver}
+                              />
+                            </div>
+
+                            {/* Derived Stat Badges */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800/60 text-blue-300 font-mono text-[11px] font-bold">
+                                Req: {weaponCompositeReq}
+                              </span>
                               <span className="px-2 py-0.5 rounded bg-rose-950/60 border border-rose-800/60 text-rose-300 font-mono text-[11px] font-bold">
                                 Atk & Dmg: {getWeaponAtkDmg(pathElementFormType)}
                               </span>
@@ -7601,27 +7658,44 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               >
                                 {[4, 6, 8, 10, 12].map((n) => (
                                   <option key={n} value={n}>
-                                    💪 {n}
+                                    {n}
                                   </option>
                                 ))}
                               </select>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-slate-400">Cost</label>
-                              <input
-                                type="text"
-                                value={pathElementFormCost}
-                                onChange={(e) => setPathElementFormCost(e.target.value)}
-                                placeholder="e.g. 1g"
+                              <label className="text-[10px] font-bold text-slate-400">Domain</label>
+                              <select
+                                value={pathElementFormDomain}
+                                onChange={(e) => setPathElementFormDomain(e.target.value)}
                                 className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                              />
+                              >
+                                {availableArmorDomains.map((d) => (
+                                  <option key={d} value={d}>
+                                    {d}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
                           </div>
 
-                          {/* Derived Stat Badges */}
-                          <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center gap-3">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Derived:</span>
+                          {/* Row 2: Cost and Derived Badges */}
+                          <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
                             <div className="flex items-center gap-2">
+                              <label className="text-[10px] font-bold text-slate-400">Cost:</label>
+                              <CompactCostInput
+                                gold={pathElementCostGold}
+                                silver={pathElementCostSilver}
+                                onGoldChange={setPathElementCostGold}
+                                onSilverChange={setPathElementCostSilver}
+                              />
+                            </div>
+
+                            {/* Derived Stat Badges */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800/60 text-blue-300 font-mono text-[11px] font-bold">
+                                Req: 💪 {pathElementFormReq}
+                              </span>
                               <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800/60 text-purple-300 font-mono text-[11px] font-bold">
                                 AR: 🧥{pathElementFormReq}
                               </span>
@@ -7645,27 +7719,44 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               >
                                 {[4, 6, 8, 10, 12].map((n) => (
                                   <option key={n} value={n}>
-                                    💪 {n}
+                                    {n}
                                   </option>
                                 ))}
                               </select>
                             </div>
                             <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-slate-400">Cost</label>
-                              <input
-                                type="text"
-                                value={pathElementFormCost}
-                                onChange={(e) => setPathElementFormCost(e.target.value)}
-                                placeholder="e.g. 2g"
+                              <label className="text-[10px] font-bold text-slate-400">Domain</label>
+                              <select
+                                value={pathElementFormDomain}
+                                onChange={(e) => setPathElementFormDomain(e.target.value)}
                                 className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                              />
+                              >
+                                {availableShieldDomains.map((d) => (
+                                  <option key={d} value={d}>
+                                    {d}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
                           </div>
 
-                          {/* Derived Stat Badges */}
-                          <div className="p-2 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center gap-3">
-                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Derived:</span>
+                          {/* Row 2: Cost and Derived Badges */}
+                          <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
                             <div className="flex items-center gap-2">
+                              <label className="text-[10px] font-bold text-slate-400">Cost:</label>
+                              <CompactCostInput
+                                gold={pathElementCostGold}
+                                silver={pathElementCostSilver}
+                                onGoldChange={setPathElementCostGold}
+                                onSilverChange={setPathElementCostSilver}
+                              />
+                            </div>
+
+                            {/* Derived Stat Badges */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800/60 text-blue-300 font-mono text-[11px] font-bold">
+                                Req: 💪 {pathElementFormReq}
+                              </span>
                               <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 font-mono text-[11px] font-bold">
                                 Max Block: {getShieldMaxBlockStr(String(pathElementFormReq))}
                               </span>
@@ -7677,13 +7768,13 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </div>
                       )}
 
-                      {/* Rules Effect (Powers, Traits, or Any Element with Rules Text) */}
-                      {(cat === 'power' || cat === 'trait' || pathElementFormEffect) && (
+                      {/* Effect Field (ONLY Powers and Traits have Effect) */}
+                      {(cat === 'power' || cat === 'trait') && (
                         <div className="flex flex-col gap-1.5 shrink-0">
                           <div className="flex items-center justify-between">
                             <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                              <span>Rules Effect</span>
-                              {cat === 'power' && <GuardrailBadge isValid={Boolean(pathElementFormEffect.trim())} />}
+                              <span>Effect</span>
+                              <GuardrailBadge isValid={Boolean(pathElementFormEffect.trim())} />
                             </label>
                             <span className="text-[10px] text-slate-500 font-mono">Canonical rules syntax</span>
                           </div>
@@ -7749,7 +7840,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         </div>
                       )}
 
-                      {/* Notes Field */}
+                      {/* Notes Field (ALL types have Notes) */}
                       <div className="flex flex-col gap-1 shrink-0">
                         <label className="text-xs font-bold text-slate-300">Notes</label>
                         <textarea
@@ -7804,12 +7895,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           onClick={handleSavePathElement}
                           disabled={
                             !pathElementFormName.trim() ||
-                            (cat === 'power' && !pathElementFormEffect.trim()) ||
+                            ((cat === 'power' || cat === 'trait') && !pathElementFormEffect.trim()) ||
                             isSavingPathElement
                           }
                           className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
                             pathElementFormName.trim() &&
-                            (cat !== 'power' || pathElementFormEffect.trim()) &&
+                            ((cat !== 'power' && cat !== 'trait') || pathElementFormEffect.trim()) &&
                             !isSavingPathElement
                               ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white cursor-pointer shadow-purple-900/40'
                               : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
