@@ -48,23 +48,71 @@ export function getCatalogCacheKey(email?: string): string {
 
 function hydrateSetsWithCounts(
   rawSets: SupabaseSet[] | undefined | null,
-  allItemsPool: any[]
+  catalogs: {
+    weapons?: any[];
+    armor?: any[];
+    shields?: any[];
+    powers?: any[];
+    skills?: any[];
+    traits?: any[];
+    functions?: any[];
+  }
 ): SupabaseSet[] {
   if (!rawSets || rawSets.length === 0) return [];
-  const counts: Record<string, number> = {};
-  for (const item of allItemsPool) {
-    if (Array.isArray(item?.sets)) {
-      for (const s of item.sets) {
-        const key = (s || '').trim().toLowerCase();
-        if (key) counts[key] = (counts[key] || 0) + 1;
+
+  const buildCounts = (items: any[] | undefined) => {
+    const map: Record<string, number> = {};
+    if (!Array.isArray(items)) return map;
+    for (const item of items) {
+      if (Array.isArray(item?.sets)) {
+        for (const s of item.sets) {
+          const key = (s || '').trim().toLowerCase();
+          if (key) map[key] = (map[key] || 0) + 1;
+        }
       }
     }
-  }
+    return map;
+  };
+
+  const weaponsCounts = buildCounts(catalogs.weapons);
+  const armorCounts = buildCounts(catalogs.armor);
+  const shieldsCounts = buildCounts(catalogs.shields);
+  const powersCounts = buildCounts(catalogs.powers);
+  const skillsCounts = buildCounts(catalogs.skills);
+  const traitsCounts = buildCounts(catalogs.traits);
+
   return rawSets.map((set) => {
     const key = (set.name || '').trim().toLowerCase();
+    const cat = (set.category || '').trim().toLowerCase();
+    let count = 0;
+
+    if (cat.includes('weapon')) {
+      count = weaponsCounts[key] || 0;
+    } else if (cat === 'armor') {
+      count = armorCounts[key] || 0;
+    } else if (cat === 'shields' || cat === 'shield') {
+      count = shieldsCounts[key] || 0;
+    } else if (cat.includes('armor') || cat.includes('shield')) {
+      count = (armorCounts[key] || 0) + (shieldsCounts[key] || 0);
+    } else if (cat.includes('power')) {
+      count = powersCounts[key] || 0;
+    } else if (cat.includes('skill')) {
+      count = skillsCounts[key] || 0;
+    } else if (cat.includes('trait')) {
+      count = traitsCounts[key] || 0;
+    } else {
+      count =
+        (weaponsCounts[key] || 0) +
+        (armorCounts[key] || 0) +
+        (shieldsCounts[key] || 0) +
+        (powersCounts[key] || 0) +
+        (skillsCounts[key] || 0) +
+        (traitsCounts[key] || 0);
+    }
+
     return {
       ...set,
-      items_count: counts[key] || 0,
+      items_count: count,
     };
   });
 }
@@ -530,16 +578,15 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         }, email);
       }
 
-      const allCatalogItemsPool = [
-        ...(weaponsData || []),
-        ...(armorData || []),
-        ...(shieldsData || []),
-        ...(powers || []),
-        ...(skills || []),
-        ...(traits || []),
-        ...(functionsData || []),
-      ];
-      const hydratedSetsCatalog = hydrateSetsWithCounts(setsData, allCatalogItemsPool);
+      const hydratedSetsCatalog = hydrateSetsWithCounts(setsData, {
+        weapons: weaponsData || [],
+        armor: armorData || [],
+        shields: shieldsData || [],
+        powers: powers || [],
+        skills: skills || [],
+        traits: traits || [],
+        functions: functionsData || [],
+      });
 
       // If unauthenticated, do not select any character
       if (!email) {

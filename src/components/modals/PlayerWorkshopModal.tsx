@@ -6879,11 +6879,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 appearance-none focus:outline-none focus:border-indigo-500 transition cursor-pointer pr-8 font-medium"
                 >
                   <option value="">-- Choose an existing {selectedSetCategory.toLowerCase()} set --</option>
-                  {availableSetsForLeftPane.map((s) => (
-                    <option key={s.id || s.name} value={s.id ? String(s.id) : ''}>
-                      {s.name} ({s.category}{s.items_count !== undefined ? ` • ${s.items_count} items` : ''})
-                    </option>
-                  ))}
+                  {availableSetsForLeftPane.map((s) => {
+                    const count = String(s.id) === String(selectedSetId) ? draftSetItems.length : s.items_count;
+                    return (
+                      <option key={s.id || s.name} value={s.id ? String(s.id) : ''}>
+                        {s.name} ({s.category}{count !== undefined ? ` • ${count} items` : ''})
+                      </option>
+                    );
+                  })}
                 </select>
                 <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
               </div>
