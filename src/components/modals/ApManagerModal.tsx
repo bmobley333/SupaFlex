@@ -309,7 +309,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
       {
         id: 'loadoutSlots',
         name: 'Loadout Slots',
-        emoji: '⚡',
+        emoji: '🧿',
         netAp: magicItemsNet,
         badgeColor: 'text-cyan-300 bg-cyan-950/60 border-cyan-500/30',
         details: [
@@ -345,7 +345,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
       {
         id: 'skills',
         name: 'Skills',
-        emoji: '🥋',
+        emoji: '🎓',
         netAp: skillsNet,
         badgeColor: 'text-indigo-300 bg-indigo-950/60 border-indigo-500/30',
         details: [

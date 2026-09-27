@@ -732,7 +732,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
                                   {pathPowers.length > 0 && (
                                     <div className="pl-3 border-l border-slate-800 space-y-1">
                                       <div className="text-[10px] font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1">
-                                        <span>⚡</span> Powers ({pathPowers.length})
+                                        <span>🔥</span> Powers ({pathPowers.length})
                                       </div>
                                       {pathPowers.map((p: Power) => (
                                         <div key={p.id} className="flex items-center justify-between py-0.5 group">
@@ -767,7 +767,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
                                   {pathSkills.length > 0 && (
                                     <div className="pl-3 border-l border-slate-800 space-y-1">
                                       <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                                        <span>🎯</span> Skills ({pathSkills.length})
+                                        <span>🎓</span> Skills ({pathSkills.length})
                                       </div>
                                       {pathSkills.map((s: SupabaseSkill) => (
                                         <div key={s.id} className="flex items-center justify-between py-0.5 group">
@@ -909,7 +909,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
                         {/* Armor */}
                         {myData.armor.length > 0 && (
                           <div className="space-y-1.5">
-                            <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">🥋 Armor ({myData.armor.length})</div>
+                            <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">🧥 Armor ({myData.armor.length})</div>
                             {myData.armor.map(a => (
                               <div key={a.id} className="border border-slate-800 rounded-lg bg-slate-950/60 p-2 flex items-center justify-between gap-2">
                                 <div className="min-w-0 flex-1">
@@ -1220,7 +1220,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
                                   {pathPowers.length > 0 && (
                                     <div className="pl-3 border-l border-slate-800 space-y-1">
                                       <div className="text-[10px] font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1">
-                                        <span>⚡</span> Powers ({pathPowers.length})
+                                        <span>🔥</span> Powers ({pathPowers.length})
                                       </div>
                                       {pathPowers.map((p: Power) => (
                                         <div key={p.id} className="text-xs text-slate-300 py-0.5">
@@ -1235,7 +1235,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
                                   {pathSkills.length > 0 && (
                                     <div className="pl-3 border-l border-slate-800 space-y-1">
                                       <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                                        <span>🎯</span> Skills ({pathSkills.length})
+                                        <span>🎓</span> Skills ({pathSkills.length})
                                       </div>
                                       {pathSkills.map((s: SupabaseSkill) => (
                                         <div key={s.id} className="text-xs text-slate-300 py-0.5">
@@ -1327,7 +1327,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
                         {/* Subscribed Armor */}
                         {subscribedData.armor.length > 0 && (
                           <div className="space-y-1.5">
-                            <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">🥋 Armor ({subscribedData.armor.length})</div>
+                            <div className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">🧥 Armor ({subscribedData.armor.length})</div>
                             {subscribedData.armor.map(a => (
                               <div key={a.id} className="border border-slate-800 rounded-lg bg-slate-950/60 p-2 flex items-center justify-between gap-2">
                                 <div className="min-w-0 flex-1">

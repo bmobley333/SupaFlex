@@ -922,7 +922,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     const type = (itemType || '').toLowerCase();
     const costLower = (cost || '').toLowerCase();
     if (type === 'weapon' || cat.includes('weapon')) return '⚔️ Weapons';
-    if (type === 'armor' || cat.includes('armor')) return '🥋 Armor';
+    if (type === 'armor' || cat.includes('armor')) return '🧥 Armor';
     if (type === 'shield' || cat.includes('shield')) return '🛡️ Shields';
     if (type === 'artifact' || cat.includes('artifact') || costLower === 'artifact') return '🔮 Artifact';
     if (type === 'exotic' || cat.includes('exotic')) return '🧿 Exotic';
@@ -1267,7 +1267,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    🥋 Armor
+                    🧥 Armor
                   </button>
                   <button
                     type="button"
@@ -1575,7 +1575,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                         : 'text-slate-400 hover:text-slate-200 border border-transparent'
                     }`}
                   >
-                    🥋 Armor
+                    🧥 Armor
                   </button>
                   <button
                     type="button"
@@ -1703,7 +1703,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                         if (isWeapon) {
                           itemSubtext = [isExoticItem ? '🧿 Exotic Weapon' : '⚔️ Weapon', catalogItem.type, itemDomain].filter(Boolean).join(' • ') || 'Weapon';
                         } else if (isArmor) {
-                          itemSubtext = [isExoticItem ? '🧿 Exotic Armor' : '🥋 Armor', catalogItem.ar ? `AR: ${catalogItem.ar}` : null, itemDomain].filter(Boolean).join(' • ') || 'Armor';
+                          itemSubtext = [isExoticItem ? '🧿 Exotic Armor' : '🧥 Armor', catalogItem.ar ? `AR: ${catalogItem.ar}` : null, itemDomain].filter(Boolean).join(' • ') || 'Armor';
                         } else if (isShield) {
                           itemSubtext = [isExoticItem ? '🧿 Exotic Shield' : '🛡️ Shield', catalogItem.max_block ? `Block: ${catalogItem.max_block}` : null, itemDomain].filter(Boolean).join(' • ') || 'Shield';
                         } else if (isKit) {
@@ -1765,7 +1765,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                     className="px-1.5 py-0.5 rounded bg-amber-950/80 hover:bg-amber-900/90 text-amber-300 border border-amber-500/30 text-[9px] font-mono flex items-center gap-1 cursor-pointer transition shrink-0"
                                     title="Toggle inherent exotic powers"
                                   >
-                                    <span>⚡ {inherentFunctions.length} {inherentFunctions.length === 1 ? 'Exotic Power' : 'Exotic Powers'}</span>
+                                    <span>🔥 {inherentFunctions.length} {inherentFunctions.length === 1 ? 'Exotic Power' : 'Exotic Powers'}</span>
                                     <ChevronDown className={`w-2.5 h-2.5 transition-transform ${isFunctionsExpanded ? 'rotate-180' : ''}`} />
                                   </button>
                                 )}
@@ -1850,7 +1850,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                           {isFunctionsExpanded && inherentFunctions.length > 0 && (
                             <div className="mt-1 pt-2 border-t border-slate-800/80 flex flex-col gap-1.5 bg-slate-950/60 p-2 rounded-lg">
                               <span className="text-[10px] font-mono font-bold text-amber-300 uppercase tracking-wide flex items-center gap-1">
-                                <span>⚡ Inherent Exotic Powers ({inherentFunctions.length}):</span>
+                                <span>🔥 Inherent Exotic Powers ({inherentFunctions.length}):</span>
                               </span>
                               {inherentFunctions.map((fn: FunctionItem) => {
                                 const actionBadgeColor = ACTION_BADGE_COLORS[fn.action || ''] || 'bg-slate-800 text-slate-300 border-slate-700';

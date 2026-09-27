@@ -27,7 +27,7 @@ const CATEGORY_ROW_1: { id: PathElementType; label: string; icon: string }[] = [
 
 const CATEGORY_ROW_2: { id: PathElementType; label: string; icon: string }[] = [
   { id: 'weapon', label: 'Weapon Sk', icon: '⚔️' },
-  { id: 'armor', label: 'Armor Sk', icon: '🥋' },
+  { id: 'armor', label: 'Armor Sk', icon: '🧥' },
   { id: 'shield', label: 'Shield Sk', icon: '🛡️' },
 ];
 

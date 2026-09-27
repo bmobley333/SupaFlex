@@ -520,7 +520,7 @@ export default function App() {
           gearCat = '⚔️ Weapons';
           itemType = 'weapon';
         } else if (catLower.includes('armor') || typeLower.includes('armor')) {
-          gearCat = '🥋 Armor';
+          gearCat = '🧥 Armor';
           itemType = 'armor';
         } else if (catLower.includes('shield') || typeLower.includes('shield')) {
           gearCat = '🛡️ Shields';

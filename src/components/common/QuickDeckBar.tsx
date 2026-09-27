@@ -177,7 +177,7 @@ export const getTableIcon = (tableName: string, domain: QuickDeckDomain): string
       nameLower.includes('leather') ||
       nameLower.includes('cloth')
     ) {
-      return '🥋';
+      return '🧥';
     }
     if (nameLower.includes('shield') || nameLower.includes('barrier') || nameLower.includes('force')) {
       return '🛡️';
@@ -415,7 +415,7 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
       });
     } else if (domain === 'armor' || domain === 'shields') {
       groups['🛡️ Tech & Powered Suits'] = [];
-      groups['🥋 Archaic & Medieval Armor'] = [];
+      groups['🧥 Archaic & Medieval Armor'] = [];
       groups['🛡️ Shields & Field Barriers'] = [];
       groups['📁 Custom & Other Decks'] = [];
 
@@ -424,7 +424,7 @@ export const QuickDeckBar: React.FC<QuickDeckBarProps> = ({
         if (nameLower.includes('tech') || nameLower.includes('powered') || nameLower.includes('suit') || nameLower.includes('frame')) {
           groups['🛡️ Tech & Powered Suits'].push(tblName);
         } else if (nameLower.includes('archaic') || nameLower.includes('medieval') || nameLower.includes('plate') || nameLower.includes('leather')) {
-          groups['🥋 Archaic & Medieval Armor'].push(tblName);
+          groups['🧥 Archaic & Medieval Armor'].push(tblName);
         } else if (nameLower.includes('shield') || nameLower.includes('barrier') || nameLower.includes('field')) {
           groups['🛡️ Shields & Field Barriers'].push(tblName);
         } else {

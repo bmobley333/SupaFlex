@@ -3766,7 +3766,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               {studioChassisType === 'weapon'
                 ? '⚔️'
                 : studioChassisType === 'armor'
-                ? '🥋'
+                ? '🧥'
                 : studioChassisType === 'shield'
                 ? '🛡️'
                 : '🎒'}
@@ -5029,7 +5029,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       : 'text-slate-400 hover:text-slate-200 border border-transparent'
                   }`}
                 >
-                  🥋 Armor
+                  🧥 Armor
                 </button>
                 <button
                   type="button"
@@ -6041,12 +6041,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               <span className="text-xs shrink-0">
                                 {item.element_type === 'weapon' || item.table === 'weapons'
                                   ? '⚔️'
-                                  : item.element_type === 'armor' || item.table === 'armor' || item.element_type === 'shield' || item.table === 'shields'
+                                  : item.element_type === 'armor' || item.table === 'armor'
+                                  ? '🧥'
+                                  : item.element_type === 'shield' || item.table === 'shields'
                                   ? '🛡️'
                                   : item.element_type === 'power' || item.table === 'powers'
-                                  ? '⚡'
+                                  ? '🔥'
                                   : item.element_type === 'skill' || item.table === 'skills'
-                                  ? '🎯'
+                                  ? '🎓'
                                   : '🧬'}
                               </span>
                               <span className={`text-xs truncate ${isNewItem ? 'font-black text-emerald-300' : 'font-bold text-slate-200'}`}>
@@ -6999,7 +7001,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           <span>Target:</span>
                           <span className="font-bold text-amber-300">
                             {powerFormParentType === 'inherent'
-                              ? '⚡ Inherent Ability (Direct to Chassis)'
+                              ? '🔥 Inherent Ability (Direct to Chassis)'
                               : `⚙️ Mod: ${attachedMods.find((m) => m.id === powerFormParentId)?.name || 'Mod'}`}
                           </span>
                         </div>
@@ -7025,7 +7027,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     {exactCanonPowerMatch && isPowerFormExactMatch && (
                       <div className="flex items-center justify-between p-2 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-xs">
                         <div className="flex items-center gap-1.5 text-emerald-300 min-w-0">
-                          <span>⚡</span>
+                          <span>🔥</span>
                           <span className="font-bold truncate">Matches Canon Power '{exactCanonPowerMatch.name}'</span>
                           <span className="font-mono text-[10px] text-emerald-400/80">({exactCanonPowerMatch.action} | {exactCanonPowerMatch.usage})</span>
                         </div>
@@ -7070,7 +7072,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             }}
                             className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-rose-300 text-[10px] font-mono transition cursor-pointer"
                           >
-                            ⚡ {p.name}
+                            🔥 {p.name}
                           </button>
                         ))}
                       </div>
@@ -8831,12 +8833,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <span className="text-base">
                         {activeSetSelection.item.element_type === 'weapon' || activeSetSelection.item.table === 'weapons'
                           ? '⚔️'
-                          : activeSetSelection.item.element_type === 'armor' || activeSetSelection.item.table === 'armor' || activeSetSelection.item.element_type === 'shield' || activeSetSelection.item.table === 'shields'
+                          : activeSetSelection.item.element_type === 'armor' || activeSetSelection.item.table === 'armor'
+                          ? '🧥'
+                          : activeSetSelection.item.element_type === 'shield' || activeSetSelection.item.table === 'shields'
                           ? '🛡️'
                           : activeSetSelection.item.element_type === 'power' || activeSetSelection.item.table === 'powers'
-                          ? '⚡'
+                          ? '🔥'
                           : activeSetSelection.item.element_type === 'skill' || activeSetSelection.item.table === 'skills'
-                          ? '🎯'
+                          ? '🎓'
                           : '🧬'}
                       </span>
                       <div>
