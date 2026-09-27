@@ -1651,40 +1651,6 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                   onChange={scaleEncounterDifficulty}
                 />
               </div>
-
-              {/* Right: Encounter List vs Room Focus Switch */}
-              <div className="flex items-center gap-2 shrink-0 ml-auto flex-wrap">
-                {/* Dyslexia-Friendly Multi-Option Pill Switch: Encounter List vs Room Focus */}
-                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-                  <button
-                    type="button"
-                    onClick={() => setEncounterViewMode('tree')}
-                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      encounterViewMode === 'tree'
-                        ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                    title="View all encounters and monsters across the active act"
-                  >
-                    <span>🐉</span>
-                    <span>Encounter List</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEncounterViewMode('focus')}
-                    disabled={!activeEncounter}
-                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      encounterViewMode === 'focus'
-                        ? 'bg-rose-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    } disabled:opacity-40 disabled:cursor-not-allowed`}
-                    title="Focus on active room monsters and full-height encounter notes"
-                  >
-                    <span>🏰</span>
-                    <span>Room Focus</span>
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -1830,6 +1796,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                         selectedPartyId={selectedParty?.id}
                         isPoppedOut={false}
                         onTogglePopOut={handlePopOutNotes}
+                        onClose={() => setEncounterViewMode('tree')}
                         fullHeight={true}
                       />
                     </div>
@@ -1871,8 +1838,11 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                           {/* Zone 1 (Left): 🏰 Room Title & Active Room Badge + Stepper / Set Active */}
                           <div
                             className="flex-1 min-w-0 flex items-center gap-2 cursor-pointer group"
-                            onClick={() => selectEncounter(enc.id)}
-                            title="Click to select this encounter as the Active Room"
+                            onClick={() => {
+                              selectEncounter(enc.id);
+                              setEncounterViewMode('focus');
+                            }}
+                            title="Click to focus on this encounter and view notes"
                           >
                             <span className="text-sm shrink-0">🏰</span>
                             <span
@@ -2021,7 +1991,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           setIsNotesPoppedOut(false);
           setEncounterViewMode('focus');
         }}
-        onClose={() => setIsNotesPoppedOut(false)}
+        onClose={() => {
+          setIsNotesPoppedOut(false);
+          setEncounterViewMode('tree');
+        }}
       />
     </div>
   );

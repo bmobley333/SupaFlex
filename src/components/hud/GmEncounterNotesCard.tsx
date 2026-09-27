@@ -3,7 +3,7 @@
 // Markdown-style formatting, Icon insertion, Loot & Links dropdowns, and Pop-out HUD support.
 
 import React, { useState, useRef } from 'react';
-import { StickyNote, ExternalLink } from 'lucide-react';
+import { StickyNote, ExternalLink, X } from 'lucide-react';
 import { GmEncounter } from '../../types/adventures';
 import { EncounterLootDropdown } from './EncounterLootDropdown';
 import { EncounterLinksDropdown } from './EncounterLinksDropdown';
@@ -14,6 +14,7 @@ interface GmEncounterNotesCardProps {
   selectedPartyId?: string;
   isPoppedOut?: boolean;
   onTogglePopOut?: () => void;
+  onClose?: () => void;
   fullHeight?: boolean;
   className?: string;
 }
@@ -31,6 +32,7 @@ export const GmEncounterNotesCard: React.FC<GmEncounterNotesCardProps> = ({
   selectedPartyId,
   isPoppedOut = false,
   onTogglePopOut,
+  onClose,
   fullHeight = false,
   className = '',
 }) => {
@@ -153,10 +155,10 @@ export const GmEncounterNotesCard: React.FC<GmEncounterNotesCardProps> = ({
         fullHeight ? 'flex-1 min-h-0' : ''
       } ${className}`}
     >
-      {/* Top Header Row */}
-      <div className="flex items-center justify-between flex-wrap gap-2 shrink-0">
+      {/* Row 1: Title + View/Edit Pill Switch + Close 'X' Button */}
+      <div className="flex items-center justify-between gap-2 shrink-0">
         {/* Left: Title + View/Edit Dyslexia-Friendly Pill Switch */}
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap min-w-0">
           <h4 className="text-xs font-extrabold text-rose-200 uppercase tracking-wider flex items-center gap-2 font-mono">
             <div className="p-1 rounded-lg bg-rose-950/90 border border-rose-500/40 text-rose-300 flex items-center justify-center shadow-sm">
               <StickyNote className="w-3.5 h-3.5" />
@@ -194,30 +196,43 @@ export const GmEncounterNotesCard: React.FC<GmEncounterNotesCardProps> = ({
           </div>
         </div>
 
-        {/* Right Controls: Insert Icons + Loot + Links + Pop-Out / Dock */}
-        <div className="flex items-center gap-3 flex-wrap ml-auto">
-          {/* Insert Icon Buttons */}
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-[10px] text-slate-400 font-bold mr-0.5 font-mono">Insert Icon:</span>
-            {ATTRIBUTE_EFFECT_ICONS.map((item) => (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => insertIconAtNotesCursor(item.icon)}
-                disabled={!activeEncounter}
-                className="px-1.5 py-0.5 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded text-[11px] font-bold text-slate-200 transition-colors flex items-center gap-1 shadow-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                title={`Insert ${item.icon} into Encounter Notes`}
-              >
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
+        {/* Close Button ("X") - Upper Right Hand Corner of Encounter Notes */}
+        {!isPoppedOut && onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 text-slate-400 hover:text-rose-300 hover:bg-rose-950/60 rounded-lg transition-all cursor-pointer shrink-0"
+            title="Close Encounter Notes (Return to Encounter List)"
+            aria-label="Close Encounter Notes"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
-          {/* High-Density Encounter Loot Dropdown + Encounter Links Dropdown */}
-          <div className="flex items-center gap-2">
-            <EncounterLootDropdown partyId={selectedPartyId} />
-            <EncounterLinksDropdown />
-          </div>
+      {/* Row 2: Insert Icons + Loot + Links + Pop-Out */}
+      <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-slate-800/60 shrink-0">
+        {/* Insert Icon Buttons */}
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className="text-[10px] text-slate-400 font-bold mr-0.5 font-mono">Insert Icon:</span>
+          {ATTRIBUTE_EFFECT_ICONS.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => insertIconAtNotesCursor(item.icon)}
+              disabled={!activeEncounter}
+              className="px-1.5 py-0.5 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded text-[11px] font-bold text-slate-200 transition-colors flex items-center gap-1 shadow-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              title={`Insert ${item.icon} into Encounter Notes`}
+            >
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* High-Density Encounter Loot Dropdown + Encounter Links Dropdown + Pop-Out */}
+        <div className="flex items-center gap-2 ml-auto">
+          <EncounterLootDropdown partyId={selectedPartyId} />
+          <EncounterLinksDropdown />
 
           {/* Pop-Out Affordance (Only shown when docked in pane) */}
           {!isPoppedOut && onTogglePopOut && (

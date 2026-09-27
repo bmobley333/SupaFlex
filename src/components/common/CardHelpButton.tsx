@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRulesHelp } from '../../hooks/useRulesHelp';
 
 interface CardHelpButtonProps {
@@ -14,36 +15,80 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
 }) => {
   const { rule } = useRulesHelp(ruleKey);
   const [isOpen, setIsOpen] = useState(false);
-  const [calculatedAlign, setCalculatedAlign] = useState<'left' | 'right'>('right');
+  const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const [activeTabIdx, setActiveTabIdx] = useState(0);
 
+  const updatePosition = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const isSmallScreen = window.innerWidth < 640;
+    const popoverWidth = isSmallScreen ? Math.min(320, window.innerWidth - 32) : Math.min(440, window.innerWidth - 32);
+
+    let left = rect.left;
+    if (align === 'right') {
+      left = rect.right - popoverWidth;
+    } else if (align === 'auto') {
+      if (rect.left + popoverWidth > window.innerWidth - 16) {
+        left = rect.right - popoverWidth;
+      }
+    }
+
+    left = Math.max(16, Math.min(window.innerWidth - popoverWidth - 16, left));
+
+    let top = rect.bottom + 8;
+    const estimatedHeight = Math.min(window.innerHeight * 0.75, 480);
+    if (top + estimatedHeight > window.innerHeight - 16 && rect.top > estimatedHeight + 16) {
+      top = rect.top - estimatedHeight - 8;
+    }
+
+    setCoords({ top, left });
+  }, [align]);
+
   useEffect(() => {
+    if (!isOpen) return;
+
+    updatePosition();
+
+    const handleScrollOrResize = () => {
+      updatePosition();
+    };
+
     const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node) && buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
     };
-  }, [isOpen]);
+
+    document.addEventListener('mousedown', handleClickOutside, true);
+    document.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+    };
+  }, [isOpen, updatePosition]);
 
   const handleToggle = () => {
-    if (!isOpen && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      if (align === 'left') {
-        setCalculatedAlign('left');
-      } else if (align === 'right') {
-        setCalculatedAlign('right');
-      } else {
-        setCalculatedAlign(rect.left < window.innerWidth / 2 ? 'left' : 'right');
-      }
+    if (!isOpen) {
+      updatePosition();
     }
     setIsOpen(!isOpen);
     setActiveTabIdx(0);
@@ -250,78 +295,92 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
 
   const tabs = parseTabs(rule.summary);
 
+  const popoverContent = isOpen && typeof document !== 'undefined' ? (
+    <div
+      ref={popoverRef}
+      style={{
+        position: 'fixed',
+        top: `${coords.top}px`,
+        left: `${coords.left}px`,
+      }}
+      className="w-80 sm:w-[440px] max-w-[calc(100vw-2rem)] max-h-[75vh] overflow-y-auto p-4 rounded-xl bg-slate-900/95 border border-amber-500/50 shadow-2xl backdrop-blur-xl text-xs z-[99999] animate-in fade-in zoom-in-95 duration-150 custom-scrollbar select-text"
+      onClick={(e) => {
+        e.stopPropagation();
+      }}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+      }}
+    >
+      <div className="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-2 sticky top-0 bg-slate-900/90 backdrop-blur-md pt-0.5 z-10">
+        <span className="font-bold text-amber-300 text-sm flex items-center gap-1.5">
+          <span>📖</span> {rule.title}
+        </span>
+        <button
+          onClick={() => setIsOpen(false)}
+          className="text-slate-400 hover:text-slate-200 font-bold px-1.5 py-0.5 rounded hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          ✕
+        </button>
+      </div>
+
+      {tabs && (
+        <div className="flex border-b border-slate-800 mb-3 sticky top-8 bg-slate-900/90 backdrop-blur-md z-10">
+          {tabs.map((tab, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setActiveTabIdx(idx)}
+              className={`flex-1 py-1.5 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                activeTabIdx === idx
+                  ? 'border-amber-400 text-amber-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tabs
+        ? renderFormattedSummary(tabs[activeTabIdx]?.content || '')
+        : renderFormattedSummary(rule.summary)}
+
+      <div className="pt-2 border-t border-slate-800 flex items-center justify-between sticky bottom-0 bg-slate-900/90 backdrop-blur-md pb-0.5 z-10">
+        <a
+          href="https://notebook.google.com/notebook/8a1b90e8-17e0-44a2-a926-667dc08234a7"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-sky-400 hover:text-sky-300 hover:underline"
+        >
+          <span>✨</span> Gemini Notebook ↗
+        </a>
+        <a
+          href={playerGuideUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-amber-400 hover:text-amber-300 hover:underline"
+        >
+          <span>📖</span> Full Rules Chapter ↗
+        </a>
+      </div>
+    </div>
+  ) : null;
+
   return (
-    <div className="relative inline-block text-left" ref={popoverRef}>
+    <div className="relative inline-block text-left">
       <button
         ref={buttonRef}
         type="button"
         tabIndex={-1}
         onClick={handleToggle}
         title={`View ${rule.title} Rules`}
-        className="w-5 h-5 rounded-full bg-slate-800/80 hover:bg-amber-600/80 text-amber-300 hover:text-white border border-amber-500/40 text-xs font-bold flex items-center justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-amber-400"
+        className="w-5 h-5 rounded-full bg-slate-800/80 hover:bg-amber-600/80 text-amber-300 hover:text-white border border-amber-500/40 text-xs font-bold flex items-center justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
       >
         {buttonLabel}
       </button>
 
-      {isOpen && (
-        <div
-          className={`absolute ${calculatedAlign === 'left' ? 'left-0' : 'right-0'} mt-2 w-80 sm:w-[440px] max-w-[calc(100vw-2rem)] max-h-[75vh] overflow-y-auto p-4 rounded-xl bg-slate-900/95 border border-amber-500/50 shadow-2xl backdrop-blur-xl text-xs z-50 animate-in fade-in zoom-in-95 duration-150 custom-scrollbar`}
-        >
-          <div className="flex items-center justify-between border-b border-slate-700/80 pb-2 mb-2 sticky top-0 bg-slate-900/90 backdrop-blur-md pt-0.5 z-10">
-            <span className="font-bold text-amber-300 text-sm flex items-center gap-1.5">
-              <span>📖</span> {rule.title}
-            </span>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-slate-400 hover:text-slate-200 font-bold px-1.5 py-0.5 rounded hover:bg-slate-800 transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-
-          {tabs && (
-            <div className="flex border-b border-slate-800 mb-3 sticky top-8 bg-slate-900/90 backdrop-blur-md z-10">
-              {tabs.map((tab, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setActiveTabIdx(idx)}
-                  className={`flex-1 py-1.5 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                    activeTabIdx === idx
-                      ? 'border-amber-400 text-amber-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {tabs
-            ? renderFormattedSummary(tabs[activeTabIdx]?.content || '')
-            : renderFormattedSummary(rule.summary)}
-
-          <div className="pt-2 border-t border-slate-800 flex items-center justify-between sticky bottom-0 bg-slate-900/90 backdrop-blur-md pb-0.5 z-10">
-            <a
-              href="https://notebook.google.com/notebook/8a1b90e8-17e0-44a2-a926-667dc08234a7"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-sky-400 hover:text-sky-300 hover:underline"
-            >
-              <span>✨</span> Gemini Notebook ↗
-            </a>
-            <a
-              href={playerGuideUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-amber-400 hover:text-amber-300 hover:underline"
-            >
-              <span>📖</span> Full Rules Chapter ↗
-            </a>
-          </div>
-        </div>
-      )}
+      {popoverContent && createPortal(popoverContent, document.body)}
     </div>
   );
 };

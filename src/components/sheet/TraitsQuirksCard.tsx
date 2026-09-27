@@ -53,7 +53,7 @@ export const TraitsQuirksCard: React.FC<TraitsQuirksCardProps> = ({ onTogglePosi
   }, [visibilityFilter, visibleTraits, validTraits, isGsUnlocked]);
 
   return (
-    <div className="bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-purple-500/90 p-4 flex flex-col gap-3 shadow-xl backdrop-blur-md relative overflow-hidden h-fit">
+    <div className="bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-purple-500/90 p-4 flex flex-col gap-3 shadow-xl backdrop-blur-md relative h-fit">
       {/* Standard Card Header */}
       <div className="flex items-center justify-between gap-2 flex-wrap border-b border-slate-800/80 pb-2.5">
         <div className="flex items-center gap-2">
