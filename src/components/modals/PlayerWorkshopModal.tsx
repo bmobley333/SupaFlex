@@ -309,7 +309,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [isCreatingNewGear, setIsCreatingNewGear] = useState<boolean>(false);
   const [selectedPathId, setSelectedPathId] = useState<string>('');
   const [activePathSelection, setActivePathSelection] = useState<{
-    type: 'path_root' | 'path_element' | 'path_set' | 'path_add_set' | 'path_add_element' | 'path' | 'ability';
+    type: 'path_root' | 'path_element' | 'path_new_element' | 'path_set' | 'path_add_set' | 'path_add_element' | 'path' | 'ability';
     category?: string;
     id?: string | number;
     name?: string;
@@ -359,9 +359,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [isCreatingNewSet, setIsCreatingNewSet] = useState<boolean>(false);
   const [selectedSetId, setSelectedSetId] = useState<string>('');
   const [activeSetSelection, setActiveSetSelection] = useState<{
-    type: 'set_root' | 'set_member' | 'set_add_member';
+    type: 'set_root' | 'set_member' | 'set_add_member' | 'set_new_member';
     item?: SetMemberItem;
     index?: number;
+    category?: 'trait' | 'power' | 'skill' | 'weapon' | 'armor' | 'shield';
   }>({ type: 'set_root' });
   const [setPathsIncluded, setSetPathsIncluded] = useState<string[]>([]);
   const [setsSearchQuery, setSetsSearchQuery] = useState<string>('');
@@ -4545,6 +4546,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   };
 
   const activePathElementCategory = useMemo<'power' | 'trait' | 'skill' | 'weapon' | 'armor' | 'shield' | null>(() => {
+    if (activePathSelection.type === 'path_new_element') {
+      return (activePathSelection.category as any) || null;
+    }
     if (activePathSelection.type !== 'path_element' || !activePathSelection.element) return null;
     const el = activePathSelection.element;
     return getLinkedElementCategory(el);
@@ -4846,6 +4850,828 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     } finally {
       setIsSavingPathElement(false);
     }
+  };
+
+  const getCategorySingular = (c?: string | null): string => {
+    const cat = (c || '').toLowerCase();
+    if (cat.includes('trait')) return 'Trait';
+    if (cat.includes('power')) return 'Power';
+    if (cat.includes('skill')) return 'Skill';
+    if (cat.includes('weapon')) return 'Weapon';
+    if (cat.includes('shield')) return 'Shield';
+    if (cat.includes('armor')) return 'Armor';
+    return 'Ability';
+  };
+
+  const mapSetCategoryToElementType = (setCat: SetCategory): 'trait' | 'power' | 'skill' | 'weapon' | 'armor' | 'shield' => {
+    const c = (setCat || '').toLowerCase();
+    if (c.includes('trait')) return 'trait';
+    if (c.includes('power')) return 'power';
+    if (c.includes('skill')) return 'skill';
+    if (c.includes('weapon')) return 'weapon';
+    if (c.includes('shield')) return 'shield';
+    if (c.includes('armor')) return 'armor';
+    return 'weapon';
+  };
+
+  const resetElementFormForNew = (cat: 'trait' | 'power' | 'skill' | 'weapon' | 'armor' | 'shield') => {
+    setPathElementFormName('');
+    setPathElementFormAction(ACTION_OPTIONS[0]?.id || 'AM');
+    setPathElementFormUsage(USAGE_OPTIONS[0]?.id || '1-Enc');
+    setPathElementFormEffect('');
+    setPathElementFormNotes('');
+    setPathElementFormGenres(selectedGenres.length > 0 ? [...selectedGenres] : ['Medieval']);
+    setPathElementFormDiscipline(
+      cat === 'trait'
+        ? availableTraitDisciplines[0] || 'General'
+        : cat === 'power'
+        ? availablePowerDisciplines[0] || 'BioTech'
+        : cat === 'skill'
+        ? availableSkillDisciplines[0] || 'General'
+        : 'General'
+    );
+    setPathElementFormAttribute('💪');
+    setPathElementFormType('Melee');
+    setPathElementFormReq(4);
+    setPathElementCostGold(0);
+    setPathElementCostSilver(0);
+    setPathElementFormDomain(
+      cat === 'weapon'
+        ? availableWeaponDomains[0] || 'Archaic'
+        : cat === 'armor'
+        ? availableArmorDomains[0] || 'Archaic'
+        : cat === 'shield'
+        ? availableShieldDomains[0] || 'Archaic'
+        : 'Archaic'
+    );
+  };
+
+  const handleSaveNewElement = async (context: 'path' | 'set', cat: 'power' | 'trait' | 'skill' | 'weapon' | 'armor' | 'shield') => {
+    if (!pathElementFormName.trim()) return;
+    if ((cat === 'power' || cat === 'trait') && !pathElementFormEffect.trim()) return;
+    setIsSavingPathElement(true);
+
+    const formattedCost = formatCostString(pathElementCostGold, pathElementCostSilver);
+    let compositeReq = `💪 ${pathElementFormReq}`;
+    if (cat === 'weapon') {
+      if (pathElementFormType === 'Melee, Hurled') {
+        compositeReq = `💪${pathElementFormReq}, 🏃${pathElementFormReq}`;
+      } else if (pathElementFormType === 'Melee, Shot') {
+        compositeReq = `💪${pathElementFormReq}, 👁️${pathElementFormReq}`;
+      } else if (pathElementFormType === 'Hurled') {
+        compositeReq = `🏃 ${pathElementFormReq}`;
+      } else if (pathElementFormType === 'Shot') {
+        compositeReq = `👁️ ${pathElementFormReq}`;
+      } else {
+        compositeReq = `💪 ${pathElementFormReq}`;
+      }
+    }
+
+    const cleanName = pathElementFormName.trim();
+    const effectiveGenres = pathElementFormGenres.length > 0 ? pathElementFormGenres : ['Medieval'];
+    const owner = workshopMode === 'designer' ? 'Designer' : (playerEmail || 'Player');
+
+    try {
+      let created: any = null;
+      if (cat === 'power') {
+        const payload: any = {
+          name: cleanName,
+          action: pathElementFormAction,
+          usage: pathElementFormUsage,
+          effect: pathElementFormEffect.trim(),
+          discipline: pathElementFormDiscipline || 'General',
+          notes: pathElementFormNotes.trim() || null,
+          genres: effectiveGenres,
+          owner,
+        };
+        if (context === 'set' && name.trim()) {
+          payload.sets = [name.trim()];
+        }
+        created = await gameApi.saveCanonicalPower(payload);
+        updateCanonicalCatalogItem('power', created);
+      } else if (cat === 'trait') {
+        const payload: any = {
+          name: cleanName,
+          effect: pathElementFormEffect.trim(),
+          discipline: pathElementFormDiscipline || 'General',
+          notes: pathElementFormNotes.trim() || '',
+          genres: effectiveGenres,
+          owner,
+        };
+        if (context === 'set' && name.trim()) {
+          payload.sets = [name.trim()];
+        }
+        created = await gameApi.saveCanonicalTrait(payload);
+        updateCanonicalCatalogItem('trait', created);
+      } else if (cat === 'skill') {
+        const payload: any = {
+          name: cleanName,
+          attribute: pathElementFormAttribute,
+          discipline: pathElementFormDiscipline || 'General',
+          notes: pathElementFormNotes.trim() || '',
+          genres: effectiveGenres,
+          owner,
+        };
+        if (context === 'set' && name.trim()) {
+          payload.sets = [name.trim()];
+        }
+        created = await gameApi.saveCanonicalSkill(payload);
+        updateCanonicalCatalogItem('skill', created);
+      } else if (cat === 'weapon') {
+        const atkDmg = getWeaponAtkDmg(pathElementFormType);
+        const maxBlock = pathElementFormType.includes('Melee') ? String(pathElementFormReq * 2) : null;
+        const payload: any = {
+          name: cleanName,
+          type: pathElementFormType,
+          requirement: compositeReq,
+          atk: atkDmg,
+          dmg: atkDmg,
+          max_block: maxBlock,
+          cost: formattedCost,
+          domain: pathElementFormDomain || 'Archaic',
+          notes: pathElementFormNotes.trim() || '',
+          genres: effectiveGenres,
+          owner,
+        };
+        if (context === 'set' && name.trim()) {
+          payload.sets = [name.trim()];
+        }
+        created = await gameApi.saveCanonicalWeapon(payload);
+        updateCanonicalCatalogItem('weapon', created);
+      } else if (cat === 'armor') {
+        const arStr = `🧥${pathElementFormReq}`;
+        const mrMap: Record<number, string> = { 4: '👣12', 6: '👣11', 8: '👣10', 10: '👣9', 12: '👣8' };
+        const payload: any = {
+          name: cleanName,
+          requirement: `💪 ${pathElementFormReq}`,
+          ar: arStr,
+          mr: mrMap[pathElementFormReq] || '👣10',
+          cost: formattedCost,
+          domain: pathElementFormDomain || 'Archaic',
+          notes: pathElementFormNotes.trim() || '',
+          genres: effectiveGenres,
+          owner,
+        };
+        if (context === 'set' && name.trim()) {
+          payload.sets = [name.trim()];
+        }
+        created = await gameApi.saveCanonicalArmor(payload);
+        updateCanonicalCatalogItem('armor', created);
+      } else if (cat === 'shield') {
+        const blockMap: Record<number, string> = { 4: '🛡️12', 6: '🛡️16', 8: '🛡️20', 10: '🛡️24', 12: '🛡️28' };
+        const mrMap: Record<number, string> = { 4: '👣0', 6: '👣-1', 8: '👣-2', 10: '👣-3', 12: '👣-4' };
+        const payload: any = {
+          name: cleanName,
+          requirement: `💪 ${pathElementFormReq}`,
+          max_block: blockMap[pathElementFormReq] || '🛡️16',
+          mr: mrMap[pathElementFormReq] || '👣-1',
+          cost: formattedCost,
+          domain: pathElementFormDomain || 'Archaic',
+          notes: pathElementFormNotes.trim() || '',
+          genres: effectiveGenres,
+          owner,
+        };
+        if (context === 'set' && name.trim()) {
+          payload.sets = [name.trim()];
+        }
+        created = await gameApi.saveCanonicalShield(payload);
+        updateCanonicalCatalogItem('shield', created);
+      }
+
+      if (context === 'path') {
+        // Link to path with default '1 AP'
+        const newLinkedElement: PathLinkedElement = {
+          id: created?.id || `${cat}_${Date.now()}`,
+          name: cleanName,
+          type: cat as PathElementType,
+          element_type: cat as PathElementType,
+          tag: '1 AP',
+          isFree: false,
+          is_free: false,
+          item_data: {
+            ...(created || {}),
+            name: cleanName,
+            type: cat,
+            category: cat,
+            notes: pathElementFormNotes.trim(),
+            effect: pathElementFormEffect.trim(),
+            action: pathElementFormAction,
+            usage: pathElementFormUsage,
+            attribute: pathElementFormAttribute,
+            discipline: pathElementFormDiscipline,
+            genres: effectiveGenres,
+            cost: formattedCost,
+            domain: pathElementFormDomain,
+            requirement: compositeReq,
+          },
+          details: pathElementFormEffect.trim() || pathElementFormNotes.trim() || pathElementFormDiscipline || '',
+        };
+        setLinkedElements((prev) => [...(prev || []), newLinkedElement]);
+        setActivePathSelection({ type: 'path_element', element: newLinkedElement, category: cat });
+        setFeedback({
+          type: 'success',
+          message: `✨ Created '${cleanName}' and linked to Path!`,
+        });
+      } else {
+        // Add to draft set items
+        const newSetMember = convertCatalogItemToSetMember(created, selectedSetCategory);
+        setDraftSetItems((prev) => [...prev, newSetMember]);
+        setActiveSetSelection({ type: 'set_member', item: newSetMember, index: draftSetItems.length });
+        setFeedback({
+          type: 'success',
+          message: `✨ Created '${cleanName}' and added to Set!`,
+        });
+      }
+    } catch (err: any) {
+      console.error('[handleSaveNewElement] Error:', err);
+      setFeedback({
+        type: 'error',
+        message: `Failed to save ${cat}: ${err.message || err}`,
+      });
+    } finally {
+      setIsSavingPathElement(false);
+    }
+  };
+
+  const renderAbilityElementEditor = (
+    mode: 'path_edit' | 'path_new' | 'set_new',
+    targetCat?: 'power' | 'trait' | 'skill' | 'weapon' | 'armor' | 'shield' | null
+  ) => {
+    const isNew = mode !== 'path_edit';
+    const cat =
+      mode === 'path_edit'
+        ? activePathElementCategory
+        : targetCat ||
+          (activePathSelection.category as any) ||
+          (activeSetSelection.category as any) ||
+          'power';
+
+    const weaponCompositeReq =
+      pathElementFormType === 'Melee, Hurled'
+        ? `💪${pathElementFormReq}, 🏃${pathElementFormReq}`
+        : pathElementFormType === 'Melee, Shot'
+        ? `💪${pathElementFormReq}, 👁️${pathElementFormReq}`
+        : pathElementFormType === 'Hurled'
+        ? `🏃 ${pathElementFormReq}`
+        : pathElementFormType === 'Shot'
+        ? `👁️ ${pathElementFormReq}`
+        : `💪 ${pathElementFormReq}`;
+
+    return (
+      <div
+        key={`${mode}_${cat}_${activePathSelection.element?.id || 'element'}`}
+        className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-base shrink-0">{getCategoryEmoji(cat || activePathSelection.element?.type)}</span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-outfit font-extrabold text-sm text-slate-100 truncate">
+                  {isNew
+                    ? pathElementFormName.trim() || `New ${getCategorySingular(cat)}`
+                    : pathElementFormName || activePathSelection.element?.name || 'Linked Ability'}
+                </h3>
+                <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px] font-bold capitalize shrink-0">
+                  {isNew ? `New ${getCategorySingular(cat)}` : (cat || activePathSelection.element?.type || 'Ability')}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 truncate">
+                {mode === 'path_new'
+                  ? `Forge a new ${getCategorySingular(cat).toLowerCase()} and link to ${name.trim() || 'Path'}`
+                  : mode === 'set_new'
+                  ? `Forge a new ${getCategorySingular(cat).toLowerCase()} and add to ${name.trim() || 'Set'}`
+                  : workshopMode === 'designer'
+                  ? '👑 Master Database In-Place Editor'
+                  : '🧭 Path Ability Inspector & Tuning'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {workshopMode === 'designer' ? (
+              <span className="text-[10px] font-mono text-amber-300 px-2 py-0.5 rounded bg-amber-950/60 border border-amber-500/40 font-bold">
+                👑 Designer Mode
+              </span>
+            ) : (
+              <span className="text-[10px] font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+                🔒 Player Mode
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (mode === 'set_new') {
+                  setActiveSetSelection({ type: 'set_root' });
+                } else {
+                  setActivePathSelection({ type: 'path_root' });
+                }
+              }}
+              className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
+            >
+              {isNew ? 'Cancel' : '← Back'}
+            </button>
+          </div>
+        </div>
+
+        {/* Name Input */}
+        <div className="flex items-center gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 shrink-0">
+          <label className="text-xs font-bold text-slate-300 shrink-0 flex items-center gap-1.5">
+            <span>Name:</span>
+            <GuardrailBadge isValid={Boolean(pathElementFormName.trim())} />
+          </label>
+          <input
+            type="text"
+            value={pathElementFormName}
+            onChange={(e) => setPathElementFormName(e.target.value)}
+            placeholder="Ability Name"
+            className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-100 font-bold focus:border-amber-400 outline-none"
+          />
+        </div>
+
+        {/* Category-Specific Form Fields */}
+        {cat === 'power' && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-slate-400">Action</label>
+              <select
+                value={pathElementFormAction}
+                onChange={(e) => setPathElementFormAction(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+              >
+                {ACTION_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-slate-400">Usage</label>
+              <select
+                value={pathElementFormUsage}
+                onChange={(e) => setPathElementFormUsage(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+              >
+                {USAGE_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-slate-400">Discipline</label>
+              <select
+                value={pathElementFormDiscipline}
+                onChange={(e) => setPathElementFormDiscipline(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
+              >
+                {availablePowerDisciplines.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {cat === 'trait' && (
+          <div className="flex flex-col gap-1 shrink-0">
+            <label className="text-[10px] font-bold text-slate-400">Discipline</label>
+            <select
+              value={pathElementFormDiscipline}
+              onChange={(e) => setPathElementFormDiscipline(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
+            >
+              {availableTraitDisciplines.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {cat === 'skill' && (
+          <div className="flex flex-col gap-2 shrink-0">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-slate-400">Governing Attribute</label>
+              <div className="flex items-center gap-1.5">
+                {ATTRIBUTE_CHIPS.map((attr) => (
+                  <button
+                    key={attr}
+                    type="button"
+                    onClick={() => setPathElementFormAttribute(attr)}
+                    className={`px-3 py-1.5 rounded-lg border text-sm transition-all cursor-pointer ${
+                      pathElementFormAttribute === attr
+                        ? 'bg-amber-600 border-amber-400 text-white shadow-sm font-extrabold scale-105'
+                        : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {attr}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-slate-400">Discipline</label>
+              <select
+                value={pathElementFormDiscipline}
+                onChange={(e) => setPathElementFormDiscipline(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
+              >
+                {availableSkillDisciplines.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {cat === 'weapon' && (
+          <div className="flex flex-col gap-2.5 shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-400">Weapon Type</label>
+                <select
+                  value={pathElementFormType}
+                  onChange={(e) => setPathElementFormType(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                >
+                  <option value="Melee">💪 Melee</option>
+                  <option value="Hurled">🏃 Hurled</option>
+                  <option value="Shot">👁️ Shot</option>
+                  <option value="Melee, Hurled">💪 Melee, 🏃 Hurled</option>
+                  <option value="Melee, Shot">💪 Melee, 👁️ Shot</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-400">Requirement</label>
+                <select
+                  value={pathElementFormReq}
+                  onChange={(e) => setPathElementFormReq(parseInt(e.target.value, 10))}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                >
+                  {WEAPON_REQ_NUMBERS.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-400">Domain</label>
+                <select
+                  value={pathElementFormDomain}
+                  onChange={(e) => setPathElementFormDomain(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                >
+                  {availableWeaponDomains.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Row 2: Cost and Derived Badges */}
+            <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-bold text-slate-400">Cost:</label>
+                <CompactCostInput
+                  gold={pathElementCostGold}
+                  silver={pathElementCostSilver}
+                  onGoldChange={setPathElementCostGold}
+                  onSilverChange={setPathElementCostSilver}
+                />
+              </div>
+
+              {/* Derived Stat Badges */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800/60 text-blue-300 font-mono text-[11px] font-bold">
+                  Req: {weaponCompositeReq}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-rose-950/60 border border-rose-800/60 text-rose-300 font-mono text-[11px] font-bold">
+                  Atk & Dmg: {getWeaponAtkDmg(pathElementFormType)}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 font-mono text-[11px] font-bold">
+                  Max Block: {getWeaponMaxBlock(pathElementFormType, pathElementFormReq)}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {cat === 'armor' && (
+          <div className="flex flex-col gap-2.5 shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-400">Requirement</label>
+                <select
+                  value={pathElementFormReq}
+                  onChange={(e) => setPathElementFormReq(parseInt(e.target.value, 10))}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                >
+                  {[4, 6, 8, 10, 12].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-400">Domain</label>
+                <select
+                  value={pathElementFormDomain}
+                  onChange={(e) => setPathElementFormDomain(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                >
+                  {availableArmorDomains.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Row 2: Cost and Derived Badges */}
+            <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-bold text-slate-400">Cost:</label>
+                <CompactCostInput
+                  gold={pathElementCostGold}
+                  silver={pathElementCostSilver}
+                  onGoldChange={setPathElementCostGold}
+                  onSilverChange={setPathElementCostSilver}
+                />
+              </div>
+
+              {/* Derived Stat Badges */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800/60 text-blue-300 font-mono text-[11px] font-bold">
+                  Req: 💪 {pathElementFormReq}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800/60 text-purple-300 font-mono text-[11px] font-bold">
+                  AR: 🧥{pathElementFormReq}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 font-mono text-[11px] font-bold">
+                  MR: {getArmorMrStr(String(pathElementFormReq))}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {cat === 'shield' && (
+          <div className="flex flex-col gap-2.5 shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-400">Requirement</label>
+                <select
+                  value={pathElementFormReq}
+                  onChange={(e) => setPathElementFormReq(parseInt(e.target.value, 10))}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                >
+                  {[4, 6, 8, 10, 12].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold text-slate-400">Domain</label>
+                <select
+                  value={pathElementFormDomain}
+                  onChange={(e) => setPathElementFormDomain(e.target.value)}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
+                >
+                  {availableShieldDomains.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Row 2: Cost and Derived Badges */}
+            <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-bold text-slate-400">Cost:</label>
+                <CompactCostInput
+                  gold={pathElementCostGold}
+                  silver={pathElementCostSilver}
+                  onGoldChange={setPathElementCostGold}
+                  onSilverChange={setPathElementCostSilver}
+                />
+              </div>
+
+              {/* Derived Stat Badges */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800/60 text-blue-300 font-mono text-[11px] font-bold">
+                  Req: 💪 {pathElementFormReq}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 font-mono text-[11px] font-bold">
+                  Max Block: {getShieldMaxBlockStr(String(pathElementFormReq))}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 font-mono text-[11px] font-bold">
+                  MR: {getShieldMrStr(String(pathElementFormReq))}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Effect Field (ONLY Powers and Traits have Effect) */}
+        {(cat === 'power' || cat === 'trait') && (
+          <div className="flex flex-col gap-1.5 shrink-0">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <span>Effect</span>
+                <GuardrailBadge isValid={Boolean(pathElementFormEffect.trim())} />
+              </label>
+              <span className="text-[10px] text-slate-500 font-mono">Canonical rules syntax</span>
+            </div>
+
+            {/* Quick Insert Ribbon */}
+            <div className="p-2 rounded-xl bg-slate-950 border border-slate-800 flex flex-col gap-2">
+              {/* Attributes Quick Chips */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold text-slate-400 shrink-0">Attributes:</span>
+                {ATTRIBUTE_CHIPS.map((icon) => (
+                  <button
+                    key={icon}
+                    type="button"
+                    onClick={() => insertPathElementTextAtCursor(icon)}
+                    className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
+                    title={`Insert ${icon}`}
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
+
+              {/* Range Bands Quick Chips */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold text-slate-400 shrink-0">Range:</span>
+                {RANGE_BANDS.map((rng) => (
+                  <button
+                    key={rng.id}
+                    type="button"
+                    onClick={() => insertPathElementTextAtCursor(rng.text)}
+                    className="px-2 py-0.5 rounded bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-500/50 text-cyan-300 text-[10px] font-mono transition cursor-pointer"
+                    title={`Insert ${rng.label}`}
+                  >
+                    {rng.id}
+                  </button>
+                ))}
+              </div>
+
+              {/* AoE Quick Chips */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold text-slate-400 shrink-0">AoE:</span>
+                {AOE_PRESETS.map((aoe) => (
+                  <button
+                    key={aoe.id}
+                    type="button"
+                    onClick={() => insertPathElementTextAtCursor(aoe.text)}
+                    className="px-2 py-0.5 rounded bg-slate-900 hover:bg-rose-950/70 border border-slate-700 hover:border-rose-500/50 text-rose-300 text-[10px] font-mono transition cursor-pointer"
+                  >
+                    {aoe.id}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <textarea
+              ref={pathElementEffectTextareaRef}
+              rows={3}
+              value={pathElementFormEffect}
+              onChange={(e) => setPathElementFormEffect(e.target.value)}
+              placeholder="e.g. Rng Short; target makes 🏃^14 save or suffers d💪 dmg and Prone."
+              className="bg-slate-950 text-slate-100 text-xs font-mono px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
+            />
+          </div>
+        )}
+
+        {/* Notes Field (ALL types have Notes) */}
+        <div className="flex flex-col gap-1 shrink-0">
+          <label className="text-xs font-bold text-slate-300">Notes</label>
+          <textarea
+            rows={2}
+            value={pathElementFormNotes}
+            onChange={(e) => setPathElementFormNotes(e.target.value)}
+            placeholder="Optional lore, tactical notes, or historical context..."
+            className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 font-serif italic resize-y min-h-[44px]"
+          />
+        </div>
+
+        {/* Genres Multi-Select */}
+        <div className="flex flex-col gap-1.5 shrink-0">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-300">Genres</label>
+            <span className="text-[10px] text-slate-500 font-mono">Select at least 1</span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {GENRE_OPTIONS.map((g) => {
+              const isSelected = pathElementFormGenres.includes(g.id);
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => {
+                    setPathElementFormGenres((prev) =>
+                      isSelected
+                        ? prev.length > 1
+                          ? prev.filter((id) => id !== g.id)
+                          : prev
+                        : [...prev, g.id]
+                    );
+                  }}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
+                    isSelected
+                      ? 'bg-amber-600 border-amber-500 text-white shadow-sm'
+                      : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span>{g.icon}</span>
+                  <span>{g.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Action Save Button */}
+        <div className="pt-2 border-t border-slate-800 shrink-0 flex items-center gap-2">
+          {isNew && (
+            <button
+              type="button"
+              onClick={() => {
+                if (mode === 'set_new') {
+                  setActiveSetSelection({ type: 'set_root' });
+                } else {
+                  setActivePathSelection({ type: 'path_root' });
+                }
+              }}
+              className="py-2.5 px-4 rounded-xl font-outfit font-bold text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer shrink-0"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              if (mode === 'path_edit') {
+                handleSavePathElement();
+              } else if (mode === 'path_new') {
+                handleSaveNewElement('path', cat as any);
+              } else {
+                handleSaveNewElement('set', cat as any);
+              }
+            }}
+            disabled={
+              !pathElementFormName.trim() ||
+              ((cat === 'power' || cat === 'trait') && !pathElementFormEffect.trim()) ||
+              isSavingPathElement
+            }
+            className={`flex-1 py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
+              pathElementFormName.trim() &&
+              ((cat !== 'power' && cat !== 'trait') || pathElementFormEffect.trim()) &&
+              !isSavingPathElement
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white cursor-pointer shadow-purple-900/40'
+                : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
+            }`}
+          >
+            <Check className="w-4 h-4" />
+            <span>
+              {isSavingPathElement
+                ? isNew
+                  ? 'Saving to Database...'
+                  : 'Saving Changes...'
+                : mode === 'path_new'
+                ? workshopMode === 'designer'
+                  ? `💾 Save New ${getCategorySingular(cat)} to Master Database & Link`
+                  : `💾 Save & Link to Path`
+                : mode === 'set_new'
+                ? workshopMode === 'designer'
+                  ? `💾 Save New ${getCategorySingular(cat)} to Master Database & Add to Set`
+                  : `💾 Save & Add to Set`
+                : workshopMode === 'designer'
+                ? `💾 Save Changes to Master Database`
+                : `💾 Save Changes to Path`}
+            </span>
+          </button>
+        </div>
+      </div>
+    );
   };
 
   if (!isOpen) return null;
@@ -5553,10 +6379,18 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  // Unwired placeholder for +New
+                                  setPathAddElementSearch('');
+                                  setPathAddSetSearch('');
+                                  setIsAuthoringPathCustomAbility(false);
+                                  resetElementFormForNew(cat.id);
+                                  setActivePathSelection({ type: 'path_new_element', category: cat.id });
                                 }}
-                                className="py-0.5 px-1.5 rounded-md border border-dashed border-slate-700/80 hover:border-indigo-500/60 bg-slate-950/40 hover:bg-slate-900 text-[10px] font-bold text-slate-400 hover:text-indigo-300 transition flex items-center gap-0.5 cursor-pointer select-none"
-                                title="Create New (Coming Soon)"
+                                className={`py-0.5 px-1.5 rounded-md border transition flex items-center gap-0.5 cursor-pointer select-none text-[10px] font-bold ${
+                                  activePathSelection.type === 'path_new_element' && activePathSelection.category === cat.id
+                                    ? 'bg-blue-600 text-white border-blue-500 shadow-sm font-extrabold'
+                                    : 'border-dashed border-slate-700/80 hover:border-blue-500/60 bg-slate-950/40 hover:bg-slate-900 text-slate-400 hover:text-blue-300'
+                                }`}
+                                title={`Create New ${cat.singular} and link to path`}
                               >
                                 <Plus className="w-2.5 h-2.5" />
                                 <span>New</span>
@@ -6094,14 +6928,21 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         <span>Add</span>
                       </button>
 
-                      {/* +New Button (Placeholder) */}
+                      {/* +New Button */}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          const targetCat = mapSetCategoryToElementType(selectedSetCategory);
+                          resetElementFormForNew(targetCat);
+                          setActiveSetSelection({ type: 'set_new_member', category: targetCat });
                         }}
-                        className="py-0.5 px-2 rounded-lg border border-dashed border-slate-700/80 hover:border-indigo-500/60 bg-slate-950/40 hover:bg-slate-900 text-[10px] font-bold text-slate-400 hover:text-indigo-300 transition flex items-center gap-1 cursor-pointer select-none shrink-0"
-                        title="Author a new custom ability (Coming Soon)"
+                        className={`py-0.5 px-2 rounded-lg border transition flex items-center gap-1 cursor-pointer select-none shrink-0 text-[10px] font-bold ${
+                          activeSetSelection.type === 'set_new_member'
+                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm font-extrabold'
+                            : 'border-dashed border-slate-700/80 hover:border-indigo-500/60 bg-slate-950/40 hover:bg-slate-900 text-slate-400 hover:text-indigo-300'
+                        }`}
+                        title={`Create New ${mapSetCategoryToElementType(selectedSetCategory)} and add to set`}
                       >
                         <Plus className="w-3 h-3" />
                         <span>New</span>
@@ -7588,520 +8429,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
                 </div>
               ) : activePathSelection.type === 'path_element' ? (
-                /* ROUTE 3: ABILITY INSPECTOR & PERMISSIONED EDIT (CHAOS GEM PARITY) */
-                (() => {
-                  const cat = activePathElementCategory;
-                  const weaponCompositeReq =
-                    pathElementFormType === 'Melee, Hurled'
-                      ? `💪${pathElementFormReq}, 🏃${pathElementFormReq}`
-                      : pathElementFormType === 'Melee, Shot'
-                      ? `💪${pathElementFormReq}, 👁️${pathElementFormReq}`
-                      : pathElementFormType === 'Hurled'
-                      ? `🏃 ${pathElementFormReq}`
-                      : pathElementFormType === 'Shot'
-                      ? `👁️ ${pathElementFormReq}`
-                      : `💪 ${pathElementFormReq}`;
-
-                  return (
-                    <div
-                      key={`path_element_${activePathSelection.element?.id || 'element'}`}
-                      className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1"
-                    >
-                      {/* Header */}
-                      <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">{getCategoryEmoji(cat || activePathSelection.element?.type)}</span>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-outfit font-extrabold text-sm text-slate-100">
-                                {pathElementFormName || activePathSelection.element?.name || 'Linked Ability'}
-                              </h3>
-                              <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px] font-bold capitalize">
-                                {cat || activePathSelection.element?.type || 'Ability'}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-slate-400">
-                              {workshopMode === 'designer' ? '👑 Master Database In-Place Editor' : '🧭 Path Ability Inspector & Tuning'}
-                            </p>
-                          </div>
-                        </div>
-                        {workshopMode === 'designer' ? (
-                          <span className="text-[10px] font-mono text-amber-300 px-2 py-0.5 rounded bg-amber-950/60 border border-amber-500/40 font-bold">
-                            👑 Designer Mode
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
-                            🔒 Player Mode
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Name Input */}
-                      <div className="flex items-center gap-2 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 shrink-0">
-                        <label className="text-xs font-bold text-slate-300 shrink-0 flex items-center gap-1.5">
-                          <span>Name:</span>
-                          <GuardrailBadge isValid={Boolean(pathElementFormName.trim())} />
-                        </label>
-                        <input
-                          type="text"
-                          value={pathElementFormName}
-                          onChange={(e) => setPathElementFormName(e.target.value)}
-                          placeholder="Ability Name"
-                          className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-100 font-bold focus:border-amber-400 outline-none"
-                        />
-                      </div>
-
-                      {/* Category-Specific Form Fields */}
-                      {cat === 'power' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0">
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-slate-400">Action</label>
-                            <select
-                              value={pathElementFormAction}
-                              onChange={(e) => setPathElementFormAction(e.target.value)}
-                              className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                            >
-                              {ACTION_OPTIONS.map((opt) => (
-                                <option key={opt.id} value={opt.id}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-slate-400">Usage</label>
-                            <select
-                              value={pathElementFormUsage}
-                              onChange={(e) => setPathElementFormUsage(e.target.value)}
-                              className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                            >
-                              {USAGE_OPTIONS.map((opt) => (
-                                <option key={opt.id} value={opt.id}>
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-slate-400">Discipline</label>
-                            <select
-                              value={pathElementFormDiscipline}
-                              onChange={(e) => setPathElementFormDiscipline(e.target.value)}
-                              className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
-                            >
-                              {availablePowerDisciplines.map((d) => (
-                                <option key={d} value={d}>
-                                  {d}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      )}
-
-                      {cat === 'trait' && (
-                        <div className="flex flex-col gap-1 shrink-0">
-                          <label className="text-[10px] font-bold text-slate-400">Discipline</label>
-                          <select
-                            value={pathElementFormDiscipline}
-                            onChange={(e) => setPathElementFormDiscipline(e.target.value)}
-                            className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
-                          >
-                            {availableTraitDisciplines.map((d) => (
-                              <option key={d} value={d}>
-                                {d}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-
-                      {cat === 'skill' && (
-                        <div className="flex flex-col gap-2 shrink-0">
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-slate-400">Governing Attribute</label>
-                            <div className="flex items-center gap-1.5">
-                              {ATTRIBUTE_CHIPS.map((attr) => (
-                                <button
-                                  key={attr}
-                                  type="button"
-                                  onClick={() => setPathElementFormAttribute(attr)}
-                                  className={`px-3 py-1.5 rounded-lg border text-sm transition-all cursor-pointer ${
-                                    pathElementFormAttribute === attr
-                                      ? 'bg-amber-600 border-amber-400 text-white shadow-sm font-extrabold scale-105'
-                                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-                                  }`}
-                                >
-                                  {attr}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <label className="text-[10px] font-bold text-slate-400">Discipline</label>
-                            <select
-                              value={pathElementFormDiscipline}
-                              onChange={(e) => setPathElementFormDiscipline(e.target.value)}
-                              className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400"
-                            >
-                              {availableSkillDisciplines.map((d) => (
-                                <option key={d} value={d}>
-                                  {d}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                      )}
-
-                      {cat === 'weapon' && (
-                        <div className="flex flex-col gap-2.5 shrink-0">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-slate-400">Weapon Type</label>
-                              <select
-                                value={pathElementFormType}
-                                onChange={(e) => setPathElementFormType(e.target.value)}
-                                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                              >
-                                <option value="Melee">💪 Melee</option>
-                                <option value="Hurled">🏃 Hurled</option>
-                                <option value="Shot">👁️ Shot</option>
-                                <option value="Melee, Hurled">💪 Melee, 🏃 Hurled</option>
-                                <option value="Melee, Shot">💪 Melee, 👁️ Shot</option>
-                              </select>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-slate-400">Requirement</label>
-                              <select
-                                value={pathElementFormReq}
-                                onChange={(e) => setPathElementFormReq(parseInt(e.target.value, 10))}
-                                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                              >
-                                {WEAPON_REQ_NUMBERS.map((n) => (
-                                  <option key={n} value={n}>
-                                    {n}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-slate-400">Domain</label>
-                              <select
-                                value={pathElementFormDomain}
-                                onChange={(e) => setPathElementFormDomain(e.target.value)}
-                                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                              >
-                                {availableWeaponDomains.map((d) => (
-                                  <option key={d} value={d}>
-                                    {d}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-
-                          {/* Row 2: Cost and Derived Badges */}
-                          <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
-                            <div className="flex items-center gap-2">
-                              <label className="text-[10px] font-bold text-slate-400">Cost:</label>
-                              <CompactCostInput
-                                gold={pathElementCostGold}
-                                silver={pathElementCostSilver}
-                                onGoldChange={setPathElementCostGold}
-                                onSilverChange={setPathElementCostSilver}
-                              />
-                            </div>
-
-                            {/* Derived Stat Badges */}
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800/60 text-blue-300 font-mono text-[11px] font-bold">
-                                Req: {weaponCompositeReq}
-                              </span>
-                              <span className="px-2 py-0.5 rounded bg-rose-950/60 border border-rose-800/60 text-rose-300 font-mono text-[11px] font-bold">
-                                Atk & Dmg: {getWeaponAtkDmg(pathElementFormType)}
-                              </span>
-                              <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 font-mono text-[11px] font-bold">
-                                Max Block: {getWeaponMaxBlock(pathElementFormType, pathElementFormReq)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {cat === 'armor' && (
-                        <div className="flex flex-col gap-2.5 shrink-0">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-slate-400">Requirement</label>
-                              <select
-                                value={pathElementFormReq}
-                                onChange={(e) => setPathElementFormReq(parseInt(e.target.value, 10))}
-                                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                              >
-                                {[4, 6, 8, 10, 12].map((n) => (
-                                  <option key={n} value={n}>
-                                    {n}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-slate-400">Domain</label>
-                              <select
-                                value={pathElementFormDomain}
-                                onChange={(e) => setPathElementFormDomain(e.target.value)}
-                                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                              >
-                                {availableArmorDomains.map((d) => (
-                                  <option key={d} value={d}>
-                                    {d}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-
-                          {/* Row 2: Cost and Derived Badges */}
-                          <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
-                            <div className="flex items-center gap-2">
-                              <label className="text-[10px] font-bold text-slate-400">Cost:</label>
-                              <CompactCostInput
-                                gold={pathElementCostGold}
-                                silver={pathElementCostSilver}
-                                onGoldChange={setPathElementCostGold}
-                                onSilverChange={setPathElementCostSilver}
-                              />
-                            </div>
-
-                            {/* Derived Stat Badges */}
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800/60 text-blue-300 font-mono text-[11px] font-bold">
-                                Req: 💪 {pathElementFormReq}
-                              </span>
-                              <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800/60 text-purple-300 font-mono text-[11px] font-bold">
-                                AR: 🧥{pathElementFormReq}
-                              </span>
-                              <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 font-mono text-[11px] font-bold">
-                                MR: {getArmorMrStr(String(pathElementFormReq))}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {cat === 'shield' && (
-                        <div className="flex flex-col gap-2.5 shrink-0">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-slate-400">Requirement</label>
-                              <select
-                                value={pathElementFormReq}
-                                onChange={(e) => setPathElementFormReq(parseInt(e.target.value, 10))}
-                                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                              >
-                                {[4, 6, 8, 10, 12].map((n) => (
-                                  <option key={n} value={n}>
-                                    {n}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <label className="text-[10px] font-bold text-slate-400">Domain</label>
-                              <select
-                                value={pathElementFormDomain}
-                                onChange={(e) => setPathElementFormDomain(e.target.value)}
-                                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-400 font-mono"
-                              >
-                                {availableShieldDomains.map((d) => (
-                                  <option key={d} value={d}>
-                                    {d}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-
-                          {/* Row 2: Cost and Derived Badges */}
-                          <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
-                            <div className="flex items-center gap-2">
-                              <label className="text-[10px] font-bold text-slate-400">Cost:</label>
-                              <CompactCostInput
-                                gold={pathElementCostGold}
-                                silver={pathElementCostSilver}
-                                onGoldChange={setPathElementCostGold}
-                                onSilverChange={setPathElementCostSilver}
-                              />
-                            </div>
-
-                            {/* Derived Stat Badges */}
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800/60 text-blue-300 font-mono text-[11px] font-bold">
-                                Req: 💪 {pathElementFormReq}
-                              </span>
-                              <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800/60 text-cyan-300 font-mono text-[11px] font-bold">
-                                Max Block: {getShieldMaxBlockStr(String(pathElementFormReq))}
-                              </span>
-                              <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 font-mono text-[11px] font-bold">
-                                MR: {getShieldMrStr(String(pathElementFormReq))}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Effect Field (ONLY Powers and Traits have Effect) */}
-                      {(cat === 'power' || cat === 'trait') && (
-                        <div className="flex flex-col gap-1.5 shrink-0">
-                          <div className="flex items-center justify-between">
-                            <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                              <span>Effect</span>
-                              <GuardrailBadge isValid={Boolean(pathElementFormEffect.trim())} />
-                            </label>
-                            <span className="text-[10px] text-slate-500 font-mono">Canonical rules syntax</span>
-                          </div>
-
-                          {/* Quick Insert Ribbon */}
-                          <div className="p-2 rounded-xl bg-slate-950 border border-slate-800 flex flex-col gap-2">
-                            {/* Attributes Quick Chips */}
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[10px] font-bold text-slate-400 shrink-0">Attributes:</span>
-                              {ATTRIBUTE_CHIPS.map((icon) => (
-                                <button
-                                  key={icon}
-                                  type="button"
-                                  onClick={() => insertPathElementTextAtCursor(icon)}
-                                  className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
-                                  title={`Insert ${icon}`}
-                                >
-                                  {icon}
-                                </button>
-                              ))}
-                            </div>
-
-                            {/* Range Bands Quick Chips */}
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[10px] font-bold text-slate-400 shrink-0">Range:</span>
-                              {RANGE_BANDS.map((rng) => (
-                                <button
-                                  key={rng.id}
-                                  type="button"
-                                  onClick={() => insertPathElementTextAtCursor(rng.text)}
-                                  className="px-2 py-0.5 rounded bg-slate-900 hover:bg-cyan-950/70 border border-slate-700 hover:border-cyan-500/50 text-cyan-300 text-[10px] font-mono transition cursor-pointer"
-                                  title={`Insert ${rng.label}`}
-                                >
-                                  {rng.id}
-                                </button>
-                              ))}
-                            </div>
-
-                            {/* AoE Quick Chips */}
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[10px] font-bold text-slate-400 shrink-0">AoE:</span>
-                              {AOE_PRESETS.map((aoe) => (
-                                <button
-                                  key={aoe.id}
-                                  type="button"
-                                  onClick={() => insertPathElementTextAtCursor(aoe.text)}
-                                  className="px-2 py-0.5 rounded bg-slate-900 hover:bg-rose-950/70 border border-slate-700 hover:border-rose-500/50 text-rose-300 text-[10px] font-mono transition cursor-pointer"
-                                >
-                                  {aoe.id}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <textarea
-                            ref={pathElementEffectTextareaRef}
-                            rows={3}
-                            value={pathElementFormEffect}
-                            onChange={(e) => setPathElementFormEffect(e.target.value)}
-                            placeholder="e.g. Rng Short; target makes 🏃^14 save or suffers d💪 dmg and Prone."
-                            className="bg-slate-950 text-slate-100 text-xs font-mono px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400"
-                          />
-                        </div>
-                      )}
-
-                      {/* Notes Field (ALL types have Notes) */}
-                      <div className="flex flex-col gap-1 shrink-0">
-                        <label className="text-xs font-bold text-slate-300">Notes</label>
-                        <textarea
-                          rows={2}
-                          value={pathElementFormNotes}
-                          onChange={(e) => setPathElementFormNotes(e.target.value)}
-                          placeholder="Optional lore, tactical notes, or historical context..."
-                          className="bg-slate-950 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-amber-400 font-serif italic resize-y min-h-[44px]"
-                        />
-                      </div>
-
-                      {/* Genres Multi-Select */}
-                      <div className="flex flex-col gap-1.5 shrink-0">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-bold text-slate-300">Genres</label>
-                          <span className="text-[10px] text-slate-500 font-mono">Select at least 1</span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {GENRE_OPTIONS.map((g) => {
-                            const isSelected = pathElementFormGenres.includes(g.id);
-                            return (
-                              <button
-                                key={g.id}
-                                type="button"
-                                onClick={() => {
-                                  setPathElementFormGenres((prev) =>
-                                    isSelected
-                                      ? prev.length > 1
-                                        ? prev.filter((id) => id !== g.id)
-                                        : prev
-                                      : [...prev, g.id]
-                                  );
-                                }}
-                                className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
-                                  isSelected
-                                    ? 'bg-amber-600 border-amber-500 text-white shadow-sm'
-                                    : 'bg-slate-950/80 border-slate-800 text-slate-400 hover:text-slate-200'
-                                }`}
-                              >
-                                <span>{g.icon}</span>
-                                <span>{g.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Action Save Button */}
-                      <div className="pt-2 border-t border-slate-800 shrink-0">
-                        <button
-                          type="button"
-                          onClick={handleSavePathElement}
-                          disabled={
-                            !pathElementFormName.trim() ||
-                            ((cat === 'power' || cat === 'trait') && !pathElementFormEffect.trim()) ||
-                            isSavingPathElement
-                          }
-                          className={`w-full py-2.5 px-4 rounded-xl font-outfit font-extrabold text-xs transition-all flex items-center justify-center gap-2 select-none shadow-md ${
-                            pathElementFormName.trim() &&
-                            ((cat !== 'power' && cat !== 'trait') || pathElementFormEffect.trim()) &&
-                            !isSavingPathElement
-                              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white cursor-pointer shadow-purple-900/40'
-                              : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed'
-                          }`}
-                        >
-                          <Check className="w-4 h-4" />
-                          <span>
-                            {isSavingPathElement
-                              ? 'Saving Changes...'
-                              : workshopMode === 'designer'
-                              ? `💾 Save Changes to Master Database`
-                              : `💾 Save Changes to Path`}
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })()
+                /* ROUTE 3: ABILITY INSPECTOR & PERMISSIONED EDIT */
+                renderAbilityElementEditor('path_edit', activePathElementCategory)
+              ) : activePathSelection.type === 'path_new_element' ? (
+                /* ROUTE 3b: CREATE NEW ELEMENT FOR PATH */
+                renderAbilityElementEditor('path_new', (activePathSelection.category as any) || 'power')
               ) : activePathSelection.type === 'path_add_set' ? (
                 /* ROUTE 4: FILTERED SET PICKER */
                 <div
@@ -9167,6 +9499,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     )}
                   </div>
                 </div>
+              )}
+
+              {/* ROUTE 4: CREATE NEW ELEMENT FOR SET */}
+              {activeSetSelection.type === 'set_new_member' && (
+                renderAbilityElementEditor(
+                  'set_new',
+                  activeSetSelection.category || mapSetCategoryToElementType(selectedSetCategory)
+                )
               )}
             </>
           )}
