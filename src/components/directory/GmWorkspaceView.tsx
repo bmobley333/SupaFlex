@@ -1838,11 +1838,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                           {/* Zone 1 (Left): 🏰 Room Title & Active Room Badge + Stepper / Set Active */}
                           <div
                             className="flex-1 min-w-0 flex items-center gap-2 cursor-pointer group"
-                            onClick={() => {
-                              selectEncounter(enc.id);
-                              setEncounterViewMode('focus');
-                            }}
-                            title="Click to focus on this encounter and view notes"
+                            onClick={() => selectEncounter(enc.id)}
+                            title="Click to select this encounter as the Active Room"
                           >
                             <span className="text-sm shrink-0">🏰</span>
                             <span
