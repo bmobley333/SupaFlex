@@ -2182,6 +2182,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (!setsCatalog) return [];
     const query = setsSearchQuery.trim().toLowerCase();
     return setsCatalog.filter((s) => {
+      if (s.category !== selectedSetCategory) return false;
       const owner = (s.owner || 'Designer').toLowerCase();
       if (workshopMode === 'designer') {
         if (owner !== 'designer') return false;
@@ -2196,7 +2197,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       }
       return true;
     });
-  }, [setsCatalog, setsSearchQuery, workshopMode, playerEmail]);
+  }, [setsCatalog, setsSearchQuery, selectedSetCategory, workshopMode, playerEmail]);
 
   const availableBasedOnSets = useMemo<SupabaseSet[]>(() => {
     if (!setsCatalog) return [];
@@ -2303,20 +2304,18 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setActiveSetSelection({ type: 'set_root' });
   };
 
-  const handleSwitchSetCategory = (newCat: SetCategory) => {
+  const handleCategoryFilterChange = (newCat: SetCategory) => {
     if (newCat === selectedSetCategory) return;
-    if (draftSetItems.length > 0) {
+    const hasUnsavedChanges = draftSetItems.length > 0 || (name.trim().length > 0 && isCreatingNewSet);
+    if (hasUnsavedChanges) {
       const ok = window.confirm(
-        `Changing category to '${newCat}' will clear the ${draftSetItems.length} current draft item(s). Continue?`
+        `You have unsaved changes in this set. Discard and switch category to '${newCat}'?`
       );
       if (!ok) return;
     }
+    handleResetSetSelection();
     setSelectedSetCategory(newCat);
-    setDraftSetItems([]);
-    setSelectedBaseSetName('');
-    setBaseSetMembers([]);
-    setBasedOnSourceSets([]);
-    setInitialBaseItemIds(new Set());
+    setSetsSearchQuery('');
   };
 
   const handleSelectBaseSet = async (baseName: string) => {
@@ -5829,12 +5828,42 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           ) : creationType === 'set' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
+              {/* Top Category Filter Multi-Option Pill Switch */}
+              <div className="flex flex-col gap-1.5 shrink-0 pb-1 border-b border-slate-800/80">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-slate-300 text-xs">Category</span>
+                    <InfoTooltip text="Filter sets by category and author new sets in this domain." />
+                  </div>
+                </div>
+                <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md overflow-x-auto scrollbar-none">
+                  {SET_CATEGORIES.map((cat) => {
+                    const isCatActive = selectedSetCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => handleCategoryFilterChange(cat.id)}
+                        className={`flex-1 py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
+                          isCatActive
+                            ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>{cat.icon}</span>
+                        <span>{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Header: Title / Count, Search Bar, and + New Set Button */}
               <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
                 <span className="flex items-center gap-1.5 shrink-0">
                   <span>{workshopMode === 'designer' ? '👑' : '🎨'}</span>
                   <span>
-                    {workshopMode === 'designer' ? 'Master Sets' : 'My Sets'} ({availableSetsForLeftPane.length})
+                    {workshopMode === 'designer' ? `${selectedSetCategory} Sets` : `My ${selectedSetCategory} Sets`} ({availableSetsForLeftPane.length})
                   </span>
                 </span>
 
@@ -5844,7 +5873,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     type="text"
                     value={setsSearchQuery}
                     onChange={(e) => setSetsSearchQuery(e.target.value)}
-                    placeholder={workshopMode === 'designer' ? 'Search master sets...' : 'Search my sets...'}
+                    placeholder={workshopMode === 'designer' ? `Search ${selectedSetCategory.toLowerCase()} sets...` : `Search my ${selectedSetCategory.toLowerCase()} sets...`}
                     className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/80 transition"
                   />
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
@@ -5883,7 +5912,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   }}
                   className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-slate-200 appearance-none focus:outline-none focus:border-indigo-500 transition cursor-pointer pr-8 font-medium"
                 >
-                  <option value="">-- Choose an existing set to inspect/edit --</option>
+                  <option value="">-- Choose an existing {selectedSetCategory.toLowerCase()} set --</option>
                   {availableSetsForLeftPane.map((s) => (
                     <option key={s.id || s.name} value={s.id ? String(s.id) : ''}>
                       {s.name} ({s.category}{s.items_count !== undefined ? ` • ${s.items_count} items` : ''})
@@ -6032,9 +6061,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500 text-xs">
                   <span className="text-3xl mb-2">🗂️</span>
-                  <p className="font-bold text-slate-300 text-sm">Forge Sets Studio</p>
+                  <p className="font-bold text-slate-300 text-sm">Forge {selectedSetCategory} Sets</p>
                   <p className="text-[11px] mt-1 text-slate-500 max-w-sm">
-                    Select a set from the dropdown above to inspect and edit its items, or click "+ New Set" to author a new collection.
+                    Select an existing {selectedSetCategory.toLowerCase()} set from the dropdown above to inspect and edit its items, or click "+ New Set" to author a new collection.
                   </p>
                 </div>
               )}
@@ -8547,13 +8576,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                 }`}
                               />
                             </div>
-                            {selectedSetId && (
-                              <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 font-mono text-[10px] font-bold whitespace-nowrap flex items-center gap-1">
+                                <span>{SET_CATEGORIES.find((c) => c.id === selectedSetCategory)?.icon}</span>
+                                <span>{selectedSetCategory} Set</span>
+                              </span>
+                              {selectedSetId && (
                                 <span className="px-2 py-0.5 rounded bg-amber-950 border border-amber-700/60 text-amber-300 font-mono text-[10px] font-bold whitespace-nowrap">
                                   {workshopMode === 'designer' ? '👑 Canon Set' : 'Custom Set'}
                                 </span>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
                           {topLevelCollision.isCollision && (
                             <p className="text-[10px] text-rose-400 font-medium pl-24">
@@ -8562,35 +8595,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           )}
                         </div>
 
-                        {/* Row 2: Category Multi-Option Pill Switch */}
-                        <div className="flex items-center gap-3 shrink-0">
-                          <div className="flex items-center gap-1.5 w-24 shrink-0">
-                            <span className="font-bold text-slate-300 text-xs whitespace-nowrap">Category</span>
-                            <InfoTooltip text="Homogeneous domain for all elements in this set." />
-                          </div>
-                          <div className="flex-1 bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md overflow-x-auto">
-                            {SET_CATEGORIES.map((cat) => {
-                              const isCatActive = selectedSetCategory === cat.id;
-                              return (
-                                <button
-                                  key={cat.id}
-                                  type="button"
-                                  onClick={() => handleSwitchSetCategory(cat.id)}
-                                  className={`flex-1 py-1.5 px-2 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
-                                    isCatActive
-                                      ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                                  }`}
-                                >
-                                  <span>{cat.icon}</span>
-                                  <span>{cat.label}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* Row 3: Genres Multi-Option Pill Switch (Directly Below Category) */}
+                        {/* Row 2: Genres Multi-Option Pill Switch (Directly Below Name) */}
                         <div className="flex items-center gap-3 shrink-0">
                           <div className="flex items-center gap-1.5 w-24 shrink-0">
                             <span className="font-bold text-slate-300 text-xs whitespace-nowrap">Genres</span>
