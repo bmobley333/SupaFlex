@@ -4275,8 +4275,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     { id: 'trait', label: 'Traits', icon: '🧬', singular: 'Trait' },
     { id: 'power', label: 'Powers', icon: '⚡', singular: 'Power' },
     { id: 'skill', label: 'Skills', icon: '🎯', singular: 'Skill' },
-    { id: 'weapon', label: 'Weapon Sk', icon: '⚔️', singular: 'Weapon Sk' },
-    { id: 'armor_shield', label: 'Armor & Shield Sk', icon: '🛡️', singular: 'Armor & Shield Sk' },
+    { id: 'weapon', label: 'Weapon Sk', icon: '⚔️', singular: 'Sk' },
+    { id: 'armor_shield', label: 'Armor & Shield Sk', icon: '🛡️', singular: 'Sk' },
   ] as const;
 
   const getLinkedElementCategory = useCallback((el: PathLinkedElement): 'trait' | 'power' | 'skill' | 'weapon' | 'armor_shield' => {
@@ -5392,24 +5392,60 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   <div className="ml-4 pl-3 border-l-2 border-blue-500/40 flex flex-col gap-3 pt-1 pb-1">
                     {PATH_ABILITY_CATEGORIES.map((cat) => {
                       const catData = pathCategoryMembers[cat.id];
-                      const setsCount = catData.sets.length;
-                      const indCount = catData.elements.length;
+                      const hasMembers = catData.sets.length > 0 || catData.elements.length > 0;
 
                       return (
                         <div key={cat.id} className="flex flex-col gap-1.5">
-                          {/* Category Header */}
-                          <div className="flex items-center justify-between px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-slate-300">
-                            <span className="font-bold flex items-center gap-1.5 text-slate-200">
+                          {/* Category Header with Consolidated Action Buttons */}
+                          <div className="flex items-center justify-between gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-xs text-slate-300">
+                            <span className="font-bold flex items-center gap-1.5 text-slate-200 shrink-0">
                               <span>{cat.icon}</span>
                               <span>{cat.label}</span>
                             </span>
-                            <span className="text-[10px] font-mono text-slate-400">
-                              ({setsCount} {setsCount === 1 ? 'Set' : 'Sets'}, {indCount} {indCount === 1 ? 'Individual' : 'Individuals'})
-                            </span>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPathAddSetSearch('');
+                                  setActivePathSelection({ type: 'path_add_set', category: cat.id });
+                                }}
+                                className="py-0.5 px-1.5 rounded-md border border-dashed border-slate-700 hover:border-blue-500/60 bg-slate-950/60 hover:bg-slate-900 text-[10px] font-bold text-slate-300 hover:text-blue-300 transition flex items-center gap-0.5 cursor-pointer select-none"
+                                title={`Add ${cat.label} Set`}
+                              >
+                                <Plus className="w-2.5 h-2.5" />
+                                <span>Set</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPathAddElementSearch('');
+                                  setIsAuthoringPathCustomAbility(false);
+                                  setActivePathSelection({ type: 'path_add_element', category: cat.id });
+                                }}
+                                className="py-0.5 px-1.5 rounded-md border border-dashed border-slate-700 hover:border-blue-500/60 bg-slate-950/60 hover:bg-slate-900 text-[10px] font-bold text-slate-300 hover:text-blue-300 transition flex items-center gap-0.5 cursor-pointer select-none"
+                                title={`Add ${cat.singular}`}
+                              >
+                                <Plus className="w-2.5 h-2.5" />
+                                <span>{cat.singular}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  // Unwired placeholder for +New
+                                }}
+                                className="py-0.5 px-1.5 rounded-md border border-dashed border-slate-700/80 hover:border-indigo-500/60 bg-slate-950/40 hover:bg-slate-900 text-[10px] font-bold text-slate-400 hover:text-indigo-300 transition flex items-center gap-0.5 cursor-pointer select-none"
+                                title="Create New (Coming Soon)"
+                              >
+                                <Plus className="w-2.5 h-2.5" />
+                                <span>New</span>
+                              </button>
+                            </div>
                           </div>
 
-                          {/* Indented Tier 3: Sets & Individuals & Add Buttons */}
-                          <div className="ml-3 pl-2.5 border-l border-slate-800/80 flex flex-col gap-1.5">
+                          {/* Indented Tier 3: Sets & Individuals (Collapsed if Empty) */}
+                          {hasMembers && (
+                            <div className="ml-3 pl-2.5 border-l border-slate-800/80 flex flex-col gap-1.5">
                             {/* Linked Sets in this category */}
                             {catData.sets.map((setItem) => {
                               const isSelected =
@@ -5583,33 +5619,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               );
                             })}
 
-                            {/* Action Buttons for this category */}
-                            <div className="flex items-center gap-2 pt-0.5">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPathAddSetSearch('');
-                                  setActivePathSelection({ type: 'path_add_set', category: cat.id });
-                                }}
-                                className="flex-1 py-1 px-2 rounded-lg border border-dashed border-slate-700 hover:border-blue-500/60 bg-slate-950/60 hover:bg-slate-900 text-[11px] font-bold text-slate-400 hover:text-blue-300 transition flex items-center justify-center gap-1 cursor-pointer select-none"
-                              >
-                                <Plus className="w-3 h-3" />
-                                <span>+ Add {cat.singular} Set</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPathAddElementSearch('');
-                                  setIsAuthoringPathCustomAbility(false);
-                                  setActivePathSelection({ type: 'path_add_element', category: cat.id });
-                                }}
-                                className="flex-1 py-1 px-2 rounded-lg border border-dashed border-slate-700 hover:border-blue-500/60 bg-slate-950/60 hover:bg-slate-900 text-[11px] font-bold text-slate-400 hover:text-blue-300 transition flex items-center justify-center gap-1 cursor-pointer select-none"
-                              >
-                                <Plus className="w-3 h-3" />
-                                <span>+ Add {cat.singular}</span>
-                              </button>
                             </div>
-                          </div>
+                          )}
                         </div>
                       );
                     })}
