@@ -221,8 +221,8 @@ export default function App() {
         const currentEmail = useCharacterStore.getState().playerEmail;
         await handleAuthUser(userEmail, userName);
 
-        // Only trigger full data fetch if user was unauthenticated or identity changed
-        if (!currentEmail || currentEmail !== userEmail) {
+        // Only trigger full data fetch if identity actually changed to a different user
+        if (currentEmail && currentEmail.toLowerCase() !== userEmail.toLowerCase()) {
           fetchInitialData({ silent: false });
         }
 

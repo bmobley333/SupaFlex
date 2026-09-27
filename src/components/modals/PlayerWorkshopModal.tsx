@@ -572,7 +572,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (isHostSavedInDb && isExisting) {
       try {
         await gameApi.unlinkCanonicalGearPower(Number(pwrId), hostBelongsTo);
-        await refreshCatalogs();
+        await refreshCatalogs(['gear_powers']);
         setFeedback({
           type: 'success',
           message: `🗑️ Removed power from ${name.trim()} in Master Database!`,
@@ -634,7 +634,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (isHostSavedInDb && isExisting) {
       try {
         await gameApi.unlinkCanonicalMod(Number(modId), hostBelongsTo);
-        await refreshCatalogs();
+        await refreshCatalogs(['mods', 'gear_powers']);
         setFeedback({
           type: 'success',
           message: `🗑️ Removed mod from ${name.trim()} in Master Database!`,
@@ -734,7 +734,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             message: `👑 Created and attached Mod '${modPayload.name}' to ${name.trim()} in Master Database!`,
           });
         }
-        await refreshCatalogs();
+        await refreshCatalogs(['mods']);
       } catch (err: any) {
         console.error('[handleSaveModForm] Error saving mod to DB:', err);
         setFeedback({
@@ -830,7 +830,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             message: `👑 Created and linked '${pwrPayload.name}' to ${name.trim()} in Master Database!`,
           });
         }
-        await refreshCatalogs();
+        await refreshCatalogs(['gear_powers']);
       } catch (err: any) {
         console.error('[handleSavePowerForm] Error saving power to DB:', err);
         setFeedback({
@@ -2464,7 +2464,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setBasedOnSourceSets([]);
       setInitialExistingMemberIds(new Set(draftSetItems.map((m) => String(m.id))));
 
-      await refreshCatalogs();
+      await refreshCatalogs(['sets', 'weapons', 'armor', 'shields', 'powers', 'skills', 'traits']);
       setFeedback({
         type: 'success',
         message: `✨ Set '${name.trim()}' successfully forged with ${draftSetItems.length} item(s)!`,
@@ -2489,7 +2489,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     try {
       await gameApi.batchUpdateSetMembership(name.trim(), selectedSetCategory, []);
       await gameApi.deleteSet(selectedSetId);
-      await refreshCatalogs();
+      await refreshCatalogs(['sets', 'weapons', 'armor', 'shields', 'powers', 'skills', 'traits']);
       handleResetSetSelection();
       setFeedback({
         type: 'success',
@@ -3761,7 +3761,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         }
       }
 
-      await refreshCatalogs();
+      await refreshCatalogs(['gear_powers', 'mods', 'supplies', 'weapons', 'armor', 'shields']);
       if (onItemSaved) onItemSaved();
     } catch (err: any) {
       console.error('[PlayerWorkshopModal] Error in save:', err);
