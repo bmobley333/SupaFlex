@@ -175,7 +175,7 @@ export const getCategoryEmoji = (type?: string): string => {
     case 'weapon':
     case 'weapon_skill': return '⚔️';
     case 'armor':
-    case 'armor_skill': return '🥋';
+    case 'armor_skill': return '🧥';
     case 'paths_abilities': return '🧭';
     case 'shield':
     case 'shield_skill': return '🛡️';
@@ -2099,10 +2099,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   // --- Sets Studio Constants & Helpers ---
   const SET_CATEGORIES: { id: SetCategory; label: string; icon: string }[] = [
     { id: 'Traits', label: 'Traits', icon: '🧬' },
-    { id: 'Skills', label: 'Skills', icon: '🎯' },
-    { id: 'Powers', label: 'Powers', icon: '⚡' },
+    { id: 'Skills', label: 'Skills', icon: '🎓' },
+    { id: 'Powers', label: 'Powers', icon: '🔥' },
     { id: 'Weapons', label: 'Weapons', icon: '⚔️' },
-    { id: 'Armor & Shields', label: 'Armor & Shields', icon: '🛡️' },
+    { id: 'Armor', label: 'Armor', icon: '🧥' },
+    { id: 'Shields', label: 'Shields', icon: '🛡️' },
   ];
 
   const convertCatalogItemToSetMember = (item: any, category: SetCategory): SetMemberItem => {
@@ -2120,12 +2121,40 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         effect: item.mso ? `MSO: ${item.mso}` : (item.effect || ''),
         item_data: item,
       };
+    } else if (category === 'Armor') {
+      return {
+        id: String(item.id),
+        name: item.name || '',
+        category: 'Armor',
+        table: 'armor',
+        element_type: 'armor',
+        source_table: 'armor',
+        requirement: item.requirement || item.armor_type || '',
+        cost: item.cost || '',
+        action: item.ar ? `AR ${item.ar}` : (item.armor_type || 'Armor'),
+        effect: item.notes || (item.dr !== undefined ? `DR: ${item.dr ?? 0}, Mob: ${item.mobility ?? 0}` : ''),
+        item_data: item,
+      };
+    } else if (category === 'Shields') {
+      return {
+        id: String(item.id),
+        name: item.name || '',
+        category: 'Shields',
+        table: 'shields',
+        element_type: 'shield',
+        source_table: 'shields',
+        requirement: item.requirement || '',
+        cost: item.cost || '',
+        action: item.max_block ? `Block ${item.max_block}` : 'Shield',
+        effect: item.notes || (item.parry !== undefined ? `Parry: ${item.parry ?? 0}` : ''),
+        item_data: item,
+      };
     } else if (category === 'Armor & Shields') {
       const isArmor = Boolean(item.armor_type || item.dr !== undefined);
       return {
         id: String(item.id),
         name: item.name || '',
-        category: 'Armor & Shields',
+        category: isArmor ? 'Armor' : 'Shields',
         table: isArmor ? 'armor' : 'shields',
         element_type: isArmor ? 'armor' : 'shield',
         source_table: isArmor ? 'armor' : 'shields',
@@ -2221,6 +2250,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const categoryCatalogItems = useMemo<any[]>(() => {
     if (selectedSetCategory === 'Weapons') {
       return weaponsCatalog || [];
+    } else if (selectedSetCategory === 'Armor') {
+      return armorCatalog || [];
+    } else if (selectedSetCategory === 'Shields') {
+      return shieldsCatalog || [];
     } else if (selectedSetCategory === 'Armor & Shields') {
       const armors = armorCatalog || [];
       const shields = shieldsCatalog || [];
@@ -4273,13 +4306,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   const PATH_ABILITY_CATEGORIES = [
     { id: 'trait', label: 'Traits', icon: '🧬', singular: 'Trait' },
-    { id: 'power', label: 'Powers', icon: '⚡', singular: 'Power' },
-    { id: 'skill', label: 'Skills', icon: '🎯', singular: 'Skill' },
+    { id: 'power', label: 'Powers', icon: '🔥', singular: 'Power' },
+    { id: 'skill', label: 'Skills', icon: '🎓', singular: 'Skill' },
     { id: 'weapon', label: 'Weapon Sk', icon: '⚔️', singular: 'Sk' },
-    { id: 'armor_shield', label: 'Armor & Shield Sk', icon: '🛡️', singular: 'Sk' },
+    { id: 'armor', label: 'Armor Sk', icon: '🧥', singular: 'Sk' },
+    { id: 'shield', label: 'Shield Sk', icon: '🛡️', singular: 'Sk' },
   ] as const;
 
-  const getLinkedElementCategory = useCallback((el: PathLinkedElement): 'trait' | 'power' | 'skill' | 'weapon' | 'armor_shield' => {
+  const getLinkedElementCategory = useCallback((el: PathLinkedElement): 'trait' | 'power' | 'skill' | 'weapon' | 'armor' | 'shield' => {
     const elType = (el.type || el.element_type || '').toLowerCase();
     if (elType === 'set') {
       const setRecord = (setsCatalog || []).find(
@@ -4287,7 +4321,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       );
       const cat = (setRecord?.category || (el as any).category || el.details || '').toLowerCase();
       if (cat.includes('weapon')) return 'weapon';
-      if (cat.includes('armor') || cat.includes('shield')) return 'armor_shield';
+      if (cat === 'shield' || cat.includes('shield')) return 'shield';
+      if (cat === 'armor' || cat.includes('armor')) return 'armor';
       if (cat.includes('power')) return 'power';
       if (cat.includes('skill')) return 'skill';
       if (cat.includes('trait')) return 'trait';
@@ -4297,20 +4332,30 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (elType === 'power') return 'power';
     if (elType === 'skill' || elType === 'skillset') return 'skill';
     if (elType === 'weapon') return 'weapon';
-    if (elType === 'armor' || elType === 'shield' || elType === 'armor_shield') return 'armor_shield';
+    if (elType === 'shield') return 'shield';
+    if (elType === 'armor') return 'armor';
+    if (elType === 'armor_shield') {
+      const cleanName = (el.name || '').toLowerCase().trim();
+      const isShield =
+        (shieldsCatalog || []).some(
+          (s) => String(s.id) === String(el.id) || (s.name || '').toLowerCase().trim() === cleanName
+        ) || el.item_data?.max_block !== undefined;
+      return isShield ? 'shield' : 'armor';
+    }
     return 'power';
-  }, [setsCatalog]);
+  }, [setsCatalog, shieldsCatalog]);
 
   const pathCategoryMembers = useMemo(() => {
     const groups: Record<
-      'trait' | 'power' | 'skill' | 'weapon' | 'armor_shield',
+      'trait' | 'power' | 'skill' | 'weapon' | 'armor' | 'shield',
       { sets: PathLinkedElement[]; elements: PathLinkedElement[] }
     > = {
       trait: { sets: [], elements: [] },
       power: { sets: [], elements: [] },
       skill: { sets: [], elements: [] },
       weapon: { sets: [], elements: [] },
-      armor_shield: { sets: [], elements: [] },
+      armor: { sets: [], elements: [] },
+      shield: { sets: [], elements: [] },
     };
     (linkedElements || []).forEach((el) => {
       const cat = getLinkedElementCategory(el);
@@ -4355,7 +4400,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     return (setsCatalog || []).filter((s) => {
       const c = (s.category || '').toLowerCase();
       if (cat === 'weapon') return c.includes('weapon');
-      if (cat === 'armor_shield') return c.includes('armor') || c.includes('shield');
+      if (cat === 'armor') return c === 'armor' || (c.includes('armor') && !c.includes('shield'));
+      if (cat === 'shield') return c.includes('shield');
       if (cat === 'power') return c.includes('power');
       if (cat === 'skill') return c.includes('skill');
       if (cat === 'trait') return c.includes('trait');
@@ -4387,10 +4433,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (cat === 'weapon') {
       return (weaponsCatalog || []).map((w) => ({ ...w, _catalogType: 'weapon' as PathElementType }));
     }
-    if (cat === 'armor_shield') {
-      const a = (armorCatalog || []).map((item) => ({ ...item, _catalogType: 'armor' as PathElementType }));
-      const sh = (shieldsCatalog || []).map((item) => ({ ...item, _catalogType: 'shield' as PathElementType }));
-      return [...a, ...sh];
+    if (cat === 'armor') {
+      return (armorCatalog || []).map((item) => ({ ...item, _catalogType: 'armor' as PathElementType }));
+    }
+    if (cat === 'shield') {
+      return (shieldsCatalog || []).map((item) => ({ ...item, _catalogType: 'shield' as PathElementType }));
     }
     return [];
   }, [activePathSelection, traits, powers, skills, weaponsCatalog, armorCatalog, shieldsCatalog]);
@@ -4479,19 +4526,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const activePathElementCategory = useMemo<'power' | 'trait' | 'skill' | 'weapon' | 'armor' | 'shield' | null>(() => {
     if (activePathSelection.type !== 'path_element' || !activePathSelection.element) return null;
     const el = activePathSelection.element;
-    const baseCat = getLinkedElementCategory(el);
-    if (baseCat === 'armor_shield') {
-      const cleanName = (el.name || '').toLowerCase().trim();
-      const isShield =
-        (shieldsCatalog || []).some(
-          (s) => String(s.id) === String(el.id) || (s.name || '').toLowerCase().trim() === cleanName
-        ) ||
-        (el.type || '').toLowerCase() === 'shield' ||
-        el.item_data?.max_block !== undefined;
-      return isShield ? 'shield' : 'armor';
-    }
-    return baseCat;
-  }, [activePathSelection, getLinkedElementCategory, shieldsCatalog]);
+    return getLinkedElementCategory(el);
+  }, [activePathSelection, getLinkedElementCategory]);
 
   useEffect(() => {
     if (activePathSelection.type !== 'path_element' || !activePathSelection.element) return;
@@ -7996,7 +8032,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <span className="text-base">🗂️</span>
                       <div>
                         <h3 className="font-outfit font-extrabold text-sm text-slate-100 capitalize">
-                          Add {activePathSelection.category === 'armor_shield' ? 'Armor & Shield' : activePathSelection.category} Set to Path
+                          Add {activePathSelection.category === 'armor' ? 'Armor' : activePathSelection.category === 'shield' ? 'Shields' : activePathSelection.category} Set to Path
                         </h3>
                         <p className="text-[10px] text-slate-400">
                           Showing {filteredSetsForPathCategory.length} of {availableSetsForPathCategory.length} sets
@@ -8140,16 +8176,18 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         {activePathSelection.category === 'trait'
                           ? '🧬'
                           : activePathSelection.category === 'power'
-                          ? '⚡'
+                          ? '🔥'
                           : activePathSelection.category === 'skill'
-                          ? '🎯'
+                          ? '🎓'
                           : activePathSelection.category === 'weapon'
                           ? '⚔️'
+                          : activePathSelection.category === 'armor'
+                          ? '🧥'
                           : '🛡️'}
                       </span>
                       <div>
                         <h3 className="font-outfit font-extrabold text-sm text-slate-100 capitalize">
-                          Add {activePathSelection.category === 'armor_shield' ? 'Armor & Shield Sk' : activePathSelection.category} to Path
+                          Add {activePathSelection.category === 'armor' ? 'Armor Sk' : activePathSelection.category === 'shield' ? 'Shield Sk' : activePathSelection.category} to Path
                         </h3>
                         <p className="text-[10px] text-slate-400">
                           Showing {filteredElementsForPathCategory.length} of {availableElementsForPathCategory.length} abilities
@@ -8909,12 +8947,14 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <span className="text-base">
                         {selectedSetCategory === 'Weapons'
                           ? '⚔️'
-                          : selectedSetCategory === 'Armor & Shields'
+                          : selectedSetCategory === 'Armor'
+                          ? '🧥'
+                          : selectedSetCategory === 'Shields'
                           ? '🛡️'
                           : selectedSetCategory === 'Powers'
-                          ? '⚡'
+                          ? '🔥'
                           : selectedSetCategory === 'Skills'
-                          ? '🎯'
+                          ? '🎓'
                           : '🧬'}
                       </span>
                       <div>

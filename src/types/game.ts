@@ -71,6 +71,8 @@ export type SetCategory =
   | 'Skills'
   | 'Powers'
   | 'Weapons'
+  | 'Armor'
+  | 'Shields'
   | 'Armor & Shields'
   | string;
 

@@ -663,6 +663,52 @@ export const gameApi = {
             });
           });
         }
+      } else if (cat === 'armor') {
+        const { data, error } = await supabase
+          .from('armor')
+          .select('*')
+          .contains('sets', [cleanName]);
+        if (!error && data) {
+          data.forEach((a) => {
+            members.push({
+              id: a.id,
+              name: a.name,
+              category: 'Armor',
+              table: 'armor',
+              requirement: a.requirement,
+              action: `AR ${a.ar}`,
+              usage: `MR ${a.mr}`,
+              effect: a.notes,
+              notes: a.notes,
+              domain: a.domain,
+              sets: a.sets || [],
+              ...a,
+            });
+          });
+        }
+      } else if (cat === 'shields' || cat === 'shield') {
+        const { data, error } = await supabase
+          .from('shields')
+          .select('*')
+          .contains('sets', [cleanName]);
+        if (!error && data) {
+          data.forEach((s) => {
+            members.push({
+              id: s.id,
+              name: s.name,
+              category: 'Shields',
+              table: 'shields',
+              requirement: s.requirement,
+              action: `Block ${s.max_block}`,
+              usage: `MR ${s.mr}`,
+              effect: s.notes,
+              notes: s.notes,
+              domain: s.domain,
+              sets: s.sets || [],
+              ...s,
+            });
+          });
+        }
       } else if (cat.includes('armor') || cat.includes('shield')) {
         const [armorRes, shieldRes] = await Promise.all([
           supabase.from('armor').select('*').contains('sets', [cleanName]),
@@ -673,7 +719,7 @@ export const gameApi = {
             members.push({
               id: a.id,
               name: a.name,
-              category: 'Armor & Shields',
+              category: 'Armor',
               table: 'armor',
               requirement: a.requirement,
               action: `AR ${a.ar}`,
@@ -691,7 +737,7 @@ export const gameApi = {
             members.push({
               id: s.id,
               name: s.name,
-              category: 'Armor & Shields',
+              category: 'Shields',
               table: 'shields',
               requirement: s.requirement,
               action: `Block ${s.max_block}`,
@@ -787,6 +833,8 @@ export const gameApi = {
 
     const targetTables: ('weapons' | 'armor' | 'shields' | 'powers' | 'skills' | 'traits')[] = [];
     if (cat.includes('weapon')) targetTables.push('weapons');
+    else if (cat === 'armor') targetTables.push('armor');
+    else if (cat === 'shields' || cat === 'shield') targetTables.push('shields');
     else if (cat.includes('armor') || cat.includes('shield')) targetTables.push('armor', 'shields');
     else if (cat.includes('power')) targetTables.push('powers');
     else if (cat.includes('skill')) targetTables.push('skills');
