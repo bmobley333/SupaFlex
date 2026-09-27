@@ -292,8 +292,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [skillAttribute, setSkillAttribute] = useState<string>('💪');
   const [skillDiscipline, setSkillDiscipline] = useState<string>('General');
   const [skillDisciplineNewText, setSkillDisciplineNewText] = useState<string>('');
-  const [pathCategory, setPathCategory] = useState<string>('General');
+  const [pathCategory, setPathCategory] = useState<string>('Race');
   const [pathCategoryNewText, setPathCategoryNewText] = useState<string>('');
+  const [selectedPathCategoryFilter, setSelectedPathCategoryFilter] = useState<string>('Race');
   const [pathDescription, setPathDescription] = useState<string>('');
   const [linkedElements, setLinkedElements] = useState<PathLinkedElement[]>([]);
   const [effect, setEffect] = useState('');
@@ -998,6 +999,20 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     return Array.from(cats).sort((a, b) => a.localeCompare(b));
   }, [paths]);
 
+  // Categories other than Race and Class for the Other dropdown
+  const otherPathCategories = useMemo(() => {
+    return availablePathCategories.filter(
+      (c) => c.toLowerCase() !== 'race' && c.toLowerCase() !== 'class'
+    );
+  }, [availablePathCategories]);
+
+  const handleSelectPathCategoryFilter = (newCat: string) => {
+    if (!newCat) return;
+    setSelectedPathCategoryFilter(newCat);
+    setPathCategory(newCat);
+    setPathCategoryNewText('');
+  };
+
   // Distinct Skill Disciplines from Supabase skills table + defaults
   const availableSkillDisciplines = useMemo(() => {
     const discs = new Set<string>();
@@ -1523,12 +1538,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
         }
       }
     });
+    const catFiltered = selectedPathCategoryFilter
+      ? list.filter((p) => (p.category || 'General').toLowerCase() === selectedPathCategoryFilter.toLowerCase())
+      : list;
     const q = canonicalSearchQuery.trim().toLowerCase();
-    if (!q) return list.sort((a, b) => a.name.localeCompare(b.name));
-    return list
+    if (!q) return catFiltered.sort((a, b) => a.name.localeCompare(b.name));
+    return catFiltered
       .filter((p) => p.name.toLowerCase().includes(q) || (p.category && p.category.toLowerCase().includes(q)))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [paths, personalItems, cleanEmail, canonicalSearchQuery]);
+  }, [paths, personalItems, cleanEmail, canonicalSearchQuery, selectedPathCategoryFilter]);
 
   // Canonical Search Filtered Lists (Designer Mode SupaBase)
   const filteredCanonicalWeapons = useMemo(() => {
@@ -1583,14 +1601,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const filteredCanonicalPaths = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
     const canonItems = (paths || []).filter((p) => getItemScope(p.owner) === 'canon');
-    if (!q) return canonItems;
-    return canonItems.filter(
+    const catFiltered = selectedPathCategoryFilter
+      ? canonItems.filter((p) => (p.category || 'General').toLowerCase() === selectedPathCategoryFilter.toLowerCase())
+      : canonItems;
+    if (!q) return catFiltered;
+    return catFiltered.filter(
       (p) =>
         (p.name || '').toLowerCase().includes(q) ||
         (p.category || '').toLowerCase().includes(q) ||
         (p.description || '').toLowerCase().includes(q)
     );
-  }, [paths, canonicalSearchQuery, cleanEmail]);
+  }, [paths, canonicalSearchQuery, cleanEmail, selectedPathCategoryFilter]);
 
   const filteredCanonicalPowers = useMemo(() => {
     const q = canonicalSearchQuery.trim().toLowerCase();
@@ -5254,12 +5275,74 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           ) : creationType === 'paths_abilities' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
+              {/* Row 1: Category Filter Multi-Option Pill Switch & Other Dropdown */}
+              <div className="flex items-center gap-1.5 text-xs shrink-0">
+                <span className="font-bold text-slate-300 text-xs shrink-0">Category:</span>
+
+                {/* Multi-Option Pill Switch for Race and Class */}
+                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPathCategoryFilter('Race')}
+                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                      selectedPathCategoryFilter.toLowerCase() === 'race'
+                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <span>🧬</span>
+                    <span>Race</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPathCategoryFilter('Class')}
+                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                      selectedPathCategoryFilter.toLowerCase() === 'class'
+                        ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <span>⚔️</span>
+                    <span>Class</span>
+                  </button>
+                </div>
+
+                <span className="font-bold text-slate-300 text-xs shrink-0 ml-1">Other:</span>
+
+                <select
+                  value={
+                    selectedPathCategoryFilter.toLowerCase() !== 'race' && selectedPathCategoryFilter.toLowerCase() !== 'class'
+                      ? selectedPathCategoryFilter
+                      : ''
+                  }
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleSelectPathCategoryFilter(e.target.value);
+                    }
+                  }}
+                  className={`flex-1 min-w-[120px] bg-slate-950 border text-xs px-2.5 py-1 rounded-xl outline-none font-medium cursor-pointer transition ${
+                    selectedPathCategoryFilter.toLowerCase() !== 'race' && selectedPathCategoryFilter.toLowerCase() !== 'class'
+                      ? 'border-blue-500/80 text-blue-300 font-bold bg-blue-950/30'
+                      : 'border-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <option value="" disabled>
+                    -- Select Other --
+                  </option>
+                  {otherPathCategories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Header: Title / Count, Search Bar, and + New Button */}
               <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
                 <span className="flex items-center gap-1.5 shrink-0">
                   <span>{workshopMode === 'designer' ? '👑' : '🎨'}</span>
                   <span>
-                    {workshopMode === 'designer' ? 'Master Paths' : 'My Paths'} (
+                    {workshopMode === 'designer' ? 'Paths' : 'My Paths'} (
                     {workshopMode === 'designer' ? filteredCanonicalPaths.length : myPathsList.length})
                   </span>
                 </span>
@@ -5270,7 +5353,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     type="text"
                     value={canonicalSearchQuery}
                     onChange={(e) => setCanonicalSearchQuery(e.target.value)}
-                    placeholder={workshopMode === 'designer' ? "Search master paths..." : "Search my paths..."}
+                    placeholder="Search paths..."
                     className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/80 transition"
                   />
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
@@ -5300,15 +5383,17 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     setCanonicalSelectedId('');
                     setSelectedPathId('');
                     setActivePathSelection({ type: 'path_root' });
+                    setPathCategory(selectedPathCategoryFilter || 'Race');
+                    setPathCategoryNewText('');
                   }}
                   className={`text-[10px] font-bold px-2 py-1 rounded-lg transition cursor-pointer shrink-0 ${
                     workshopMode === 'designer'
                       ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
                       : 'bg-blue-500/20 text-blue-300 border border-blue-500/40 hover:bg-blue-500/30'
                   }`}
-                  title={workshopMode === 'designer' ? "Author a new canonical Master Path in Supabase" : "Create a new custom Path"}
+                  title={workshopMode === 'designer' ? "Author a new canonical Path in Supabase" : "Create a new custom Path"}
                 >
-                  {workshopMode === 'designer' ? '+ New Master Path' : '+ New Path'}
+                  + New Path
                 </button>
               </div>
 
@@ -5354,8 +5439,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     ? `-- Filtered (${
                         workshopMode === 'designer' ? filteredCanonicalPaths.length : myPathsList.length
                       } matches) --`
-                    : `-- Choose ${workshopMode === 'designer' ? 'Master' : 'My'} Path (${
-                        workshopMode === 'designer' ? (paths || []).length : myPathsList.length
+                    : `-- Choose Path (${
+                        workshopMode === 'designer' ? filteredCanonicalPaths.length : myPathsList.length
                       } available) --`}
                 </option>
                 {workshopMode === 'designer'
@@ -5666,11 +5751,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500 text-xs">
                   <span className="text-2xl mb-1.5">{workshopMode === 'designer' ? '👑' : '🧭'}</span>
                   <p className="font-semibold text-slate-400">
-                    {workshopMode === 'designer' ? 'No Master Path Selected' : 'No Path Selected'}
+                    No Path Selected
                   </p>
                   <p className="text-[10px] mt-0.5 text-slate-600 max-w-xs">
                     {workshopMode === 'designer'
-                      ? 'Pick a Master Path from the dropdown above to inspect and edit its Linked Sets and Abilities, or click "+ New Master Path" to author a new canonical path.'
+                      ? 'Pick a Path from the dropdown above to inspect and edit its Linked Sets and Abilities, or click "+ New Path" to author a new canonical path.'
                       : 'Pick a Path from your creations above or click "+ New Path" to forge a custom Path Archetype.'}
                   </p>
                 </div>
@@ -7263,7 +7348,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     </div>
                     {canonicalSelectedId && (
                       <span className="px-2 py-0.5 rounded bg-blue-950 border border-blue-700/60 text-blue-300 font-mono text-[10px] font-bold">
-                        {workshopMode === 'designer' ? '👑 Master Path' : 'Archetype'}
+                        {workshopMode === 'designer' ? '👑 Path' : 'Archetype'}
                       </span>
                     )}
                   </div>
@@ -7306,43 +7391,10 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                     )}
                   </div>
 
-                  {/* Row 2: Category & Based-On Template Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 shrink-0">
-                    {/* Path Category */}
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-slate-300 text-xs">Category</span>
-                          <GuardrailBadge isValid={isPathCategoryValid} />
-                        </div>
-                      </div>
-                      <select
-                        value={pathCategory}
-                        onChange={(e) => setPathCategory(e.target.value)}
-                        disabled={isUniversalPath && workshopMode !== 'designer'}
-                        className="bg-slate-950 border border-slate-700 text-slate-200 text-xs px-2.5 py-1.5 rounded-xl outline-none focus:border-blue-400 font-medium disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        {availablePathCategories.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                        <option value="CUSTOM_NEW">+ Custom Category...</option>
-                      </select>
-                      {pathCategory === 'CUSTOM_NEW' && (
-                        <input
-                          type="text"
-                          value={pathCategoryNewText}
-                          onChange={(e) => setPathCategoryNewText(e.target.value)}
-                          disabled={isUniversalPath && workshopMode !== 'designer'}
-                          placeholder="Type custom category name..."
-                          className="bg-slate-950 text-slate-100 text-xs px-2.5 py-1 rounded-xl border border-blue-500/60 outline-none"
-                        />
-                      )}
-                    </div>
-
+                  {/* Row 2: Based-On Path Template & Category Confirmation Badge */}
+                  <div className="flex items-center justify-between gap-3 shrink-0">
                     {/* Based-On Path Template */}
-                    <div className="flex flex-col gap-1">
+                    <div className="flex-1 flex flex-col gap-1">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <span className="font-bold text-slate-300 text-xs">Based-On Template</span>
@@ -7365,6 +7417,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           </option>
                         ))}
                       </select>
+                    </div>
+
+                    {/* Category Confirmation Badge */}
+                    <div className="flex flex-col gap-1 shrink-0">
+                      <span className="font-bold text-slate-400 text-xs">Category</span>
+                      <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-bold text-blue-300 flex items-center gap-1.5 shadow-inner">
+                        <span>{finalPathCat.toLowerCase() === 'race' ? '🧬' : finalPathCat.toLowerCase() === 'class' ? '⚔️' : '🧭'}</span>
+                        <span>{finalPathCat}</span>
+                      </div>
                     </div>
                   </div>
 
