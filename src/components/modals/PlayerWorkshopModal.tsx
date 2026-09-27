@@ -6071,14 +6071,43 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <span className="font-bold text-slate-100 text-xs truncate">
                         {name || 'Unnamed Set'}
                       </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-500/40">
-                        {selectedSetCategory}
-                      </span>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700 shrink-0">
                         {draftSetItems.length} {draftSetItems.length === 1 ? 'item' : 'items'}
                       </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* +Add Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveSetSelection({ type: 'set_add_member' });
+                        }}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-lg transition flex items-center gap-1 cursor-pointer shrink-0 ${
+                          activeSetSelection.type === 'set_add_member'
+                            ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                            : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30'
+                        }`}
+                        title={`Browse catalog to add ${selectedSetCategory.toLowerCase()} items`}
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Add</span>
+                      </button>
+
+                      {/* +New Button (Placeholder) */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                        className="py-0.5 px-2 rounded-lg border border-dashed border-slate-700/80 hover:border-indigo-500/60 bg-slate-950/40 hover:bg-slate-900 text-[10px] font-bold text-slate-400 hover:text-indigo-300 transition flex items-center gap-1 cursor-pointer select-none shrink-0"
+                        title="Author a new custom ability (Coming Soon)"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>New</span>
+                      </button>
+
+                      {/* Delete Set Button */}
                       {selectedSetId && (
                         <button
                           type="button"
@@ -6099,7 +6128,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   <div className="ml-5 sm:ml-6 pl-3 sm:pl-4 border-l-2 border-indigo-500/40 flex flex-col gap-2 pt-1 pb-1">
                     {draftSetItems.length === 0 ? (
                       <div className="p-3 rounded-lg bg-slate-950/60 border border-dashed border-slate-800 text-center text-xs text-slate-500">
-                        Set is empty. Click "+ Add Item" below to browse catalog.
+                        Set is empty. Click "+Add" above to browse catalog.
                       </div>
                     ) : (
                       draftSetItems.map((item, idx) => {
@@ -6180,16 +6209,6 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         );
                       })
                     )}
-
-                    {/* + Add Item to Set Dashed Button */}
-                    <button
-                      type="button"
-                      onClick={() => setActiveSetSelection({ type: 'set_add_member' })}
-                      className="py-1 px-2.5 rounded-lg border border-dashed border-slate-700 hover:border-indigo-500/60 bg-slate-950/60 hover:bg-slate-900 text-xs font-bold text-slate-400 hover:text-indigo-300 transition flex items-center justify-center gap-1.5 cursor-pointer select-none"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>+ Add {selectedSetCategory} Item</span>
-                    </button>
                   </div>
                 </div>
               ) : (
