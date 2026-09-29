@@ -2318,17 +2318,113 @@ export const gameApi = {
     }
   },
 
-  async unmarkPartyTurnMember(partyId: string, memberId: string | number, roomCode?: string) {
+  async setPartyTurnMark(partyId: string, memberId: string | number, marked: boolean, roomCode?: string): Promise<string[]> {
     try {
-      const current = await this.getPartyTurnMarks(partyId);
-      const idStr = String(memberId);
-      if (current.includes(idStr)) {
-        const next = current.filter((x) => x !== idStr);
-        await this.savePartyTurnMarks(partyId, next, roomCode);
+      let targetUuid = partyId;
+      let effectiveCode = roomCode;
+      if (partyId && partyId.length === 4) {
+        effectiveCode = partyId.toUpperCase();
+        const p = await this.findActivePartyByRoomCode(partyId);
+        if (p) targetUuid = p.id;
       }
+
+      const idStr = String(memberId);
+
+      // 1. Atomic PostgreSQL RPC update (zero egress, zero TOCTOU race conditions)
+      const { data, error } = await supabase.rpc('set_party_turn_mark', {
+        p_party_id: targetUuid,
+        p_member_id: idStr,
+        p_marked: marked,
+      });
+
+      let updatedMarks: string[] = [];
+      if (!error && Array.isArray(data)) {
+        updatedMarks = data.map(String);
+      } else {
+        const fallbackRaw = localStorage.getItem(`supaflex_party_turn_marks_${targetUuid}`);
+        const current: string[] = fallbackRaw ? JSON.parse(fallbackRaw) : [];
+        updatedMarks = marked
+          ? (current.includes(idStr) ? current : [...current, idStr])
+          : current.filter((x) => x !== idStr);
+      }
+
+      localStorage.setItem(`supaflex_party_turn_marks_${partyId}`, JSON.stringify(updatedMarks));
+      localStorage.setItem(`supaflex_party_turn_marks_${targetUuid}`, JSON.stringify(updatedMarks));
+
+      // Broadcast update across canonical Realtime channels
+      const channelsToNotify = new Set<string>();
+      channelsToNotify.add(`party:${targetUuid}`);
+      channelsToNotify.add(`party:${partyId}`);
+      if (effectiveCode) {
+        channelsToNotify.add(`party:${effectiveCode}`);
+      }
+
+      for (const ch of channelsToNotify) {
+        try {
+          const channel = supabase.channel(ch);
+          await channel.send({
+            type: 'broadcast',
+            event: 'party_turn_marks_updated',
+            payload: { markedTurnIds: updatedMarks },
+          });
+        } catch {}
+      }
+
+      return updatedMarks;
     } catch (e) {
-      console.error('[gameApi] Error in unmarkPartyTurnMember:', e);
+      console.error('[gameApi] Error in setPartyTurnMark:', e);
+      return [];
     }
+  },
+
+  async clearPartyMarkedTurns(partyId: string, roomCode?: string): Promise<string[]> {
+    try {
+      let targetUuid = partyId;
+      let effectiveCode = roomCode;
+      if (partyId && partyId.length === 4) {
+        effectiveCode = partyId.toUpperCase();
+        const p = await this.findActivePartyByRoomCode(partyId);
+        if (p) targetUuid = p.id;
+      }
+
+      const { error } = await supabase.rpc('clear_party_turn_marks', {
+        p_party_id: targetUuid,
+      });
+
+      if (error) {
+        console.warn('[gameApi] Notice clearing party turn marks:', error.message);
+      }
+
+      localStorage.setItem(`supaflex_party_turn_marks_${partyId}`, JSON.stringify([]));
+      localStorage.setItem(`supaflex_party_turn_marks_${targetUuid}`, JSON.stringify([]));
+
+      const channelsToNotify = new Set<string>();
+      channelsToNotify.add(`party:${targetUuid}`);
+      channelsToNotify.add(`party:${partyId}`);
+      if (effectiveCode) {
+        channelsToNotify.add(`party:${effectiveCode}`);
+      }
+
+      for (const ch of channelsToNotify) {
+        try {
+          const channel = supabase.channel(ch);
+          await channel.send({
+            type: 'broadcast',
+            event: 'party_turn_marks_updated',
+            payload: { markedTurnIds: [] },
+          });
+        } catch {}
+      }
+
+      return [];
+    } catch (e) {
+      console.error('[gameApi] Error in clearPartyMarkedTurns:', e);
+      return [];
+    }
+  },
+
+  async unmarkPartyTurnMember(partyId: string, memberId: string | number, roomCode?: string) {
+    return this.setPartyTurnMark(partyId, memberId, false, roomCode);
   },
 
 

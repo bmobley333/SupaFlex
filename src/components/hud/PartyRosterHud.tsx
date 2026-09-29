@@ -181,8 +181,13 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
           const newMaxVit = data.vitality_max;
           const newNish = data.current_nish;
 
-          // Anytime a character's Nish changes, automatically uncheck their turn mark!
-          if (data.current_nish !== undefined || data.nish_changed) {
+          // Anytime a character's Nish changes (explicitly via reroll or changed value), automatically uncheck their turn mark!
+          const isExplicitNishReroll = Boolean(data.nish_changed);
+          const currentMember = sessionMembers.find((m) => Number(m.character_id) === charId);
+          const oldNish = currentMember?.character?.sheet_data?.current_nish;
+          const isNumericNishChange = data.current_nish !== undefined && oldNish !== undefined && Number(data.current_nish) !== Number(oldNish);
+
+          if (isExplicitNishReroll || isNumericNishChange) {
             setMarkedTurnIds((prev) => prev.filter((x) => x !== charIdStr));
           }
 

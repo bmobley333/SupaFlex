@@ -538,18 +538,18 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   const toggleTurnMark = (id: string) => {
     if (!selectedParty?.id) return;
     const roomCode = selectedParty.room_code || selectedParty.party_code || undefined;
-    setMarkedTurnIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      gameApi.savePartyTurnMarks(selectedParty.id, next, roomCode);
-      return next;
-    });
+    const willBeMarked = !markedTurnIds.includes(id);
+    // Optimistic UI state update
+    setMarkedTurnIds((prev) => (willBeMarked ? [...prev, id] : prev.filter((x) => x !== id)));
+    // Atomic PostgreSQL RPC execution outside state setter to preserve pure function invariants
+    gameApi.setPartyTurnMark(selectedParty.id, id, willBeMarked, roomCode);
   };
 
   const handleResetTurnMarks = () => {
     if (!selectedParty?.id) return;
     const roomCode = selectedParty.room_code || selectedParty.party_code || undefined;
     setMarkedTurnIds([]);
-    gameApi.savePartyTurnMarks(selectedParty.id, [], roomCode);
+    gameApi.clearPartyMarkedTurns(selectedParty.id, roomCode);
   };
 
   const handleDismissRosterMonster = (monsterId: string) => {
@@ -1029,19 +1029,18 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           const newMaxVit = data.vitality_max;
           const newNish = data.current_nish;
 
-          // Anytime a character's Nish changes, automatically uncheck their turn mark!
-          if (data.current_nish !== undefined || data.nish_changed) {
-            setMarkedTurnIds((prev) => {
-              if (prev.includes(charIdStr)) {
-                const next = prev.filter((x) => x !== charIdStr);
-                const roomCode = selectedParty?.room_code || selectedParty?.party_code || undefined;
-                if (selectedParty?.id) {
-                  gameApi.savePartyTurnMarks(selectedParty.id, next, roomCode);
-                }
-                return next;
-              }
-              return prev;
-            });
+          // Anytime a character's Nish changes (explicitly via reroll or changed value), automatically uncheck their turn mark!
+          const isExplicitNishReroll = Boolean(data.nish_changed);
+          const currentMember = sessionMembers.find((m) => Number(m.character_id) === charId);
+          const oldNish = currentMember?.character?.sheet_data?.current_nish;
+          const isNumericNishChange = data.current_nish !== undefined && oldNish !== undefined && Number(data.current_nish) !== Number(oldNish);
+
+          if (isExplicitNishReroll || isNumericNishChange) {
+            setMarkedTurnIds((prev) => prev.filter((x) => x !== charIdStr));
+            const roomCode = selectedParty?.room_code || selectedParty?.party_code || undefined;
+            if (selectedParty?.id) {
+              gameApi.unmarkPartyTurnMember(selectedParty.id, charIdStr, roomCode);
+            }
           }
 
           setSessionMembers((prev) =>
