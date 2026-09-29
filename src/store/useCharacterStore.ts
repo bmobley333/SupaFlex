@@ -33,6 +33,7 @@ export type CatalogRefreshTable =
   | 'traits';
 
 let activeFetchPromise: Promise<void> | null = null;
+let activeFetchGeneration = 0;
 
 export function getCatalogCacheKey(email?: string): string {
   return getCatalogStorageKey(email);
@@ -351,38 +352,151 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       return activeFetchPromise;
     }
 
+    const currentGen = ++activeFetchGeneration;
+
     activeFetchPromise = (async () => {
       const isSilent = options?.silent === true;
       if (!isSilent) {
         set({ isLoading: true, error: null });
       }
       try {
-        const isConnected = await gameApi.checkConnection();
-        set({ dbConnected: isConnected });
-
         // Register window network status listeners for dynamic offline warning popups and GuildSpace lock/unlock catalog reloads
         if (typeof window !== 'undefined' && !(window as any)._supaflex_net_listeners_registered) {
           (window as any)._supaflex_net_listeners_registered = true;
           window.addEventListener('online', () => {
             set({ dbConnected: true });
+            get().fetchInitialData({ silent: true });
           });
           window.addEventListener('offline', () => {
             set({ dbConnected: false });
           });
           window.addEventListener('supaflex:guildspace-unlocked', () => {
             set({ isGuildSpaceUnlocked: true });
-            get().fetchInitialData({ silent: true });
+            get().fetchInitialData({ silent: true, forceRefresh: true });
           });
           window.addEventListener('supaflex:guildspace-locked', () => {
             set({ isGuildSpaceUnlocked: false });
-            get().fetchInitialData({ silent: true });
+            get().fetchInitialData({ silent: true, forceRefresh: true });
           });
         }
 
-        if (!isConnected) {
-          set({ isLoading: false, error: 'Database connection offline.' });
-          return;
+        // Register Realtime listener for global catalog beacon updates (instant push invalidation across all clients)
+        if (typeof window !== 'undefined' && !(window as any)._supaflex_catalog_realtime_registered) {
+          (window as any)._supaflex_catalog_realtime_registered = true;
+          supabase
+            .channel('system_catalogs_global')
+            .on('broadcast', { event: 'catalog_version_updated' }, () => {
+              console.log('[Store] Cloud catalog beacon update broadcast received, re-syncing catalogs...');
+              get().fetchInitialData({ silent: true, forceRefresh: true });
+            })
+            .subscribe();
         }
+
+        const email = (get().playerEmail || (typeof window !== 'undefined' ? sessionStorage.getItem('supaflex_player_email') || '' : '')).trim().toLowerCase();
+        const storageKey = getCatalogStorageKey(email);
+
+        // 1. FAST LOCAL HYDRATION FIRST: Check local IndexedDB cache immediately (<5ms)
+        let initialCached = !options?.forceRefresh ? await loadCatalogsFromStorage(storageKey) : null;
+        if (initialCached && get().powers.length === 0) {
+          try {
+            const { allArtifacts } = resolveArtifactCatalog(
+              initialCached.suppliesData || [],
+              initialCached.weaponsData || [],
+              initialCached.armorData || [],
+              initialCached.shieldsData || [],
+              initialCached.functionsData || []
+            );
+            const { allExotics } = resolveExoticCatalog(
+              initialCached.suppliesData || [],
+              initialCached.weaponsData || [],
+              initialCached.armorData || [],
+              initialCached.shieldsData || [],
+              initialCached.functionsData || [],
+              initialCached.modsData || []
+            );
+            const combined = [...allArtifacts, ...allExotics].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            const hydratedSets = hydrateSetsWithCounts(initialCached.setsData || [], {
+              weapons: initialCached.weaponsData || [],
+              armor: initialCached.armorData || [],
+              shields: initialCached.shieldsData || [],
+              powers: initialCached.powers || [],
+              skills: initialCached.skills || [],
+              traits: initialCached.traits || [],
+              functions: initialCached.functionsData || [],
+            });
+
+            set({
+              powers: initialCached.powers || [],
+              skills: initialCached.skills || [],
+              traits: initialCached.traits || [],
+              paths: initialCached.pathsData || [],
+              setsCatalog: hydratedSets,
+              bundles: initialCached.bundlesData || [],
+              equipmentKits: initialCached.bundlesData || [],
+              functionsCatalog: initialCached.functionsData || [],
+              modsCatalog: initialCached.modsData || [],
+              suppliesCatalog: initialCached.suppliesData || [],
+              weaponsCatalog: initialCached.weaponsData || [],
+              armorCatalog: initialCached.armorData || [],
+              shieldsCatalog: initialCached.shieldsData || [],
+              chaosGemsCatalog: initialCached.chaosGemsData || [],
+              artifactsCatalog: allArtifacts,
+              exoticsCatalog: allExotics,
+              magicItems: combined,
+              isLoading: false,
+            });
+          } catch (cacheErr) {
+            console.warn('[Store] Local cache hydration failed, will fall through to network:', cacheErr);
+            await clearCatalogStorage(storageKey);
+            initialCached = null;
+          }
+        }
+
+        // 2. CHECK NETWORK & CLOUD BEACON
+        let isConnected = false;
+        let beaconTimeStr: string | null = null;
+        try {
+          isConnected = await gameApi.checkConnection();
+          set({ dbConnected: isConnected });
+          if (isConnected) {
+            beaconTimeStr = await gameApi.getCatalogBeacon();
+          }
+        } catch (netErr) {
+          console.warn('[Store] Connection check failed:', netErr);
+          isConnected = false;
+          set({ dbConnected: false });
+        }
+
+        if (!isConnected) {
+          if (get().powers.length > 0) {
+            // Keep app fully interactive in offline mode with cached catalogs!
+            set({ isLoading: false });
+            return;
+          } else {
+            set({ isLoading: false, error: 'Database connection offline.' });
+            return;
+          }
+        }
+
+        // 3. FETCH PLAYER SUBSCRIPTIONS IF LOGGED IN
+        let userSubscriptions: string[] = [];
+        if (email) {
+          try {
+            userSubscriptions = await gameApi.getSubscriptionsForUser(email);
+          } catch (subErr) {
+            console.warn('[Store] Error fetching player subscriptions:', subErr);
+          }
+        }
+
+        const catalogScope: CatalogScope = {
+          userEmail: email,
+          subscribedEmails: userSubscriptions,
+        };
+
+        // 4. CHECK CACHE WITH STRICT BEACON EQUALITY
+        const cached = (!options?.forceRefresh && beaconTimeStr)
+          ? await loadCatalogsFromStorage(storageKey, beaconTimeStr)
+          : null;
 
         let chars: Character[];
         let powers: Power[];
@@ -403,31 +517,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         let shieldsData: SupabaseShield[];
         let chaosGemsData: SupabaseChaosGem[];
 
-        const email = (get().playerEmail || (typeof window !== 'undefined' ? sessionStorage.getItem('supaflex_player_email') || '' : '')).trim().toLowerCase();
-
-        // Fetch player subscriptions if email is present
-        let userSubscriptions: string[] = [];
-        if (email) {
-          try {
-            userSubscriptions = await gameApi.getSubscriptionsForUser(email);
-          } catch (subErr) {
-            console.warn('[Store] Error fetching player subscriptions:', subErr);
-          }
-        }
-
-        const catalogScope: CatalogScope = {
-          userEmail: email,
-          subscribedEmails: userSubscriptions,
-        };
-
-        // Check 40-byte cloud beacon to detect if Antigravity / admin pushed database adjustments
-        const beaconTimeStr = await gameApi.getCatalogBeacon();
-        const beaconTime = beaconTimeStr ? new Date(beaconTimeStr).getTime() : 0;
-        const storageKey = getCatalogStorageKey(email);
-        const cached = !options?.forceRefresh ? await loadCatalogsFromStorage(storageKey, beaconTime) : null;
-
         if (cached) {
-          // Fast path: Instant load from IndexedDB (0 REST calls, 0 egress)
+          // Fast path: Exact beacon equality match (0 REST queries for catalog tables)
           powers = cached.powers;
           skills = cached.skills;
           traits = cached.traits;
@@ -443,33 +534,38 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           shieldsData = cached.shieldsData || [];
           chaosGemsData = cached.chaosGemsData || [];
 
-          // Fast deterministic in-memory resolution of derived artifacts and exotics (< 5ms)
-          const { allArtifacts } = resolveArtifactCatalog(
-            suppliesData,
-            weaponsData,
-            armorData,
-            shieldsData,
-            functionsData
-          );
-          artifactsData = allArtifacts;
+          try {
+            const { allArtifacts } = resolveArtifactCatalog(
+              suppliesData,
+              weaponsData,
+              armorData,
+              shieldsData,
+              functionsData
+            );
+            artifactsData = allArtifacts;
 
-          const { allExotics } = resolveExoticCatalog(
-            suppliesData,
-            weaponsData,
-            armorData,
-            shieldsData,
-            functionsData,
-            modsData
-          );
-          exoticsData = allExotics;
+            const { allExotics } = resolveExoticCatalog(
+              suppliesData,
+              weaponsData,
+              armorData,
+              shieldsData,
+              functionsData,
+              modsData
+            );
+            exoticsData = allExotics;
 
-          const combined = [...artifactsData, ...exoticsData];
-          combined.sort((a, b) => a.name.localeCompare(b.name));
-          items = combined;
+            const combined = [...artifactsData, ...exoticsData];
+            combined.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            items = combined;
+          } catch (derivationErr) {
+            console.warn('[Store] Derivation from cache threw error, self-healing cache:', derivationErr);
+            await clearCatalogStorage(storageKey);
+            return get().fetchInitialData({ silent: true, forceRefresh: true });
+          }
 
           chars = await gameApi.getCharactersSummary();
         } else {
-          // Cold fetch: Download all base catalogs ONCE from Supabase and cache locally (70% wire traffic reduction)
+          // Cold fetch: Download all base catalogs ONCE from Supabase and cache locally
           const [
             fetchedChars,
             fetchedPowers,
@@ -520,7 +616,6 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           shieldsData = fetchedShields || [];
           chaosGemsData = fetchedChaosGems || [];
 
-          // Fast deterministic in-memory resolution of derived artifacts and exotics (0 extra network queries)
           const { allArtifacts } = resolveArtifactCatalog(
             suppliesData,
             weaponsData,
@@ -541,26 +636,37 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           exoticsData = allExotics;
 
           const combined = [...artifactsData, ...exoticsData];
-          combined.sort((a, b) => a.name.localeCompare(b.name));
+          combined.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
           items = combined;
 
-          // Save ONLY normalized raw tables to persistent storage (never serialize bulky derived items)
-          await saveCatalogsToStorage(storageKey, {
-            powers,
-            skills,
-            traits,
-            pathsData,
-            setsData,
-            bundlesData,
-            functionsData,
-            modsData,
-            playersData,
-            suppliesData,
-            weaponsData,
-            armorData,
-            shieldsData,
-            chaosGemsData,
-          });
+          // Save ONLY normalized raw tables to persistent storage with Beacon Equality tag
+          if (currentGen === activeFetchGeneration) {
+            await saveCatalogsToStorage(
+              storageKey,
+              {
+                powers,
+                skills,
+                traits,
+                pathsData,
+                setsData,
+                bundlesData,
+                functionsData,
+                modsData,
+                playersData,
+                suppliesData,
+                weaponsData,
+                armorData,
+                shieldsData,
+                chaosGemsData,
+              },
+              beaconTimeStr
+            );
+          }
+        }
+
+        // Monotonic race check: if a newer fetch was started, abort without overwriting state!
+        if (currentGen !== activeFetchGeneration) {
+          return;
         }
 
         const hydratedSetsCatalog = hydrateSetsWithCounts(setsData, {
@@ -686,13 +792,17 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           isLoading: false,
         });
       } catch (err: any) {
-        set({
-          isLoading: false,
-          error: err.message || 'Failed to fetch character data.',
-        });
+        if (currentGen === activeFetchGeneration) {
+          set({
+            isLoading: false,
+            error: err.message || 'Failed to fetch character data.',
+          });
+        }
       }
     })().finally(() => {
-      activeFetchPromise = null;
+      if (currentGen === activeFetchGeneration) {
+        activeFetchPromise = null;
+      }
     });
 
     return activeFetchPromise;
@@ -1065,23 +1175,28 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           magicItems: combinedItems,
         });
 
-        // Persist updated raw catalogs to storage
-        await saveCatalogsToStorage(storageKey, {
-          powers: updatedPowers,
-          skills: updatedSkills,
-          traits: updatedTraits,
-          pathsData: state.paths,
-          setsData: updatedSets,
-          bundlesData: state.bundles,
-          functionsData: updatedFunctions,
-          modsData: updatedMods,
-          playersData: state.players,
-          suppliesData: updatedSupplies,
-          weaponsData: updatedWeapons,
-          armorData: updatedArmor,
-          shieldsData: updatedShields,
-          chaosGemsData: state.chaosGemsCatalog,
-        });
+        // Persist updated raw catalogs to storage with active beacon
+        const currentBeacon = await gameApi.getCatalogBeacon();
+        await saveCatalogsToStorage(
+          storageKey,
+          {
+            powers: updatedPowers,
+            skills: updatedSkills,
+            traits: updatedTraits,
+            pathsData: state.paths,
+            setsData: updatedSets,
+            bundlesData: state.bundles,
+            functionsData: updatedFunctions,
+            modsData: updatedMods,
+            playersData: state.players,
+            suppliesData: updatedSupplies,
+            weaponsData: updatedWeapons,
+            armorData: updatedArmor,
+            shieldsData: updatedShields,
+            chaosGemsData: state.chaosGemsCatalog,
+          },
+          currentBeacon
+        );
         return;
       } catch (err) {
         console.warn('[refreshCatalogs] Surgical refresh failed, falling back to full refresh:', err);
