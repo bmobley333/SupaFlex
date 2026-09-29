@@ -411,6 +411,19 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  const [isSyncingCatalogs, setIsSyncingCatalogs] = useState(false);
+  const handleManualCatalogSync = async () => {
+    setIsSyncingCatalogs(true);
+    try {
+      await refreshCatalogs();
+      setFeedback({ type: 'success', message: '⚡ Catalogs successfully synchronized from Master Database.' });
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: `Sync failed: ${err.message || err}` });
+    } finally {
+      setIsSyncingCatalogs(false);
+    }
+  };
+
   // Personal Creations State (Left Pane A-Z List)
   const [personalItems, setPersonalItems] = useState<CustomCreationItem[]>([]);
   const [isLoadingPersonal, setIsLoadingPersonal] = useState<boolean>(false);
@@ -5806,37 +5819,54 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           </div>
 
-          {/* Right: Scope Switch (ONLY for metascapegame@gmail.com) */}
-          {isMasterAccount && (
-            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-              <button
-                type="button"
-                onClick={() => handleSwitchScope('player')}
-                className={`py-1.5 px-3.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  workshopMode === 'player'
-                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-                title="Personal Creations mode (saves to Custom Elements / personal scope)"
-              >
-                <span>🎨</span>
-                <span>My Creations</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchScope('designer')}
-                className={`py-1.5 px-3.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  workshopMode === 'designer'
-                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-                title="Master Database Canon mode (edits canonical Supabase records)"
-              >
-                <span>👑</span>
-                <span>Canon</span>
-              </button>
-            </div>
-          )}
+          {/* Right: Sync Catalogs Button & Scope Switch */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleManualCatalogSync}
+              disabled={isSyncingCatalogs}
+              className={`py-1.5 px-3 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer shadow-inner backdrop-blur-md ${
+                isSyncingCatalogs
+                  ? 'bg-blue-900/60 border-blue-500/80 text-blue-200 animate-pulse cursor-wait'
+                  : 'bg-slate-950/80 border-slate-800/80 text-slate-300 hover:text-white hover:border-slate-700 hover:bg-slate-900'
+              }`}
+              title="Force-sync master database catalogs and bust local client cache"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCatalogs ? 'animate-spin text-blue-400' : 'text-slate-400'}`} />
+              <span>{isSyncingCatalogs ? 'Syncing...' : 'Sync'}</span>
+            </button>
+
+            {isMasterAccount && (
+              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchScope('player')}
+                  className={`py-1.5 px-3.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    workshopMode === 'player'
+                      ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                  title="Personal Creations mode (saves to Custom Elements / personal scope)"
+                >
+                  <span>🎨</span>
+                  <span>My Creations</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchScope('designer')}
+                  className={`py-1.5 px-3.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    workshopMode === 'designer'
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                  title="Master Database Canon mode (edits canonical Supabase records)"
+                >
+                  <span>👑</span>
+                  <span>Canon</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 2-Pane Grid Architecture */}

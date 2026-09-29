@@ -1431,20 +1431,16 @@ export const gameApi = {
   async updateCatalogBeacon(): Promise<string> {
     const nowIso = new Date().toISOString();
     try {
-      await supabase
-        .from('players')
-        .upsert({
-          email: 'system_catalogs_version@supaflex.local',
-          first_name: nowIso,
-          last_name: 'catalog_beacon_v1',
-        });
+      const { data, error } = await supabase.rpc('bump_catalog_beacon');
+      const beaconTime = !error && data ? String(data) : nowIso;
 
       const ch = supabase.channel('system_catalogs_global');
       await ch.send({
         type: 'broadcast',
         event: 'catalog_version_updated',
-        payload: { timestamp: nowIso },
+        payload: { timestamp: beaconTime },
       });
+      return beaconTime;
     } catch (e) {
       console.warn('[gameApi] Notice updating catalog beacon:', e);
     }
@@ -3150,6 +3146,7 @@ export const gameApi = {
         this.syncPathLinkedIndividuals(data.name, payload.linked_elements),
       ]);
     }
+    await this.updateCatalogBeacon();
     return data;
   },
 
@@ -3184,6 +3181,7 @@ export const gameApi = {
         ),
       ]);
     }
+    await this.updateCatalogBeacon();
     return data;
   },
 
@@ -3203,6 +3201,7 @@ export const gameApi = {
         this.syncPathLinkedIndividuals(existing.name, [], existing.linked_elements),
       ]);
     }
+    await this.updateCatalogBeacon();
     return true;
   },
 
@@ -3226,6 +3225,7 @@ export const gameApi = {
       .select('*')
       .single();
     if (error) throw error;
+    await this.updateCatalogBeacon();
     return data as SupabaseSet;
   },
 
@@ -3247,12 +3247,14 @@ export const gameApi = {
       .select('*')
       .single();
     if (error) throw error;
+    await this.updateCatalogBeacon();
     return data as SupabaseSet;
   },
 
   async deleteSet(id: string | number): Promise<boolean> {
     const { error } = await supabase.from('sets').delete().eq('id', id);
     if (error) throw error;
+    await this.updateCatalogBeacon();
     return true;
   },
 
