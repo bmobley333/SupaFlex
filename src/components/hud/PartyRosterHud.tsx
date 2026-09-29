@@ -96,6 +96,12 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
 
         const members = await gameApi.getPartySessionMembers(resolvedPartyId);
 
+        // 2. Hydrate current round turn marks from DB
+        const marks = await gameApi.getPartyTurnMarks(resolvedPartyId);
+        if (marks) {
+          setMarkedTurnIds(marks.map(String));
+        }
+
         // Verify active session with Supabase and self-heal missing DB session rows
         if (tabSessionId && activeCharacter?.id) {
           const isRegisteredInDb = members.some(
@@ -170,9 +176,16 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
         const data = payload?.payload;
         if (data?.character_id && (data.current_vitality !== undefined || data.hp !== undefined || data.current_nish !== undefined)) {
           const charId = Number(data.character_id);
+          const charIdStr = String(charId);
           const newCurrentVit = data.current_vitality ?? data.hp;
           const newMaxVit = data.vitality_max;
           const newNish = data.current_nish;
+
+          // Anytime a character's Nish changes, automatically uncheck their turn mark!
+          if (data.current_nish !== undefined || data.nish_changed) {
+            setMarkedTurnIds((prev) => prev.filter((x) => x !== charIdStr));
+          }
+
           setSessionMembers((prev) =>
             prev.map((m) => {
               if (Number(m.character_id) === charId && m.character) {
@@ -204,7 +217,7 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
       .on('broadcast', { event: 'party_turn_marks_updated' }, (payload: any) => {
         const ids = payload?.payload?.markedTurnIds;
         if (Array.isArray(ids)) {
-          setMarkedTurnIds(ids);
+          setMarkedTurnIds(ids.map(String));
         }
       })
       .on('broadcast', { event: 'party.joined' }, () => {

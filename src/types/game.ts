@@ -1299,6 +1299,7 @@ export interface Party {
   is_gm_swap_window_active?: boolean; // GM toggle for Character Vault swapping
   last_active_at?: string | null;
   created_at: string;
+  marked_turn_ids?: string[];
 }
 
 export interface PartySessionMember {

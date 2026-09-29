@@ -521,39 +521,35 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   }, [supabaseMonsters]);
 
   // Turn Marked IDs (diagonal slash for turn tracking)
-  const [markedTurnIds, setMarkedTurnIds] = useState<string[]>([]);
+  const [markedTurnIds, setMarkedTurnIds] = useState<string[]>(() => {
+    const raw = selectedParty?.marked_turn_ids;
+    return Array.isArray(raw) ? raw.map(String) : [];
+  });
   const markedTurnIdsRef = useRef<string[]>([]);
   markedTurnIdsRef.current = markedTurnIds;
   const broadcastChannelRef = useRef<any>(null);
 
   const broadcastTurnMarks = (newMarks: string[]) => {
-    if (broadcastChannelRef.current) {
-      broadcastChannelRef.current.send({
-        type: 'broadcast',
-        event: 'party_turn_marks_updated',
-        payload: { markedTurnIds: newMarks },
-      });
-    } else if (selectedParty?.id) {
-      const ch = supabase.channel(`party:${selectedParty.id}`);
-      ch.send({
-        type: 'broadcast',
-        event: 'party_turn_marks_updated',
-        payload: { markedTurnIds: newMarks },
-      });
-    }
+    if (!selectedParty?.id) return;
+    const roomCode = selectedParty.room_code || selectedParty.party_code || undefined;
+    gameApi.savePartyTurnMarks(selectedParty.id, newMarks, roomCode);
   };
 
   const toggleTurnMark = (id: string) => {
+    if (!selectedParty?.id) return;
+    const roomCode = selectedParty.room_code || selectedParty.party_code || undefined;
     setMarkedTurnIds((prev) => {
       const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      broadcastTurnMarks(next);
+      gameApi.savePartyTurnMarks(selectedParty.id, next, roomCode);
       return next;
     });
   };
 
   const handleResetTurnMarks = () => {
+    if (!selectedParty?.id) return;
+    const roomCode = selectedParty.room_code || selectedParty.party_code || undefined;
     setMarkedTurnIds([]);
-    broadcastTurnMarks([]);
+    gameApi.savePartyTurnMarks(selectedParty.id, [], roomCode);
   };
 
   const handleDismissRosterMonster = (monsterId: string) => {
@@ -988,6 +984,9 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const partyId = selectedParty.id;
 
     loadSessionMembers(partyId, false);
+    gameApi.getPartyTurnMarks(partyId).then((marks) => {
+      if (marks) setMarkedTurnIds(marks);
+    });
 
     // 1. Postgres CDC channel strictly for new players and leaves (ignoring heartbeat UPDATEs)
     const cdcChannel = supabase.channel(`gm_roster_cdc_${partyId}`);
@@ -1025,9 +1024,26 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         const data = payload?.payload;
         if (data?.character_id && (data.current_vitality !== undefined || data.hp !== undefined || data.current_nish !== undefined)) {
           const charId = Number(data.character_id);
+          const charIdStr = String(charId);
           const newCurrentVit = data.current_vitality ?? data.hp;
           const newMaxVit = data.vitality_max;
           const newNish = data.current_nish;
+
+          // Anytime a character's Nish changes, automatically uncheck their turn mark!
+          if (data.current_nish !== undefined || data.nish_changed) {
+            setMarkedTurnIds((prev) => {
+              if (prev.includes(charIdStr)) {
+                const next = prev.filter((x) => x !== charIdStr);
+                const roomCode = selectedParty?.room_code || selectedParty?.party_code || undefined;
+                if (selectedParty?.id) {
+                  gameApi.savePartyTurnMarks(selectedParty.id, next, roomCode);
+                }
+                return next;
+              }
+              return prev;
+            });
+          }
+
           setSessionMembers((prev) =>
             prev.map((m) => {
               if (Number(m.character_id) === charId && m.character) {
@@ -1054,6 +1070,12 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           );
         } else {
           loadSessionMembers(partyId, true);
+        }
+      })
+      .on('broadcast', { event: 'party_turn_marks_updated' }, (payload: any) => {
+        const ids = payload?.payload?.markedTurnIds;
+        if (Array.isArray(ids)) {
+          setMarkedTurnIds(ids.map(String));
         }
       })
       .on('broadcast', { event: 'request_turn_marks' }, () => {

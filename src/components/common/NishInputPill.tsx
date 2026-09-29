@@ -4,13 +4,14 @@
 import React, { useState, useEffect } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { rollNish } from '../../lib/dice';
+import { gameApi } from '../../services/api';
 
 interface NishInputPillProps {
   onOpenNishTc?: (type: 'tremendous' | 'critical', count?: number) => void;
 }
 
 export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc }) => {
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
+  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, activePartyId } = useCharacterStore();
   const [isRolling, setIsRolling] = useState(false);
   const [tcData, setTcData] = useState<{
     type: 'tremendous' | 'critical';
@@ -85,6 +86,11 @@ export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc }) =>
     }));
     saveActiveCharacter(true);
 
+    // Automatically uncheck turn mark across party everywhere
+    if (activePartyId && activeCharacter?.id) {
+      gameApi.unmarkPartyTurnMember(activePartyId, activeCharacter.id).catch(console.warn);
+    }
+
     setTimeout(() => {
       setIsRolling(false);
     }, 200);
@@ -99,6 +105,9 @@ export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc }) =>
         return next;
       });
       saveActiveCharacter(true);
+      if (activePartyId && activeCharacter?.id) {
+        gameApi.unmarkPartyTurnMember(activePartyId, activeCharacter.id).catch(console.warn);
+      }
       setTcData(null);
       return;
     }
@@ -111,6 +120,11 @@ export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc }) =>
       current_nish: valToSave,
     }));
     saveActiveCharacter(true);
+
+    // Automatically uncheck turn mark across party everywhere
+    if (activePartyId && activeCharacter?.id) {
+      gameApi.unmarkPartyTurnMember(activePartyId, activeCharacter.id).catch(console.warn);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

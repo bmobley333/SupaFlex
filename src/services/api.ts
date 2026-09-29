@@ -2243,6 +2243,94 @@ export const gameApi = {
     }
   },
 
+  async getPartyTurnMarks(partyId: string): Promise<string[]> {
+    try {
+      let targetUuid = partyId;
+      if (partyId && partyId.length === 4) {
+        const p = await this.findActivePartyByRoomCode(partyId);
+        if (p) targetUuid = p.id;
+      }
+
+      const { data, error } = await supabase
+        .from('parties')
+        .select('marked_turn_ids')
+        .eq('id', targetUuid)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('[gameApi] Notice fetching party marked turn ids:', error.message);
+        const fallback = localStorage.getItem(`supaflex_party_turn_marks_${partyId}`);
+        return fallback ? JSON.parse(fallback) : [];
+      }
+
+      const raw = data?.marked_turn_ids;
+      return Array.isArray(raw) ? raw.map(String) : [];
+    } catch (e) {
+      console.error('[gameApi] Error in getPartyTurnMarks:', e);
+      return [];
+    }
+  },
+
+  async savePartyTurnMarks(partyId: string, markedTurnIds: string[], roomCode?: string) {
+    try {
+      let targetUuid = partyId;
+      let effectiveCode = roomCode;
+      if (partyId && partyId.length === 4) {
+        effectiveCode = partyId.toUpperCase();
+        const p = await this.findActivePartyByRoomCode(partyId);
+        if (p) targetUuid = p.id;
+      }
+
+      const cleanIds = Array.isArray(markedTurnIds) ? markedTurnIds.map(String) : [];
+
+      localStorage.setItem(`supaflex_party_turn_marks_${partyId}`, JSON.stringify(cleanIds));
+      localStorage.setItem(`supaflex_party_turn_marks_${targetUuid}`, JSON.stringify(cleanIds));
+
+      const { error } = await supabase
+        .from('parties')
+        .update({ marked_turn_ids: cleanIds })
+        .eq('id', targetUuid);
+
+      if (error) {
+        console.warn('[gameApi] Supabase marked_turn_ids update warning:', error.message);
+      }
+
+      // Send Realtime Broadcast event to all party members across all channel aliases
+      const channelsToNotify = new Set<string>();
+      channelsToNotify.add(`party:${targetUuid}`);
+      channelsToNotify.add(`party:${partyId}`);
+      if (effectiveCode) {
+        channelsToNotify.add(`party:${effectiveCode}`);
+      }
+
+      for (const ch of channelsToNotify) {
+        try {
+          const channel = supabase.channel(ch);
+          await channel.send({
+            type: 'broadcast',
+            event: 'party_turn_marks_updated',
+            payload: { markedTurnIds: cleanIds },
+          });
+        } catch {}
+      }
+    } catch (e) {
+      console.error('[gameApi] Error saving party turn marks:', e);
+    }
+  },
+
+  async unmarkPartyTurnMember(partyId: string, memberId: string | number, roomCode?: string) {
+    try {
+      const current = await this.getPartyTurnMarks(partyId);
+      const idStr = String(memberId);
+      if (current.includes(idStr)) {
+        const next = current.filter((x) => x !== idStr);
+        await this.savePartyTurnMarks(partyId, next, roomCode);
+      }
+    } catch (e) {
+      console.error('[gameApi] Error in unmarkPartyTurnMember:', e);
+    }
+  },
+
 
 
   async getRandomChaosGem(genre?: string): Promise<SupabaseChaosGem | null> {

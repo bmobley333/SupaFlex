@@ -915,6 +915,9 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
               const curVit = saved.sheet_data?.current_vitality ?? saved.hp ?? 28;
               const maxVit = saved.sheet_data?.vitality_max ?? 28;
               const curNish = saved.sheet_data?.current_nish ?? null;
+              const prevNish = active?.sheet_data?.current_nish ?? null;
+              const nishChanged = curNish !== prevNish;
+
               const channel = supabase.channel(`party:${activePartyId}`);
               channel.send({
                 type: 'broadcast',
@@ -925,10 +928,16 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
                   current_vitality: curVit,
                   vitality_max: maxVit,
                   current_nish: curNish,
+                  nish_changed: nishChanged,
                   hp: curVit,
                   timestamp: new Date().toISOString(),
                 },
               });
+
+              // When Nish changes (roll, manual edit, rules/effects), automatically uncheck character in party DB
+              if (nishChanged && saved.id) {
+                gameApi.unmarkPartyTurnMember(activePartyId, saved.id).catch(console.warn);
+              }
             } catch (bcErr) {
               console.warn('[useCharacterStore] Notice broadcasting vitals update:', bcErr);
             }
