@@ -39,6 +39,7 @@ import { updateCharacterSheetCanonicalItem, removeCharacterSheetCanonicalItem, C
 import { isBelongsToMatch, splitBelongsToTargets, cleanBelongsToName } from '../utils/gearFunctionSync';
 import { parseItemPaths, isPathStringMatch } from '../utils/pathApUtils';
 import { cleanPathName } from '../utils/kitUtils';
+import { sanitizeMonsterForPlayerEgress } from '../utils/monsterSanitizer';
 
 export interface CatalogScope {
   userEmail?: string;
@@ -1774,6 +1775,63 @@ export const gameApi = {
 
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetPartyUuid);
 
+    // 1. Primary: Atomic Security Definer RPC (zero character_vault leakage, single round-trip)
+    try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('get_party_roster_members', {
+        p_party_id: targetPartyUuid,
+      });
+
+      if (!rpcError && Array.isArray(rpcData)) {
+        const memberMap = new Map<number, any>();
+        rpcData.forEach((row: any) => {
+          const charId = Number(row.character_id);
+          const curVit = row.char_current_vitality ?? row.char_hp ?? 28;
+          const maxVit = row.char_vitality_max ?? 28;
+          const rawNish = row.char_current_nish;
+          const curNish = rawNish !== undefined && rawNish !== null && String(rawNish).trim() !== '' ? rawNish : undefined;
+
+          const memberObj = {
+            id: row.id,
+            party_id: row.party_id,
+            party_uuid: row.party_id,
+            party_code: row.party_code,
+            player_email: row.player_email,
+            character_id: charId,
+            tab_session_id: row.tab_session_id,
+            last_seen: row.last_seen,
+            player_first_name: row.player_first_name || '',
+            character: {
+              id: charId,
+              name: row.char_name,
+              race: row.char_race,
+              class: row.char_class,
+              hp: row.char_hp,
+              current_vitality: curVit,
+              vitality_max: maxVit,
+              current_nish: curNish,
+              sheet_data: {
+                current_vitality: curVit,
+                vitality_max: maxVit,
+                ...(curNish !== undefined ? { current_nish: curNish } : {}),
+              },
+            },
+          };
+
+          const existing = memberMap.get(charId);
+          if (!existing || new Date(row.last_seen) > new Date(existing.last_seen)) {
+            memberMap.set(charId, memberObj);
+          }
+        });
+
+        return Array.from(memberMap.values()).sort((a, b) =>
+          Number(a.character_id || 0) - Number(b.character_id || 0)
+        );
+      }
+    } catch (rpcErr) {
+      console.warn('[gameApi] Notice using legacy fallback for getPartySessionMembers:', rpcErr);
+    }
+
+    // 2. Legacy fallback query
     let query = supabase
       .from('party_session_members')
       .select('id, party_id, character_id, player_email, tab_session_id, last_seen, character:characters(id, name, race, class, hp, current_vitality:sheet_data->current_vitality, vitality_max:sheet_data->vitality_max, current_nish:sheet_data->current_nish)')
@@ -2212,16 +2270,21 @@ export const gameApi = {
       localStorage.setItem(`supaflex_gm_monsters_${targetUuid}`, JSON.stringify(monsters));
       localStorage.setItem('supaflex_gm_monster_stats', JSON.stringify(monsters));
 
+      // S-Tier Egress Sanitization Gateway: strip private GM notes, MR, initiative, and attributes before wire transmission
+      const sanitizedMonsters = Array.isArray(monsters)
+        ? monsters.map(sanitizeMonsterForPlayerEgress)
+        : [];
+
       const { error } = await supabase
         .from('parties')
-        .update({ active_monsters: monsters })
+        .update({ active_monsters: sanitizedMonsters })
         .eq('id', targetUuid);
 
       if (error) {
         console.warn('[gameApi] Supabase active_monsters update warning:', error.message);
       }
 
-      // Send Realtime Broadcast event to all party members across all channel aliases
+      // Send Realtime Broadcast event with strictly sanitized monsters to all party channels
       const channelsToNotify = new Set<string>();
       channelsToNotify.add(`party:${targetUuid}`);
       channelsToNotify.add(`party:${partyId}`);
@@ -2234,7 +2297,7 @@ export const gameApi = {
           await channel.send({
             type: 'broadcast',
             event: 'monster_roster_updated',
-            payload: { monsters },
+            payload: { monsters: sanitizedMonsters },
           });
         } catch {}
       }

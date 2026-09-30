@@ -266,3 +266,57 @@ export function sanitizeParsedMonsters(
   return { monsters: healedMonsters, didHeal };
 }
 
+/**
+ * Strict egress model for live encounter monsters transmitted to player clients.
+ * Formally omits all GM notes, codex notes, initiative, MR, attributes, and unrevealed abilities.
+ */
+export interface SanitizedPlayerMonster {
+  id: string;
+  name: string;
+  count: number;
+  equipment?: string;
+  attack: number;
+  damage: number;
+  min_wounds?: number;
+  defense: number;
+  armor: number;
+  max_vit: number;
+  current_vit: number;
+}
+
+/**
+ * Egress sanitization gateway: transforms any raw monster object into a sanitized, anti-sniffing
+ * player model before writing to shared party columns or broadcasting over Realtime sockets.
+ */
+export function sanitizeMonsterForPlayerEgress(m: any): SanitizedPlayerMonster {
+  const parsed = parseMonsterLine(m.fullText || m.baseFullText || m.name || '');
+  const atkNums = parsed.attackStat ? parsed.attackStat.match(/\d+/g) || [] : [];
+  const defNums = parsed.defenseStat ? parsed.defenseStat.match(/\d+/g) || [] : [];
+  const hpNums = parsed.vitalityStat ? parsed.vitalityStat.match(/\d+/g) || [] : [];
+
+  const rawName = m.name || parsed.nameWithEquip || 'Monster';
+  const countMatch = rawName.match(/^(\d+)\s+/);
+  const resolvedCount = m.count || (countMatch ? parseInt(countMatch[1], 10) : 1);
+  const resolvedEquip = m.equipment || parsed.gear || undefined;
+
+  const cleanName = rawName
+    .replace(/^\d+\s*/, '')
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/\s*\[[^\]]*\]/g, '')
+    .trim();
+
+  return {
+    id: String(m.id || `mon_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`),
+    name: cleanName || 'Monster',
+    count: resolvedCount,
+    equipment: resolvedEquip,
+    attack: m.attack ?? (atkNums[0] ? parseInt(atkNums[0], 10) : 10),
+    damage: m.damage ?? (atkNums[1] ? parseInt(atkNums[1], 10) : 10),
+    min_wounds: m.min_wounds ?? (atkNums[2] ? parseInt(atkNums[2], 10) : 1),
+    defense: m.defense ?? (defNums[0] ? parseInt(defNums[0], 10) : 10),
+    armor: m.armor ?? (defNums[1] ? parseInt(defNums[1], 10) : 0),
+    max_vit: m.max_vit ?? (hpNums[0] ? parseInt(hpNums[0], 10) : 10),
+    current_vit: m.current_vit ?? m.max_vit ?? (hpNums[0] ? parseInt(hpNums[0], 10) : 10),
+  };
+}
+

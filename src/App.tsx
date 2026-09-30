@@ -331,40 +331,57 @@ export default function App() {
       activeCharacter?.id ? String(activeCharacter.id) : undefined
     );
 
-    const channel = supabase.channel(`party_links_broadcast_${activePartyId}`);
-    channel
-      .on('broadcast', { event: 'party_link_shared' }, ({ payload }: { payload: SharedLinkDispatchPayload }) => {
-        if (!payload || !payload.link) return;
+    const currentCharId = activeCharacter?.id ? String(activeCharacter.id) : null;
+    const channelsToCleanup: ReturnType<typeof supabase.channel>[] = [];
 
-        const { activeCharacter: charState, playerEmail: emailState } = useCharacterStore.getState();
-        const currentCharId = charState?.id ? String(charState.id) : null;
+    const handleSharedLink = ({ payload }: { payload: SharedLinkDispatchPayload }) => {
+      if (!payload || !payload.link) return;
 
-        const isTargeted =
-          payload.targetType === 'all' ||
-          (currentCharId && payload.targetCharacterIds?.includes(currentCharId));
+      const { activeCharacter: charState, playerEmail: emailState } = useCharacterStore.getState();
+      const activeCharId = charState?.id ? String(charState.id) : null;
 
-        if (isTargeted) {
-          const receivedItem: ReceivedLinkItem = {
-            ...payload.link,
-            id: `rec_${payload.id}_${payload.link.id}`,
-            senderName: payload.senderName,
-            senderRole: payload.senderRole,
-            targetType: payload.targetType,
-            receivedAt: payload.dispatchedAt || new Date().toISOString(),
-            isRead: false,
-          };
+      const isTargeted =
+        payload.targetType === 'all' ||
+        (activeCharId && payload.targetCharacterIds?.includes(activeCharId));
 
-          useReceivedLinksStore.getState().addReceivedLink(
-            receivedItem,
-            activePartyId,
-            currentCharId || emailState || undefined
-          );
-        }
-      })
-      .subscribe();
+      if (isTargeted) {
+        const receivedItem: ReceivedLinkItem = {
+          ...payload.link,
+          id: `rec_${payload.id}_${payload.link.id}`,
+          senderName: payload.senderName,
+          senderRole: payload.senderRole,
+          targetType: payload.targetType,
+          receivedAt: payload.dispatchedAt || new Date().toISOString(),
+          isRead: false,
+        };
+
+        useReceivedLinksStore.getState().addReceivedLink(
+          receivedItem,
+          activePartyId,
+          activeCharId || emailState || undefined
+        );
+      }
+    };
+
+    // 1. Primary canonical party broadcast channel
+    const primaryChannel = supabase.channel(`party:${activePartyId}`);
+    primaryChannel.on('broadcast', { event: 'party_link_shared' }, handleSharedLink).subscribe();
+    channelsToCleanup.push(primaryChannel);
+
+    // 2. Scoped private character channel (for targeted confidential links)
+    if (currentCharId) {
+      const charChannel = supabase.channel(`party:${activePartyId}:char:${currentCharId}`);
+      charChannel.on('broadcast', { event: 'party_link_shared' }, handleSharedLink).subscribe();
+      channelsToCleanup.push(charChannel);
+    }
+
+    // 3. Legacy broadcast channel fallback
+    const legacyChannel = supabase.channel(`party_links_broadcast_${activePartyId}`);
+    legacyChannel.on('broadcast', { event: 'party_link_shared' }, handleSharedLink).subscribe();
+    channelsToCleanup.push(legacyChannel);
 
     return () => {
-      supabase.removeChannel(channel);
+      channelsToCleanup.forEach((ch) => supabase.removeChannel(ch));
     };
   }, [activePartyId, activeCharacter?.id]);
 

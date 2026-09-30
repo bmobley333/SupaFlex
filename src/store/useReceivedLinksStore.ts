@@ -155,8 +155,8 @@ export const useReceivedLinksStore = create<ReceivedLinksState>((set) => ({
     }
 
     const { senderName, senderRole, targetType, targetCharacterIds, partyId } = options;
-    const channelName = `party:${partyId}`;
-    const channel = supabase.channel(channelName);
+    const isTargeted = targetType === 'specific' && Array.isArray(targetCharacterIds) && targetCharacterIds.length > 0;
+    const publicChannel = supabase.channel(`party:${partyId}`);
 
     let sentCount = 0;
     try {
@@ -167,15 +167,40 @@ export const useReceivedLinksStore = create<ReceivedLinksState>((set) => ({
           senderName,
           senderRole,
           targetType,
-          targetCharacterIds: targetType === 'specific' ? targetCharacterIds : undefined,
+          targetCharacterIds: isTargeted ? targetCharacterIds : undefined,
           dispatchedAt: new Date().toISOString(),
         };
 
-        await channel.send({
-          type: 'broadcast',
-          event: 'party_link_shared',
-          payload,
-        });
+        if (isTargeted) {
+          // Channel-level confidentiality: broadcast strictly to target character channels
+          for (const charId of targetCharacterIds) {
+            try {
+              const charChannel = supabase.channel(`party:${partyId}:char:${charId}`);
+              await charChannel.send({
+                type: 'broadcast',
+                event: 'party_link_shared',
+                payload,
+              });
+            } catch {}
+          }
+        } else {
+          // Public party broadcast
+          await publicChannel.send({
+            type: 'broadcast',
+            event: 'party_link_shared',
+            payload,
+          });
+
+          // Legacy channel fallback
+          try {
+            const legacyChannel = supabase.channel(`party_links_broadcast_${partyId}`);
+            await legacyChannel.send({
+              type: 'broadcast',
+              event: 'party_link_shared',
+              payload,
+            });
+          } catch {}
+        }
 
         sentCount++;
       }
