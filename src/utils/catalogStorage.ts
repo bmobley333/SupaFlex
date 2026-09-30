@@ -30,9 +30,13 @@ export interface StoredCatalogEnvelope {
   data: RawCatalogsData;
 }
 
-const DB_NAME = 'supaflex_cache_db';
-const DB_VERSION = 1;
-const STORE_NAME = 'catalogs';
+export const DB_NAME = 'supaflex_cache_db';
+export const DB_VERSION = 2;
+export const STORE_CATALOGS = 'catalogs';
+export const STORE_CHARACTER_OUTBOX = 'character_outbox';
+export const STORE_CHARACTER_CACHE = 'character_cache';
+
+const STORE_NAME = STORE_CATALOGS;
 
 let dbPromise: Promise<IDBDatabase | null> | null = null;
 let hotMemoryCache: { key: string; envelope: StoredCatalogEnvelope } | null = null;
@@ -40,7 +44,7 @@ let hotMemoryCache: { key: string; envelope: StoredCatalogEnvelope } | null = nu
 /**
  * Initializes and caches the native IndexedDB connection with watchdog timeout and lifecycle events.
  */
-function getIndexedDb(): Promise<IDBDatabase | null> {
+export function getIndexedDb(): Promise<IDBDatabase | null> {
   if (typeof window === 'undefined' || !window.indexedDB) {
     return Promise.resolve(null);
   }
@@ -53,8 +57,16 @@ function getIndexedDb(): Promise<IDBDatabase | null> {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME);
+        if (!db.objectStoreNames.contains(STORE_CATALOGS)) {
+          db.createObjectStore(STORE_CATALOGS);
+        }
+        if (!db.objectStoreNames.contains(STORE_CHARACTER_OUTBOX)) {
+          const outboxStore = db.createObjectStore(STORE_CHARACTER_OUTBOX, { keyPath: 'mutationId' });
+          outboxStore.createIndex('by_characterId', 'characterId', { unique: false });
+          outboxStore.createIndex('by_timestamp', 'timestamp', { unique: false });
+        }
+        if (!db.objectStoreNames.contains(STORE_CHARACTER_CACHE)) {
+          db.createObjectStore(STORE_CHARACTER_CACHE, { keyPath: 'id' });
         }
       };
 

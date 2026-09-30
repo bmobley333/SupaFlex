@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Database, BookOpen, Loader2, ChevronDown, ChevronUp, Crown } from 'lucide-react';
+import { BookOpen, Loader2, ChevronDown, ChevronUp, Crown } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseKey } from './lib/supabase';
 import { gameApi } from './services/api';
 import { Character, TreasureItem, SimpleGearItem, CustomCreationItem } from './types/game';
@@ -30,6 +30,7 @@ import { CharacterPartyModal } from './components/modals/CharacterPartyModal';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
 import { UpdatePasswordModal } from './components/modals/UpdatePasswordModal';
 import { FireworksModal } from './components/common/FireworksModal';
+import { SyncStatusPillSwitch } from './components/common/SyncStatusPillSwitch';
 import { resolveCharFirstName } from './components/common/PartyCharacterCard';
 import { useScrollRestoration } from './hooks/useScrollRestoration';
 import { useModalScrollGuard } from './hooks/useModalScrollGuard';
@@ -126,7 +127,6 @@ export default function App() {
     characters,
     activeCharacter,
     isLoading,
-    dbConnected,
     playerEmail,
     activeRole,
     fetchInitialData,
@@ -754,12 +754,7 @@ export default function App() {
               </div>
             )}
 
-            {!dbConnected && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-950/80 rounded-lg border border-rose-500/50 text-rose-300 text-xs font-semibold animate-pulse shadow-md shadow-rose-950/50">
-                <Database className="w-3.5 h-3.5 text-rose-400" />
-                <span>Offline</span>
-              </div>
-            )}
+            <SyncStatusPillSwitch />
           </div>
         </div>
 

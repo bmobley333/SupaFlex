@@ -19,6 +19,17 @@ import {
   saveCatalogsToStorage,
   clearCatalogStorage,
 } from '../utils/catalogStorage';
+import {
+  enqueueMutation,
+  getPendingOutboxCount,
+  removeMutation,
+  drainOfflineOutbox,
+  cacheCharacterSnapshot,
+  cacheCharactersList,
+  getCachedCharacter,
+  getCachedCharactersList,
+  subscribeToOutboxChanges,
+} from '../services/offlineSyncService';
 
 export type CatalogRefreshTable =
   | 'powers'
@@ -171,6 +182,8 @@ interface CharacterStore {
   isLoading: boolean;
   isSaving: boolean;
   dbConnected: boolean;
+  pendingOutboxCount: number;
+  isSyncingOutbox: boolean;
   isGuildSpaceUnlocked: boolean;
   error: string | null;
 
@@ -205,6 +218,7 @@ interface CharacterStore {
   updateActiveSheetData: (updater: (prev: CharacterSheetData) => CharacterSheetData) => void;
   updateActiveCharacterMeta: (updates: Partial<Character>) => void;
   saveActiveCharacter: (immediate?: boolean) => Promise<void>;
+  flushPendingOutbox: () => Promise<void>;
   deleteCharacter: (id: number) => Promise<void>;
   addCharge: (amount?: number) => void;
   spendSpark: () => void;
@@ -305,6 +319,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   isLoading: false,
   isSaving: false,
   dbConnected: false,
+  pendingOutboxCount: 0,
+  isSyncingOutbox: false,
   isGuildSpaceUnlocked: isGuildSpaceUnlocked(),
   error: null,
 
@@ -363,12 +379,22 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         // Register window network status listeners for dynamic offline warning popups and GuildSpace lock/unlock catalog reloads
         if (typeof window !== 'undefined' && !(window as any)._supaflex_net_listeners_registered) {
           (window as any)._supaflex_net_listeners_registered = true;
-          window.addEventListener('online', () => {
+          window.addEventListener('online', async () => {
             set({ dbConnected: true });
+            await get().flushPendingOutbox();
             get().fetchInitialData({ silent: true });
           });
           window.addEventListener('offline', () => {
             set({ dbConnected: false });
+          });
+          window.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && navigator.onLine) {
+              get().flushPendingOutbox().catch(console.warn);
+            }
+          });
+          subscribeToOutboxChanges(async () => {
+            const count = await getPendingOutboxCount();
+            set({ pendingOutboxCount: count });
           });
           window.addEventListener('supaflex:guildspace-unlocked', () => {
             set({ isGuildSpaceUnlocked: true });
@@ -468,6 +494,27 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         }
 
         if (!isConnected) {
+          // 2a. Offline Character Rehydration: Attempt to load hero list and active character from IndexedDB cache
+          try {
+            const cachedChars = await getCachedCharactersList();
+            if (cachedChars && cachedChars.length > 0) {
+              const lastActiveId = sessionStorage.getItem('supaflex_last_active_char_id');
+              const targetCandidate = cachedChars.find((c) => String(c.id) === lastActiveId) || cachedChars[0];
+              const fullChar = (await getCachedCharacter(targetCandidate.id)) || targetCandidate;
+              const pendingCount = await getPendingOutboxCount();
+              set({
+                characters: cachedChars,
+                activeCharacter: fullChar,
+                isLoading: false,
+                pendingOutboxCount: pendingCount,
+                dbConnected: false,
+              });
+              return;
+            }
+          } catch (offlineHydrationErr) {
+            console.warn('[Store] Offline character hydration failed:', offlineHydrationErr);
+          }
+
           if (get().powers.length > 0) {
             // Keep app fully interactive in offline mode with cached catalogs!
             set({ isLoading: false });
@@ -763,12 +810,19 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
               ...fullChar,
               sheet_data: migratedSheet,
             };
+            cacheCharacterSnapshot(selectedChar).catch(console.warn);
           }
         }
+
+        if (chars && chars.length > 0) {
+          cacheCharactersList(chars).catch(console.warn);
+        }
+        const initialOutboxCount = await getPendingOutboxCount();
 
         set({
           characters: chars,
           activeCharacter: selectedChar,
+          pendingOutboxCount: initialOutboxCount,
           players: playersData || [],
           powers,
           magicItems: items,
@@ -865,6 +919,16 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       set({ activeCharacter: migratedFound });
     }
     try {
+      const cached = await getCachedCharacter(id);
+      if (cached && (!found || cached.updated_at !== found.updated_at)) {
+        const migratedSheet = reconcileSheet(cached.sheet_data, cached);
+        const migratedChar = { ...cached, sheet_data: migratedSheet };
+        set({ activeCharacter: migratedChar });
+      }
+    } catch (cacheErr) {
+      console.warn('[useCharacterStore] Offline cache check failed in selectCharacter:', cacheErr);
+    }
+    try {
       const updated = await gameApi.getCharacterById(id);
       if (updated) {
         const migratedSheet = reconcileSheet(updated.sheet_data, updated);
@@ -873,6 +937,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           activeCharacter: migratedChar,
           characters: state.characters.map((c) => (c.id === updated.id ? migratedChar : c)),
         }));
+        cacheCharacterSnapshot(migratedChar).catch(console.warn);
       }
     } catch (err) {
       console.warn('Network fetch for character details failed:', err);
@@ -995,27 +1060,55 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           return;
         }
         set({ isSaving: true });
+
+        const characterUpdates = {
+          name: active.name,
+          class: active.class,
+          race: active.race,
+          hp: active.hp,
+          might: active.might,
+          motion: active.motion,
+          mind: active.mind,
+          magic: active.magic,
+          moxie: active.moxie,
+          skills: active.skills,
+          inventory: active.inventory,
+          owner_email: active.owner_email,
+          sheet_data: active.sheet_data,
+        };
+
+        // 1. Local-First: Persist to IndexedDB outbox & character cache immediately
+        let mutationId: string | null = null;
         try {
-          const saved = await gameApi.updateCharacter(active.id, {
-            name: active.name,
-            class: active.class,
-            race: active.race,
-            hp: active.hp,
-            might: active.might,
-            motion: active.motion,
-            mind: active.mind,
-            magic: active.magic,
-            moxie: active.moxie,
-            skills: active.skills,
-            inventory: active.inventory,
-            owner_email: active.owner_email,
-            sheet_data: active.sheet_data,
-          });
+          mutationId = await enqueueMutation(active.id, characterUpdates);
+          const outboxCount = await getPendingOutboxCount();
+          set({ pendingOutboxCount: outboxCount });
+        } catch (enqueueErr) {
+          console.warn('[useCharacterStore] Local outbox enqueue failed:', enqueueErr);
+        }
+
+        // If client is known to be offline, complete gracefully without network error
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          set({ isSaving: false, dbConnected: false });
+          resolversToNotify.forEach((r) => r());
+          return;
+        }
+
+        try {
+          const saved = await gameApi.updateCharacter(active.id, characterUpdates);
+
+          // 2. Remove mutation from outbox upon confirmed Supabase save
+          if (mutationId) {
+            await removeMutation(mutationId);
+          }
+          const remainingCount = await getPendingOutboxCount();
 
           set((state) => ({
             activeCharacter: saved,
             characters: state.characters.map((c) => (c.id === saved.id ? saved : c)),
             isSaving: false,
+            dbConnected: true,
+            pendingOutboxCount: remainingCount,
           }));
 
           // Instant optimistic vitals & nish broadcast to active party members (< 50ms peer-to-peer sync)
@@ -1053,7 +1146,13 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
             }
           }
         } catch (err: any) {
-          set({ isSaving: false, error: err.message || 'Failed to save character.' });
+          console.warn('[useCharacterStore] Network save failed, retained in offline outbox:', err);
+          const currentCount = await getPendingOutboxCount();
+          set({
+            isSaving: false,
+            dbConnected: false,
+            pendingOutboxCount: currentCount,
+          });
         } finally {
           resolversToNotify.forEach((r) => r());
         }
@@ -1068,6 +1167,55 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         characterSaveDebounceTimer = setTimeout(executeSave, 350);
       }
     });
+  },
+
+  flushPendingOutbox: async () => {
+    const count = await getPendingOutboxCount();
+    if (count === 0) return;
+
+    set({ isSyncingOutbox: true });
+    try {
+      const active = get().activeCharacter;
+      const result = await drainOfflineOutbox(active);
+      const remainingCount = await getPendingOutboxCount();
+
+      set({
+        pendingOutboxCount: remainingCount,
+        isSyncingOutbox: false,
+        dbConnected: result.success,
+      });
+
+      if (result.syncedCount > 0 && active) {
+        const activePartyId = get().activePartyId;
+        if (activePartyId) {
+          try {
+            const curVit = active.sheet_data?.current_vitality ?? active.hp ?? 28;
+            const maxVit = active.sheet_data?.vitality_max ?? 28;
+            const curNish = active.sheet_data?.current_nish ?? null;
+
+            const channel = supabase.channel(`party:${activePartyId}`);
+            channel.send({
+              type: 'broadcast',
+              event: 'party_members_updated',
+              payload: {
+                partyId: activePartyId,
+                character_id: active.id,
+                current_vitality: curVit,
+                vitality_max: maxVit,
+                current_nish: curNish,
+                hp: curVit,
+                timestamp: new Date().toISOString(),
+              },
+            });
+          } catch (bcErr) {
+            console.warn('[useCharacterStore] Broadcast failed after outbox drain:', bcErr);
+          }
+        }
+      }
+    } catch (syncErr) {
+      console.error('[useCharacterStore] Outbox flush failed:', syncErr);
+      set({ isSyncingOutbox: false });
+    }
   },
 
   refreshCatalogs: async (targetTables?: CatalogRefreshTable[]) => {
