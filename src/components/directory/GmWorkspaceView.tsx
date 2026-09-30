@@ -833,6 +833,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
 
   // Party Session Roster State
   const [sessionMembers, setSessionMembers] = useState<PartySessionMember[]>([]);
+  const sessionMembersRef = useRef<PartySessionMember[]>([]);
+  sessionMembersRef.current = sessionMembers;
   const [isMembersLoading, setIsMembersLoading] = useState(false);
   // Combined Party Members + Pushed Monsters Roster
   const combinedRosterItems = useMemo<GmUnifiedRosterItem[]>(() => {
@@ -1030,10 +1032,10 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
           const newNish = data.current_nish;
 
           // Anytime a character's Nish changes (explicitly via reroll or changed value), automatically uncheck their turn mark!
-          const isExplicitNishReroll = Boolean(data.nish_changed);
-          const currentMember = sessionMembers.find((m) => Number(m.character_id) === charId);
+          const isExplicitNishReroll = Boolean(data.nish_changed || data.uncheck_turn);
+          const currentMember = sessionMembersRef.current.find((m) => Number(m.character_id) === charId);
           const oldNish = currentMember?.character?.sheet_data?.current_nish;
-          const isNumericNishChange = data.current_nish !== undefined && oldNish !== undefined && Number(data.current_nish) !== Number(oldNish);
+          const isNumericNishChange = data.current_nish !== undefined && (oldNish === undefined || Number(data.current_nish) !== Number(oldNish));
 
           if (isExplicitNishReroll || isNumericNishChange) {
             setMarkedTurnIds((prev) => prev.filter((x) => x !== charIdStr));

@@ -86,6 +86,15 @@ export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc }) =>
     }));
     saveActiveCharacter(true);
 
+    // Optimistic 0ms local HUD reactivity: immediately uncheck turn on rolling client
+    if (typeof window !== 'undefined' && activeCharacter?.id) {
+      window.dispatchEvent(
+        new CustomEvent('supaflex:character-nish-changed', {
+          detail: { characterId: activeCharacter.id, newNish: result.total },
+        })
+      );
+    }
+
     // Automatically uncheck turn mark across party everywhere
     if (activePartyId && activeCharacter?.id) {
       gameApi.unmarkPartyTurnMember(activePartyId, activeCharacter.id).catch(console.warn);
@@ -105,6 +114,13 @@ export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc }) =>
         return next;
       });
       saveActiveCharacter(true);
+      if (typeof window !== 'undefined' && activeCharacter?.id) {
+        window.dispatchEvent(
+          new CustomEvent('supaflex:character-nish-changed', {
+            detail: { characterId: activeCharacter.id, newNish: undefined },
+          })
+        );
+      }
       if (activePartyId && activeCharacter?.id) {
         gameApi.unmarkPartyTurnMember(activePartyId, activeCharacter.id).catch(console.warn);
       }
@@ -120,6 +136,14 @@ export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc }) =>
       current_nish: valToSave,
     }));
     saveActiveCharacter(true);
+
+    if (typeof window !== 'undefined' && activeCharacter?.id) {
+      window.dispatchEvent(
+        new CustomEvent('supaflex:character-nish-changed', {
+          detail: { characterId: activeCharacter.id, newNish: valToSave },
+        })
+      );
+    }
 
     // Automatically uncheck turn mark across party everywhere
     if (activePartyId && activeCharacter?.id) {

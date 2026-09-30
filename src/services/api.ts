@@ -2360,10 +2360,19 @@ export const gameApi = {
 
       // Send Realtime Broadcast event to all party members across all channel aliases
       const channelsToNotify = new Set<string>();
-      channelsToNotify.add(`party:${targetUuid}`);
-      channelsToNotify.add(`party:${partyId}`);
+      if (targetUuid) {
+        channelsToNotify.add(`party:${targetUuid}`);
+        channelsToNotify.add(`party:${targetUuid.toLowerCase()}`);
+      }
+      if (partyId) {
+        channelsToNotify.add(`party:${partyId}`);
+        channelsToNotify.add(`party:${partyId.toLowerCase()}`);
+        channelsToNotify.add(`party:${partyId.toUpperCase()}`);
+      }
       if (effectiveCode) {
         channelsToNotify.add(`party:${effectiveCode}`);
+        channelsToNotify.add(`party:${effectiveCode.toLowerCase()}`);
+        channelsToNotify.add(`party:${effectiveCode.toUpperCase()}`);
       }
 
       for (const ch of channelsToNotify) {
@@ -2416,10 +2425,19 @@ export const gameApi = {
 
       // Broadcast update across canonical Realtime channels
       const channelsToNotify = new Set<string>();
-      channelsToNotify.add(`party:${targetUuid}`);
-      channelsToNotify.add(`party:${partyId}`);
+      if (targetUuid) {
+        channelsToNotify.add(`party:${targetUuid}`);
+        channelsToNotify.add(`party:${targetUuid.toLowerCase()}`);
+      }
+      if (partyId) {
+        channelsToNotify.add(`party:${partyId}`);
+        channelsToNotify.add(`party:${partyId.toLowerCase()}`);
+        channelsToNotify.add(`party:${partyId.toUpperCase()}`);
+      }
       if (effectiveCode) {
         channelsToNotify.add(`party:${effectiveCode}`);
+        channelsToNotify.add(`party:${effectiveCode.toLowerCase()}`);
+        channelsToNotify.add(`party:${effectiveCode.toUpperCase()}`);
       }
 
       for (const ch of channelsToNotify) {
@@ -2462,10 +2480,19 @@ export const gameApi = {
       localStorage.setItem(`supaflex_party_turn_marks_${targetUuid}`, JSON.stringify([]));
 
       const channelsToNotify = new Set<string>();
-      channelsToNotify.add(`party:${targetUuid}`);
-      channelsToNotify.add(`party:${partyId}`);
+      if (targetUuid) {
+        channelsToNotify.add(`party:${targetUuid}`);
+        channelsToNotify.add(`party:${targetUuid.toLowerCase()}`);
+      }
+      if (partyId) {
+        channelsToNotify.add(`party:${partyId}`);
+        channelsToNotify.add(`party:${partyId.toLowerCase()}`);
+        channelsToNotify.add(`party:${partyId.toUpperCase()}`);
+      }
       if (effectiveCode) {
         channelsToNotify.add(`party:${effectiveCode}`);
+        channelsToNotify.add(`party:${effectiveCode.toLowerCase()}`);
+        channelsToNotify.add(`party:${effectiveCode.toUpperCase()}`);
       }
 
       for (const ch of channelsToNotify) {

@@ -124,6 +124,7 @@ function hydrateSetsWithCounts(
 
 let characterSaveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingSaveResolvers: Array<() => void> = [];
+const pendingNishChangeCharacterIds = new Set<number>();
 
 const getInitialPlayerLinks = (email?: string): EncounterLink[] => {
   if (typeof window !== 'undefined') {
@@ -1012,6 +1013,18 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     const currentSheet = active.sheet_data || createDefaultSheetData();
     const updatedSheet = updater({ ...currentSheet });
 
+    const nishChanged = updatedSheet.current_nish !== currentSheet.current_nish;
+    if (nishChanged && active.id) {
+      pendingNishChangeCharacterIds.add(active.id);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('supaflex:character-nish-changed', {
+            detail: { characterId: active.id, newNish: updatedSheet.current_nish },
+          })
+        );
+      }
+    }
+
     set((state) => {
       if (!state.activeCharacter) return state;
       const updatedActive = {
@@ -1118,27 +1131,40 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
               const curVit = saved.sheet_data?.current_vitality ?? saved.hp ?? 28;
               const maxVit = saved.sheet_data?.vitality_max ?? 28;
               const curNish = saved.sheet_data?.current_nish ?? null;
-              const prevNish = active?.sheet_data?.current_nish ?? null;
-              const nishChanged = curNish !== prevNish;
+              const isExplicitNishReroll = saved.id ? pendingNishChangeCharacterIds.has(saved.id) : false;
+              if (saved.id) {
+                pendingNishChangeCharacterIds.delete(saved.id);
+              }
 
-              const channel = supabase.channel(`party:${activePartyId}`);
-              channel.send({
-                type: 'broadcast',
-                event: 'party_members_updated',
-                payload: {
-                  partyId: activePartyId,
-                  character_id: saved.id,
-                  current_vitality: curVit,
-                  vitality_max: maxVit,
-                  current_nish: curNish,
-                  nish_changed: nishChanged,
-                  hp: curVit,
-                  timestamp: new Date().toISOString(),
-                },
-              });
+              const channelsToNotify = new Set<string>();
+              channelsToNotify.add(`party:${activePartyId}`);
+              channelsToNotify.add(`party:${activePartyId.toLowerCase()}`);
+              channelsToNotify.add(`party:${activePartyId.toUpperCase()}`);
+
+              const payload = {
+                partyId: activePartyId,
+                character_id: saved.id,
+                current_vitality: curVit,
+                vitality_max: maxVit,
+                current_nish: curNish,
+                nish_changed: isExplicitNishReroll,
+                uncheck_turn: isExplicitNishReroll,
+                timestamp: new Date().toISOString(),
+              };
+
+              for (const ch of channelsToNotify) {
+                try {
+                  const channel = supabase.channel(ch);
+                  channel.send({
+                    type: 'broadcast',
+                    event: 'party_members_updated',
+                    payload,
+                  });
+                } catch {}
+              }
 
               // When Nish changes (roll, manual edit, rules/effects), automatically uncheck character in party DB
-              if (nishChanged && saved.id) {
+              if (isExplicitNishReroll && saved.id) {
                 gameApi.unmarkPartyTurnMember(activePartyId, saved.id).catch(console.warn);
               }
             } catch (bcErr) {
@@ -1193,20 +1219,30 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
             const maxVit = active.sheet_data?.vitality_max ?? 28;
             const curNish = active.sheet_data?.current_nish ?? null;
 
-            const channel = supabase.channel(`party:${activePartyId}`);
-            channel.send({
-              type: 'broadcast',
-              event: 'party_members_updated',
-              payload: {
-                partyId: activePartyId,
-                character_id: active.id,
-                current_vitality: curVit,
-                vitality_max: maxVit,
-                current_nish: curNish,
-                hp: curVit,
-                timestamp: new Date().toISOString(),
-              },
-            });
+            const channelsToNotify = new Set<string>();
+            channelsToNotify.add(`party:${activePartyId}`);
+            channelsToNotify.add(`party:${activePartyId.toLowerCase()}`);
+            channelsToNotify.add(`party:${activePartyId.toUpperCase()}`);
+
+            const payload = {
+              partyId: activePartyId,
+              character_id: active.id,
+              current_vitality: curVit,
+              vitality_max: maxVit,
+              current_nish: curNish,
+              timestamp: new Date().toISOString(),
+            };
+
+            for (const ch of channelsToNotify) {
+              try {
+                const channel = supabase.channel(ch);
+                channel.send({
+                  type: 'broadcast',
+                  event: 'party_members_updated',
+                  payload,
+                });
+              } catch {}
+            }
           } catch (bcErr) {
             console.warn('[useCharacterStore] Broadcast failed after outbox drain:', bcErr);
           }

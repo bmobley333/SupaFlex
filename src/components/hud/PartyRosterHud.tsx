@@ -1,5 +1,5 @@
 // src/components/hud/PartyRosterHud.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Users, ArrowUpDown } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { gameApi } from '../../services/api';
@@ -27,6 +27,26 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
   const [markedTurnIds, setMarkedTurnIds] = useState<string[]>([]);
   const [displayRoomCode, setDisplayRoomCode] = useState<string | null>(null);
   const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+
+  const sessionMembersRef = useRef<PartySessionMember[]>(sessionMembers);
+  sessionMembersRef.current = sessionMembers;
+  const markedTurnIdsRef = useRef<string[]>(markedTurnIds);
+  markedTurnIdsRef.current = markedTurnIds;
+
+  // Optimistic 0ms local event listener for self-nish changes
+  useEffect(() => {
+    const handleLocalNishChange = (e: Event) => {
+      const customEvent = e as CustomEvent<{ characterId: number; newNish?: any }>;
+      if (customEvent.detail?.characterId) {
+        const charIdStr = String(customEvent.detail.characterId);
+        setMarkedTurnIds((prev) => prev.filter((id) => id !== charIdStr));
+      }
+    };
+    window.addEventListener('supaflex:character-nish-changed', handleLocalNishChange);
+    return () => {
+      window.removeEventListener('supaflex:character-nish-changed', handleLocalNishChange);
+    };
+  }, []);
 
   // Fast shallow comparison to prevent unnecessary DOM re-renders and card flickering
   const areMembersEqual = (a: PartySessionMember[], b: PartySessionMember[]) => {
@@ -161,86 +181,99 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
       )
       .subscribe();
 
-    const broadcastChannel = supabase.channel(`party:${activePartyId}`);
-    broadcastChannel
-      .on('broadcast', { event: 'party.disbanded' }, () => {
-        if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');
-        setActivePartyId(null);
-      })
-      .on('broadcast', { event: 'party.closed' }, () => {
-        if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');
-        setActivePartyId(null);
-      })
-      .on('broadcast', { event: 'party_members_updated' }, (payload: any) => {
-        // Instant optimistic vitals & nish update (< 50ms peer-to-peer sync, zero extra REST egress)
-        const data = payload?.payload;
-        if (data?.character_id && (data.current_vitality !== undefined || data.hp !== undefined || data.current_nish !== undefined)) {
-          const charId = Number(data.character_id);
-          const charIdStr = String(charId);
-          const newCurrentVit = data.current_vitality ?? data.hp;
-          const newMaxVit = data.vitality_max;
-          const newNish = data.current_nish;
+    const channelNames = new Set<string>();
+    channelNames.add(`party:${activePartyId}`);
+    channelNames.add(`party:${activePartyId.toLowerCase()}`);
+    channelNames.add(`party:${activePartyId.toUpperCase()}`);
 
-          // Anytime a character's Nish changes (explicitly via reroll or changed value), automatically uncheck their turn mark!
-          const isExplicitNishReroll = Boolean(data.nish_changed);
-          const currentMember = sessionMembers.find((m) => Number(m.character_id) === charId);
-          const oldNish = currentMember?.character?.sheet_data?.current_nish;
-          const isNumericNishChange = data.current_nish !== undefined && oldNish !== undefined && Number(data.current_nish) !== Number(oldNish);
+    const broadcastChannels: any[] = [];
+    const attachListeners = (ch: any) => {
+      ch
+        .on('broadcast', { event: 'party.disbanded' }, () => {
+          if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');
+          setActivePartyId(null);
+        })
+        .on('broadcast', { event: 'party.closed' }, () => {
+          if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');
+          setActivePartyId(null);
+        })
+        .on('broadcast', { event: 'party_members_updated' }, (payload: any) => {
+          // Instant optimistic vitals & nish update (< 50ms peer-to-peer sync, zero extra REST egress)
+          const data = payload?.payload;
+          if (data?.character_id && (data.current_vitality !== undefined || data.hp !== undefined || data.current_nish !== undefined)) {
+            const charId = Number(data.character_id);
+            const charIdStr = String(charId);
+            const newCurrentVit = data.current_vitality ?? data.hp;
+            const newMaxVit = data.vitality_max;
+            const newNish = data.current_nish;
 
-          if (isExplicitNishReroll || isNumericNishChange) {
-            setMarkedTurnIds((prev) => prev.filter((x) => x !== charIdStr));
-          }
+            // Anytime a character's Nish changes (explicitly via reroll or changed value), automatically uncheck their turn mark!
+            const isExplicitNishReroll = Boolean(data.nish_changed || data.uncheck_turn);
+            const currentMember = sessionMembersRef.current.find((m) => Number(m.character_id) === charId);
+            const oldNish = currentMember?.character?.sheet_data?.current_nish;
+            const isNumericNishChange = data.current_nish !== undefined && (oldNish === undefined || Number(data.current_nish) !== Number(oldNish));
 
-          setSessionMembers((prev) =>
-            prev.map((m) => {
-              if (Number(m.character_id) === charId && m.character) {
-                const updatedSheet = {
-                  ...(m.character.sheet_data || {}),
-                  ...(newCurrentVit !== undefined ? { current_vitality: newCurrentVit } : {}),
-                  ...(newMaxVit !== undefined ? { vitality_max: newMaxVit } : {}),
-                  ...(newNish !== undefined ? { current_nish: newNish } : {}),
-                };
-                if (newNish === null) {
-                  delete updatedSheet.current_nish;
+            if (isExplicitNishReroll || isNumericNishChange) {
+              setMarkedTurnIds((prev) => prev.filter((x) => x !== charIdStr));
+            }
+
+            setSessionMembers((prev) =>
+              prev.map((m) => {
+                if (Number(m.character_id) === charId && m.character) {
+                  const updatedSheet = {
+                    ...(m.character.sheet_data || {}),
+                    ...(newCurrentVit !== undefined ? { current_vitality: newCurrentVit } : {}),
+                    ...(newMaxVit !== undefined ? { vitality_max: newMaxVit } : {}),
+                    ...(newNish !== undefined ? { current_nish: newNish } : {}),
+                  };
+                  if (newNish === null) {
+                    delete updatedSheet.current_nish;
+                  }
+                  const updatedChar = {
+                    ...m.character,
+                    ...(newCurrentVit !== undefined ? { hp: newCurrentVit, current_vitality: newCurrentVit } : {}),
+                    ...(newMaxVit !== undefined ? { vitality_max: newMaxVit } : {}),
+                    current_nish: newNish === null ? undefined : newNish ?? (m.character as any)?.current_nish,
+                    sheet_data: updatedSheet,
+                  };
+                  return { ...m, character: updatedChar as any };
                 }
-                const updatedChar = {
-                  ...m.character,
-                  ...(newCurrentVit !== undefined ? { hp: newCurrentVit, current_vitality: newCurrentVit } : {}),
-                  ...(newMaxVit !== undefined ? { vitality_max: newMaxVit } : {}),
-                  current_nish: newNish === null ? undefined : newNish ?? (m.character as any)?.current_nish,
-                  sheet_data: updatedSheet,
-                };
-                return { ...m, character: updatedChar as any };
-              }
-              return m;
-            })
-          );
-        } else {
+                return m;
+              })
+            );
+          } else {
+            loadMembers();
+          }
+        })
+        .on('broadcast', { event: 'party_turn_marks_updated' }, (payload: any) => {
+          const ids = payload?.payload?.markedTurnIds;
+          if (Array.isArray(ids)) {
+            setMarkedTurnIds(ids.map(String));
+          }
+        })
+        .on('broadcast', { event: 'party.joined' }, () => {
           loadMembers();
-        }
-      })
-      .on('broadcast', { event: 'party_turn_marks_updated' }, (payload: any) => {
-        const ids = payload?.payload?.markedTurnIds;
-        if (Array.isArray(ids)) {
-          setMarkedTurnIds(ids.map(String));
-        }
-      })
-      .on('broadcast', { event: 'party.joined' }, () => {
-        loadMembers();
-      })
-      .on('broadcast', { event: 'party.left' }, () => {
-        loadMembers();
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          // Request current round turn marks from GM
-          broadcastChannel.send({
-            type: 'broadcast',
-            event: 'request_turn_marks',
-            payload: { requester: tabSessionId || 'cs' },
-          });
-        }
-      });
+        })
+        .on('broadcast', { event: 'party.left' }, () => {
+          loadMembers();
+        })
+        .subscribe((status: string) => {
+          if (status === 'SUBSCRIBED') {
+            // Request current round turn marks from GM
+            ch.send({
+              type: 'broadcast',
+              event: 'request_turn_marks',
+              payload: { requester: tabSessionId || 'cs' },
+            });
+          }
+        });
+    };
+
+    channelNames.forEach((name) => {
+      const ch = supabase.channel(name);
+      attachListeners(ch);
+      broadcastChannels.push(ch);
+    });
 
     // S-Tier Adaptive Polling: 60s fallback interval, muted when tab is inactive/hidden
     const pollInterval = setInterval(() => {
@@ -251,7 +284,7 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
 
     return () => {
       supabase.removeChannel(cdcChannel);
-      supabase.removeChannel(broadcastChannel);
+      broadcastChannels.forEach((ch) => supabase.removeChannel(ch));
       clearInterval(pollInterval);
     };
   }, [activePartyId, tabSessionId]);
