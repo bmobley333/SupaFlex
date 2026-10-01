@@ -1,5 +1,5 @@
 // src/components/modals/ManageGearPowersModal.tsx
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Search, Zap, Trash2, Pencil, Sparkles, Lock, Plus, ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
@@ -29,6 +29,8 @@ import {
 import { ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 import { gameApi } from '../../services/api';
+
+export type ExoticCategoryFilter = 'all' | 'supplies' | 'weapons' | 'armor' | 'shields';
 
 interface ManageGearPowersModalProps {
   isOpen: boolean;
@@ -73,6 +75,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategoryFilter, setActiveCategoryFilter] = useState<ExoticCategoryFilter>('all');
   const [collapsedItems, setCollapsedItems] = useState<Record<string, boolean>>({});
 
   // Version Editor Popover Drawer State
@@ -165,6 +168,38 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
   const availableAp = sheet ? calculateAvailableAp(sheet.level || 1, sheet) : 0;
   const spellSlots = useMemo(() => (Array.isArray(sheet?.spell_slots) ? sheet.spell_slots : []), [sheet?.spell_slots]);
   const simpleGear = useMemo(() => (Array.isArray(sheet?.simple_gear) ? sheet.simple_gear : []), [sheet?.simple_gear]);
+
+  // Resilient category resolver for host equipment
+  const getItemCategoryType = useCallback(
+    (item: SimpleGearItem): 'weapon' | 'armor' | 'shield' | 'supplies' => {
+      const itemType = (item.item_type || '').toLowerCase();
+      const cat = (item.category || '').toLowerCase();
+
+      if (
+        itemType === 'weapon' ||
+        cat.includes('weapon') ||
+        (weaponsCatalog || []).some((w) => cleanBelongsToName(w.name) === cleanBelongsToName(item.name))
+      ) {
+        return 'weapon';
+      }
+      if (
+        itemType === 'armor' ||
+        cat.includes('armor') ||
+        (armorCatalog || []).some((a) => cleanBelongsToName(a.name) === cleanBelongsToName(item.name))
+      ) {
+        return 'armor';
+      }
+      if (
+        itemType === 'shield' ||
+        cat.includes('shield') ||
+        (shieldsCatalog || []).some((s) => cleanBelongsToName(s.name) === cleanBelongsToName(item.name))
+      ) {
+        return 'shield';
+      }
+      return 'supplies';
+    },
+    [weaponsCatalog, armorCatalog, shieldsCatalog]
+  );
 
   // Drop gear item with AP refund for any learned powers on it
   const handleDropGearItem = (item: SimpleGearItem) => {
@@ -527,6 +562,15 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
         const hasModsOrPowers = directFns.length > 0 || compMods.length > 0 || hasInstalledMods || hasLearnedSlot;
         if (!hasModsOrPowers) return false;
 
+        // Category Tab filter check
+        if (activeCategoryFilter !== 'all') {
+          const catType = getItemCategoryType(item);
+          if (activeCategoryFilter === 'weapons' && catType !== 'weapon') return false;
+          if (activeCategoryFilter === 'armor' && catType !== 'armor') return false;
+          if (activeCategoryFilter === 'shields' && catType !== 'shield') return false;
+          if (activeCategoryFilter === 'supplies' && catType !== 'supplies') return false;
+        }
+
         if (query) {
           const matchesHost = hostName.toLowerCase().includes(query);
           const matchesMod = compMods.some((m) => m.name.toLowerCase().includes(query));
@@ -538,14 +582,33 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
         return true;
       })
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-  }, [candidateItems, searchQuery, effectiveMods, effectiveFunctions, spellSlots]);
+  }, [candidateItems, searchQuery, activeCategoryFilter, getItemCategoryType, effectiveMods, effectiveFunctions, spellSlots]);
 
   const targetItem = initialTargetItem || exoticGearManagerTargetItem;
 
-  // Auto-expand and scroll to target item when modal opens
+  // Auto-expand and scroll to target item when modal opens, auto-switching category if needed
   useEffect(() => {
     if (!isOpen || !targetItem) return;
     const cleanTarget = cleanBelongsToName(targetItem.replace(/\s*\[[MHS]\]$/i, '').trim());
+
+    // If target item is filtered out by current activeCategoryFilter, auto-switch to its category
+    const candidateMatch = candidateItems.find(
+      (g) => cleanBelongsToName(g.name.replace(/\s*\[[MHS]\]$/i, '').trim()) === cleanTarget || g.id === targetItem
+    );
+    if (candidateMatch) {
+      const targetCat = getItemCategoryType(candidateMatch);
+      const isMismatch =
+        (activeCategoryFilter === 'weapons' && targetCat !== 'weapon') ||
+        (activeCategoryFilter === 'armor' && targetCat !== 'armor') ||
+        (activeCategoryFilter === 'shields' && targetCat !== 'shield') ||
+        (activeCategoryFilter === 'supplies' && targetCat !== 'supplies');
+      if (isMismatch) {
+        setActiveCategoryFilter(
+          targetCat === 'weapon' ? 'weapons' : targetCat === 'armor' ? 'armor' : targetCat === 'shield' ? 'shields' : 'supplies'
+        );
+      }
+    }
+
     const matched = exoticGearItems.find(
       (g) => cleanBelongsToName(g.name.replace(/\s*\[[MHS]\]$/i, '').trim()) === cleanTarget || g.id === targetItem
     );
@@ -562,7 +625,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
       }
     }, 120);
     return () => clearTimeout(timer);
-  }, [isOpen, targetItem, exoticGearItems]);
+  }, [isOpen, targetItem, exoticGearItems, candidateItems, activeCategoryFilter, getItemCategoryType]);
 
   // Render individual power card
   const renderPowerCard = (
@@ -833,6 +896,65 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
             </button>
           </div>
 
+          {/* 2. Category Multi-Option Pill Switch (5 Tabs: All, Supplies, Weapons, Armor, Shields) */}
+          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md mb-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => setActiveCategoryFilter('all')}
+              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                activeCategoryFilter === 'all'
+                  ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🌐 All
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveCategoryFilter('supplies')}
+              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                activeCategoryFilter === 'supplies'
+                  ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🎒 Supplies
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveCategoryFilter('weapons')}
+              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                activeCategoryFilter === 'weapons'
+                  ? 'bg-rose-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              ⚔️ Weapons
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveCategoryFilter('armor')}
+              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                activeCategoryFilter === 'armor'
+                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🥋 Armor
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveCategoryFilter('shields')}
+              className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                activeCategoryFilter === 'shields'
+                  ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🛡️ Shields
+            </button>
+          </div>
+
           {/* Scrollable Gear Chassis & Mods Tree */}
           <div className="flex-1 overflow-y-auto pr-1.5 space-y-4 min-h-0">
             {exoticGearItems.length > 0 ? (
@@ -1028,10 +1150,25 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
             ) : (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
                 <Zap className="w-10 h-10 text-slate-600 mb-3 opacity-40" />
-                <p className="font-bold text-sm text-slate-300">No Exotic Gear Found</p>
-                <p className="text-xs text-slate-500 mt-1 max-w-md">
-                  No owned or learned weapons, armor, or gear items with tactical exotic powers or compatible mods were found matching your filter.
+                <p className="font-bold text-sm text-slate-300">
+                  {activeCategoryFilter !== 'all'
+                    ? `No Exotic ${activeCategoryFilter.charAt(0).toUpperCase() + activeCategoryFilter.slice(1)} Found`
+                    : 'No Exotic Gear Found'}
                 </p>
+                <p className="text-xs text-slate-500 mt-1 max-w-md">
+                  {activeCategoryFilter !== 'all'
+                    ? `No owned or learned ${activeCategoryFilter} with tactical exotic powers or compatible mods were found.`
+                    : 'No owned or learned weapons, armor, or gear items with tactical exotic powers or compatible mods were found matching your filter.'}
+                </p>
+                {activeCategoryFilter !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategoryFilter('all')}
+                    className="mt-3 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  >
+                    🌐 Show All Exotic Gear
+                  </button>
+                )}
               </div>
             )}
           </div>
