@@ -751,6 +751,8 @@ export interface CharacterSheetData {
   simple_gear?: SimpleGearItem[];
   known_skillsets: string[];
   known_individual_skills?: string[]; // Individually learned skills outside a skillset
+  skillset_ap_costs?: Record<string, number>; // Stored AP cost for known_skillsets (2 AP in-path, 4 AP out-of-path, 0 AP free)
+  skill_ap_costs?: Record<string, number>; // Stored AP cost for known_individual_skills (1 AP in-path, 3 AP out-of-path, 0 AP free)
   free_individual_skills?: string[]; // Individually learned skills granted for free (0 AP)
   free_skillsets?: string[]; // Skillsets granted for free (0 AP)
   custom_skillsets?: CustomSkillsetDefinition[]; // Custom user-created skillsets
@@ -962,12 +964,18 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
   const knownSkillsets = Array.isArray(sheetData.known_skillsets) ? sheetData.known_skillsets : [];
   const freeSkillsetsSet = new Set((sheetData.free_skillsets || []).map((s: string) => (s || '').toLowerCase().trim()));
   const paidSkillsets = knownSkillsets.filter((s: string) => !freeSkillsetsSet.has((s || '').toLowerCase().trim()));
-  const skillsetCost = paidSkillsets.length * 2;
+  const skillsetCost = paidSkillsets.reduce((sum: number, s: string) => {
+    const cost = sheetData.skillset_ap_costs?.[(s || '').toLowerCase().trim()];
+    return sum + (typeof cost === 'number' ? cost : 2);
+  }, 0);
 
   const knownIndivSkills = Array.isArray(sheetData.known_individual_skills) ? sheetData.known_individual_skills : [];
   const freeIndivSet = new Set((sheetData.free_individual_skills || []).map((s: string) => (s || '').toLowerCase().trim()));
   const paidIndivSkills = knownIndivSkills.filter((s: string) => !freeIndivSet.has((s || '').toLowerCase().trim()));
-  const indivCost = paidIndivSkills.length * 1;
+  const indivCost = paidIndivSkills.reduce((sum: number, s: string) => {
+    const cost = sheetData.skill_ap_costs?.[(s || '').toLowerCase().trim()];
+    return sum + (typeof cost === 'number' ? cost : 1);
+  }, 0);
 
   const skillsNet = skillsetCost + indivCost;
 

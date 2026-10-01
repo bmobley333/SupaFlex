@@ -638,12 +638,15 @@ export const reconcileSkillsOnSkillsetAdded = (
   const lowerSkillsInNewSet = new Set(skillsInNewSet.map((s) => s.toLowerCase().trim()));
   const refundedSkills: string[] = [];
   const updatedIndividualSkills: string[] = [];
+  let totalRefund = 0;
 
   currentIndiv.forEach((skName) => {
     const lowerName = skName.toLowerCase().trim();
     // If the skill is in the new set and was NOT already granted by another skillset
     if (lowerSkillsInNewSet.has(lowerName) && !otherKnownSkillsetsSkills.has(lowerName)) {
       refundedSkills.push(skName);
+      const paidCost = sheetData.skill_ap_costs?.[lowerName];
+      totalRefund += typeof paidCost === 'number' ? paidCost : 1;
     } else {
       updatedIndividualSkills.push(skName);
     }
@@ -652,7 +655,7 @@ export const reconcileSkillsOnSkillsetAdded = (
   return {
     updatedIndividualSkills,
     refundedSkills,
-    totalRefund: refundedSkills.length,
+    totalRefund,
   };
 };
 
