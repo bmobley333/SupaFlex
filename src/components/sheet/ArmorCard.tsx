@@ -828,7 +828,7 @@ export const ArmorCard: React.FC = () => {
                               : 'text-slate-400 hover:text-slate-200 border border-transparent'
                           }`}
                         >
-                          ⚡ 1AP (Path & Req)
+                          🧥 1AP (Path & Req)
                         </button>
                         <button
                           type="button"

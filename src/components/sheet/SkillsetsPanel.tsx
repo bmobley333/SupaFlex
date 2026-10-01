@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Check, Search, X, Scroll, GraduationCap, Star, Trash2, ArrowDown, ArrowUp } from 'lucide-react';
+import { Check, Search, X, Scroll, GraduationCap, Star, Trash2, ArrowDown, ArrowUp, AlertCircle, Sparkles } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp } from '../../types/game';
@@ -25,6 +25,7 @@ export interface SkillsetsPanelProps {
 export type SkillCategoryFilter =
   | 'all'
   | 'skills_in_path'
+  | 'skills_universal'
   | 'skills_out_path'
   | 'skillsets_in_path'
   | 'skillsets_out_path';
@@ -197,13 +198,52 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
         const pathsList = parseItemPaths(catalogSkill.path);
         for (const p of pathsList) {
           const cleanP = cleanPathName(p).toLowerCase().trim();
-          if (cleanP === 'general' || cleanP === 'base' || cleanP === 'universal' || knownPaths.has(cleanP)) return true;
+          if (cleanP === 'base' || knownPaths.has(cleanP)) return true;
         }
       }
     }
 
     return false;
   }, [isSkillsetInPath, skills, knownPaths]);
+
+  const isSkillUniversal = useCallback((skillName: string, parentSets?: string[], directPath?: string[] | string): boolean => {
+    // If it's already in an owned path or free, it's not merely universal
+    if (isSkillInPath(skillName, parentSets) || isSkillFree(skillName, parentSets)) return false;
+
+    const cleanName = skillName.toLowerCase().trim();
+    const rawPath = directPath || skills.find((sk) => sk.name.toLowerCase().trim() === cleanName)?.path;
+    if (rawPath) {
+      const pathsList = parseItemPaths(rawPath);
+      for (const p of pathsList) {
+        const cleanP = cleanPathName(p).toLowerCase().trim();
+        if (cleanP === 'universal' || cleanP === 'general') return true;
+      }
+    }
+
+    // Check parent skillsets in catalog
+    const catalogSkill = skills.find((sk) => sk.name.toLowerCase().trim() === cleanName);
+    const candidateSets = parentSets && Array.isArray(parentSets) && parentSets.length > 0
+      ? parentSets
+      : (catalogSkill?.sets || catalogSkill?.skillset || []);
+
+    if (candidateSets && Array.isArray(candidateSets)) {
+      for (const s of candidateSets) {
+        const setInCatalog = setsCatalog.find(
+          (cs) => cleanPathName(normalizeSkillsetName(cs.name)).toLowerCase().trim() === cleanPathName(normalizeSkillsetName(s)).toLowerCase().trim()
+        );
+        if (setInCatalog) {
+          const setPaths = ((setInCatalog as any)?.path || (setInCatalog as any)?.paths || []);
+          const pList = parseItemPaths(setPaths);
+          for (const p of pList) {
+            const cleanP = cleanPathName(p).toLowerCase().trim();
+            if (cleanP === 'universal' || cleanP === 'general') return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }, [isSkillInPath, isSkillFree, skills, setsCatalog]);
 
   const getSkillApCost = useCallback((skillName: string, parentSets?: string[]): number => {
     if (isSkillFree(skillName, parentSets)) return 0;
@@ -253,9 +293,6 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
   const resolveSkillPath = useCallback((skillName: string, parentSets?: string[], directPath?: string[] | string): string | null => {
     const cleanName = skillName.toLowerCase().trim();
 
-    // Out-of-path skills have no path badge
-    if (!isSkillInPath(skillName, parentSets)) return null;
-
     // 1. Direct path on skill matching character known paths
     const rawPath = directPath || skills.find((sk) => sk.name.toLowerCase().trim() === cleanName)?.path;
     if (rawPath) {
@@ -285,32 +322,14 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
       }
     }
 
-    // 3. Check if skill itself has universal/general/base
-    if (rawPath) {
-      const pathsList = parseItemPaths(rawPath);
-      for (const p of pathsList) {
-        const cleanP = cleanPathName(p).toLowerCase().trim();
-        if (cleanP === 'universal' || cleanP === 'general' || cleanP === 'base') {
-          return 'Universal';
-        }
-      }
+    // 3. If it is a Universal skill, return 'Universal'
+    if (isSkillUniversal(skillName, parentSets, directPath)) {
+      return 'Universal';
     }
 
-    // 4. Check if any parent skillset was Universal
-    if (candidateSets && Array.isArray(candidateSets)) {
-      for (const s of candidateSets) {
-        if (isSkillsetInPath(s)) {
-          const pPath = resolveSkillsetPath(s);
-          if (pPath === 'Universal') {
-            return 'Universal';
-          }
-        }
-      }
-    }
-
-    // In-path universal fallback per Blake's instruction
-    return 'Universal';
-  }, [isSkillInPath, skills, knownPaths, resolveSkillsetPath]);
+    // 4. Out-of-path skills have no path badge
+    return null;
+  }, [skills, activeCharacter, knownPaths, isSkillsetInPath, resolveSkillsetPath, isSkillUniversal]);
 
   // Dynamically derive all SkillSets from atomic skills table + character custom skillsets
   const effectiveSkillsets = useMemo(() => {
@@ -547,9 +566,10 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
     if (isLearning) {
       const isFree = isSkillFree(skillName, parentSets);
       const inPath = isSkillInPath(skillName, parentSets);
+      const isUniversal = isSkillUniversal(skillName, parentSets);
       const apCost = getSkillApCost(skillName, parentSets);
 
-      if (!inPath && !isFree) {
+      if (!inPath && !isFree && !isUniversal) {
         const confirmed = window.confirm(
           `Learning "${skillName}" is Out-of-Path and costs 3 AP (normally 1 AP).\n\nOut-of-Path skills require GM approval in campaign play. Proceed with learning?`
         );
@@ -584,10 +604,11 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
       });
 
       if (apCost > 0) {
+        const gmApprovalTag = (!inPath && !isUniversal) ? ' [👑 GM Approval]' : '';
         recordApExpenditure(
           apCost,
           'Skills',
-          `Learned Individual Skill: ${skillName} (${apCost} AP${!inPath ? ' [👑 GM Approval]' : ''})`,
+          `Learned Individual Skill: ${skillName} (${apCost} AP${gmApprovalTag})`,
           1,
           'Manage Skills'
         );
@@ -939,11 +960,13 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
           return false;
         }
       }
-      // 4. In-Path vs Out-of-Path Category Filter
+      // 4. In-Path vs Universal vs Out-of-Path Category Filter
       if (skillsCategoryFilter === 'skills_in_path') {
         if (!isSkillInPath(sk.name, sk.parentSkillsets) && !isSkillFree(sk.name, sk.parentSkillsets)) return false;
+      } else if (skillsCategoryFilter === 'skills_universal') {
+        if (!isSkillUniversal(sk.name, sk.parentSkillsets, sk.path)) return false;
       } else if (skillsCategoryFilter === 'skills_out_path') {
-        if (isSkillInPath(sk.name, sk.parentSkillsets) || isSkillFree(sk.name, sk.parentSkillsets)) return false;
+        if (isSkillInPath(sk.name, sk.parentSkillsets) || isSkillFree(sk.name, sk.parentSkillsets) || isSkillUniversal(sk.name, sk.parentSkillsets, sk.path)) return false;
       }
       return true;
     });
@@ -960,7 +983,7 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
     }
 
     return base.sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
-  }, [sortedAllCatalogSkills, skillsetDerivedSkillsSet, knownIndividualSkills, localGenreFilter, localDisciplineFilter, localAttributeFilter, isSkillStarred, allCatalogSkillsMap, rightSearchQuery, isGsUnlocked, skillsCategoryFilter, isSkillInPath, isSkillFree]);
+  }, [sortedAllCatalogSkills, skillsetDerivedSkillsSet, knownIndividualSkills, localGenreFilter, localDisciplineFilter, localAttributeFilter, isSkillStarred, allCatalogSkillsMap, rightSearchQuery, isGsUnlocked, skillsCategoryFilter, isSkillInPath, isSkillFree, isSkillUniversal]);
 
   const shouldShowSkillsets =
     skillsCategoryFilter === 'all' ||
@@ -970,6 +993,7 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
   const shouldShowSkills =
     skillsCategoryFilter === 'all' ||
     skillsCategoryFilter === 'skills_in_path' ||
+    skillsCategoryFilter === 'skills_universal' ||
     skillsCategoryFilter === 'skills_out_path';
 
   const totalCatalogCount = useMemo(() => {
@@ -1283,7 +1307,7 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                         onClick={() => setSkillsCategoryFilter('all')}
                         className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           skillsCategoryFilter === 'all'
-                            ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                            ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                         }`}
                       >
@@ -1294,11 +1318,22 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                         onClick={() => setSkillsCategoryFilter('skills_in_path')}
                         className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           skillsCategoryFilter === 'skills_in_path'
-                            ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                            ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                         }`}
                       >
-                        📜 Skill (in path) 1AP
+                        🎓 Skill (in path) 1AP
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSkillsCategoryFilter('skills_universal')}
+                        className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                          skillsCategoryFilter === 'skills_universal'
+                            ? 'bg-cyan-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        ✨ Universal 3AP
                       </button>
                       <button
                         type="button"
@@ -1309,14 +1344,14 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                         }`}
                       >
-                        📜 Skills (~path) 3AP
+                        👑 Skills (~path) 3AP
                       </button>
                       <button
                         type="button"
                         onClick={() => setSkillsCategoryFilter('skillsets_in_path')}
                         className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           skillsCategoryFilter === 'skillsets_in_path'
-                            ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                            ? 'bg-teal-600 text-white shadow-sm font-extrabold'
                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                         }`}
                       >
@@ -1327,13 +1362,33 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                         onClick={() => setSkillsCategoryFilter('skillsets_out_path')}
                         className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                           skillsCategoryFilter === 'skillsets_out_path'
-                            ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                            ? 'bg-rose-600 text-white shadow-sm font-extrabold'
                             : 'text-slate-400 hover:text-slate-200 border border-transparent'
                         }`}
                       >
-                        📖 SkillSets (~path) 4AP
+                        👑 SkillSets (~path) 4AP
                       </button>
                     </div>
+
+                    {/* Universal Notice Banner */}
+                    {skillsCategoryFilter === 'skills_universal' && (
+                      <div className="p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/40 flex items-center gap-2 text-xs text-cyan-200 shrink-0">
+                        <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
+                        <span className="leading-tight">
+                          <strong>✨ Universal Acquisitions:</strong> 3 AP Self-Service • No GM Approval Needed.
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Out-of-Path GM Notice Banner */}
+                    {(skillsCategoryFilter === 'skills_out_path' || skillsCategoryFilter === 'skillsets_out_path') && (
+                      <div className="p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-center gap-2 text-xs text-amber-200 shrink-0">
+                        <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span className="leading-tight">
+                          <strong>👑 Out-of-Path Acquisitions:</strong> cost more AP AND require GM Approval.
+                        </span>
+                      </div>
+                    )}
 
                     {/* ROW 3: Search Bar + Dynamic Result Count */}
                     <div className="flex items-center gap-2 shrink-0">
@@ -1493,6 +1548,7 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                             const isTrait = isTraitItem(sk);
                             const isFree = isTrait || isSkillFree(sk.name, sk.parentSkillsets);
                             const inPath = isSkillInPath(sk.name, sk.parentSkillsets);
+                            const isUniversal = isSkillUniversal(sk.name, sk.parentSkillsets, sk.path);
 
                             return (
                               <div
@@ -1551,17 +1607,19 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                             ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/40'
                                             : inPath
                                             ? 'bg-indigo-950/90 text-indigo-300 border-indigo-500/40'
+                                            : isUniversal
+                                            ? 'bg-cyan-950/90 text-cyan-300 border-cyan-500/40'
                                             : 'bg-amber-950/90 text-amber-300 border-amber-500/40'
                                         }`}
                                       >
-                                        {isFree ? '0 AP' : inPath ? '1 AP' : '3 AP • 👑 GM'}
+                                        {isFree ? '0 AP' : inPath ? '1 AP' : isUniversal ? '3 AP' : '3 AP • 👑 GM'}
                                       </span>
                                       {isFree && (
                                         <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 shrink-0">
                                           <span>{isTrait ? '🧬' : '🎁'}</span> {isTrait ? 'Trait (Free)' : 'Free'}
                                         </span>
                                       )}
-                                      {(inPath || isFree) && (() => {
+                                      {(() => {
                                         const pathName = resolveSkillPath(sk.name, sk.parentSkillsets, sk.path);
                                         return pathName ? (
                                           <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-900/60 text-purple-300 border border-purple-500/40 shrink-0 flex items-center gap-1">
@@ -1602,6 +1660,8 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                           ? 'bg-emerald-600/40 text-emerald-200 border-emerald-500/60 hover:bg-emerald-600/60 shadow-sm'
                                           : inPath
                                           ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50'
+                                          : isUniversal
+                                          ? 'bg-cyan-600/30 text-cyan-200 border-cyan-500/50 hover:bg-cyan-600/50'
                                           : 'bg-amber-600/30 text-amber-200 border-amber-500/50 hover:bg-amber-600/50'
                                       }`}
                                     >
