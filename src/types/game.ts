@@ -938,15 +938,15 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
       else powersNet += 4;
     }
   }
-  // Add +1 AP per power version beyond v1
+  // Add escalating AP per power version beyond v1 (Version # - 1)
   for (const p of allKnownPowers) {
     const ver = typeof p.version === 'number' ? p.version : parseAbilityVersion(p.name).version;
     if (ver > 1) {
-      powersNet += (ver - 1);
+      powersNet += calculateCumulativeVersionAp(ver);
     }
   }
 
-  // 1 AP per learned Gear Power in spell_slots (plus version upgrades)
+  // 1 AP per learned Gear Power in spell_slots (plus escalating version upgrades)
   const spellSlots = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
   let gearPowersNet = spellSlots.reduce((sum: number, s: any) => sum + (typeof s?.ap_cost === 'number' ? s.ap_cost : 1), 0);
   for (const s of spellSlots) {
@@ -954,7 +954,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     const { version } = parseAbilityVersion(s.base_name || s.name);
     const itemVer = typeof s.version === 'number' ? s.version : version;
     if (itemVer > 1) {
-      gearPowersNet += (itemVer - 1);
+      gearPowersNet += calculateCumulativeVersionAp(itemVer);
     }
   }
 
@@ -1020,6 +1020,34 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     weaponsNet;
 
   return { totalSpent, gmBonus, categories };
+};
+
+/**
+ * Calculates the escalating version upgrade AP cost for upgrading to version V.
+ * Upgrading to Version V costs (V - 1) AP.
+ * e.g., v2 -> 1 AP, v3 -> 2 AP, v4 -> 3 AP, etc.
+ */
+export const calculateVersionUpgradeCost = (targetVersion: number): number => {
+  if (targetVersion <= 1) return 0;
+  return targetVersion - 1;
+};
+
+/**
+ * Calculates the cumulative version upgrade AP cost spent to reach version V.
+ * sum_{k=2}^{V} (k - 1) = ((V - 1) * V) / 2.
+ * e.g., v1 -> 0 AP, v2 -> 1 AP, v3 -> 3 AP, v4 -> 6 AP, v5 -> 10 AP.
+ */
+export const calculateCumulativeVersionAp = (version: number): number => {
+  if (version <= 1) return 0;
+  return ((version - 1) * version) / 2;
+};
+
+/**
+ * Calculates the total AP refund when unlearning/deleting a power or gear power at version V.
+ * Returns initial AP (baseCost, default 1) + cumulative version AP.
+ */
+export const calculateTotalPowerRefundAp = (version: number, baseCost: number = 1): number => {
+  return baseCost + calculateCumulativeVersionAp(version);
 };
 
 export const cleanAbilityName = (name?: string | null): string => {

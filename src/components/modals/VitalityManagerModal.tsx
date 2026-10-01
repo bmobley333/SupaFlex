@@ -126,6 +126,27 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
     showToast('Gained +2 Max Vitality!');
   };
 
+  // Handle Refunding 1 AP (-2 Max Vit)
+  const handleRefundVit = (apToRefund: number = 1) => {
+    if (vitalityApSpent < apToRefund) {
+      showToast('No AP-purchased Vitality to refund.');
+      return;
+    }
+    const newApSpent = Math.max(0, vitalityApSpent - apToRefund);
+    const newTotalMax = baseMaxVit + (newApSpent * 2) + vitAdj;
+    const newCurrentVit = Math.min(currentVit, newTotalMax);
+
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      vitality_base_max: baseMaxVit,
+      vitality_max: newTotalMax,
+      current_vitality: newCurrentVit,
+    }));
+    recordApExpenditure(-apToRefund, 'Vitality', `Refunded ${apToRefund * 2} Max Vitality (+${apToRefund} AP)`, 1, 'Vitality Manager');
+    saveActiveCharacter();
+    showToast(`Refunded ${apToRefund} AP (-${apToRefund * 2} Max Vitality)!`);
+  };
+
   // Handle Full Heal Action
   const handleFullHeal = () => {
     updateActiveSheetData((prev) => ({
@@ -435,31 +456,59 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
                 AP Vitality Boosts
               </h3>
 
-              {/* Top Action Row */}
-              <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between gap-3">
+              {/* AP Stepper Row */}
+              <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col gap-2.5">
                 <div>
                   <h4 className="font-outfit font-bold text-slate-100 text-xs flex items-center gap-1.5">
                     <Heart className="w-3.5 h-3.5 text-rose-400" />
-                    Gain +2 Max Vitality
+                    Adjust AP Vitality Boost
                   </h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Permanently increases your maximum Vit by +2.</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Each 1 AP invested grants +2 Max Vit. Freely gain or refund AP at any time.
+                  </p>
                 </div>
-                <button
-                  onClick={handleBuyVit}
-                  disabled={availableAp < 1}
-                  title={
-                    availableAp < 1
-                      ? `Insufficient AP: Requires 1 AP (${availableAp} AP available)`
-                      : 'Buy +2 Vit (1 AP)'
-                  }
-                  className={`px-3 py-1.5 rounded-lg font-outfit font-bold text-xs transition-all shadow-md shrink-0 ${
-                    availableAp < 1
-                      ? 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed opacity-80'
-                      : 'bg-rose-600 hover:bg-rose-500 text-white cursor-pointer active:scale-95'
-                  }`}
-                >
-                  Buy +2 Vit (1 AP)
-                </button>
+
+                <div className="flex items-center justify-between gap-2.5 pt-1">
+                  {/* Refund Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleRefundVit(1)}
+                    disabled={vitalityApSpent < 1}
+                    className={`flex-1 py-2 px-3 rounded-lg font-outfit font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm ${
+                      vitalityApSpent < 1
+                        ? 'bg-slate-800/60 text-slate-500 border border-slate-700/40 cursor-not-allowed opacity-60'
+                        : 'bg-slate-800 hover:bg-slate-700 text-rose-300 hover:text-rose-200 border border-rose-500/40 cursor-pointer active:scale-95'
+                    }`}
+                    title={
+                      vitalityApSpent < 1
+                        ? 'No AP Vitality purchased to refund'
+                        : 'Refund 1 AP (Reduces Max Vit by 2, returns 1 AP to available pool)'
+                    }
+                  >
+                    <span>➖</span>
+                    <span>Refund 1 AP (-2 Vit)</span>
+                  </button>
+
+                  {/* Buy Button */}
+                  <button
+                    type="button"
+                    onClick={handleBuyVit}
+                    disabled={availableAp < 1}
+                    className={`flex-1 py-2 px-3 rounded-lg font-outfit font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm ${
+                      availableAp < 1
+                        ? 'bg-slate-800/60 text-slate-500 border border-slate-700/40 cursor-not-allowed opacity-60'
+                        : 'bg-rose-600 hover:bg-rose-500 text-white border border-rose-400/50 cursor-pointer active:scale-95'
+                    }`}
+                    title={
+                      availableAp < 1
+                        ? `Insufficient AP: Requires 1 AP (${availableAp} AP available)`
+                        : 'Buy +2 Max Vit (Costs 1 AP)'
+                    }
+                  >
+                    <span>➕</span>
+                    <span>Buy 1 AP (+2 Vit)</span>
+                  </button>
+                </div>
               </div>
 
               {/* De-duplicated Breakdown Panel */}

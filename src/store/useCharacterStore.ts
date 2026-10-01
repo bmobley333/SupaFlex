@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseSet, SupabaseBundle, SupabaseSupply, SupabaseWeapon, SupabaseArmor, SupabaseShield, SupabaseChaosGem, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, GearPowerItem, ModItem, PlayerRecord, ApLogEntry, isGearPowerLearned, cleanAbilityName, calculateAvailableAp } from '../types/game';
+import { Character, CharacterSheetData, Power, MagicItem, AbilitySlot, SupabaseSkill, SupabaseTrait, SupabaseKit, SupabasePath, SupabaseSet, SupabaseBundle, SupabaseSupply, SupabaseWeapon, SupabaseArmor, SupabaseShield, SupabaseChaosGem, TraitQuirkItem, HardwareBundleItem, EncounterLink, FunctionItem, GearPowerItem, ModItem, PlayerRecord, ApLogEntry, isGearPowerLearned, cleanAbilityName, calculateAvailableAp, parseAbilityVersion, calculateTotalPowerRefundAp } from '../types/game';
 import { gameApi, createDefaultSheetData, CatalogScope } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex } from '../utils/readyMatrixSchedule';
@@ -2278,18 +2278,28 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     const currentSpellSlots: AbilitySlot[] = Array.isArray(currentSheet.spell_slots) ? [...currentSheet.spell_slots] : [];
     
     const target = cleanAbilityName(powerName);
+    const targetSlot = currentSpellSlots.find(
+      (s) => cleanAbilityName(s.name) === target || cleanAbilityName(s.base_name) === target
+    );
     const filtered = currentSpellSlots.filter(
       (s) => cleanAbilityName(s.name) !== target && cleanAbilityName(s.base_name) !== target
     );
     if (filtered.length === currentSpellSlots.length) return;
 
+    const targetVer = targetSlot
+      ? typeof targetSlot.version === 'number'
+        ? targetSlot.version
+        : parseAbilityVersion(targetSlot.name).version
+      : 1;
+    const refundAp = calculateTotalPowerRefundAp(targetVer, 1);
+
     const newLogEntry: ApLogEntry = {
       id: String(Date.now()),
       category: 'Gear Powers',
-      description: `Refunded ${powerName}`,
+      description: `Refunded ${powerName} (v${targetVer}: -${refundAp} AP)`,
       source: 'Refund',
       tier: 1,
-      cost: -1,
+      cost: -refundAp,
       timestamp: new Date().toISOString(),
     };
 
@@ -2446,7 +2456,10 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       }
     });
 
-    const refundAp = unlearnedSlots.length;
+    const refundAp = unlearnedSlots.reduce((sum, slot) => {
+      const ver = (slot as any).version || parseAbilityVersion(slot.name || '').version || 1;
+      return sum + calculateTotalPowerRefundAp(ver, 1);
+    }, 0);
     const refundLogEntry: ApLogEntry | null =
       refundAp > 0
         ? {

@@ -17,6 +17,7 @@ import {
   calculateLifetimeAp,
   calculateLiveSheetSpentAp,
   calculateAvailableAp,
+  calculateCumulativeVersionAp,
 } from '../../types/game';
 import {
   calculateTotalLoadoutCapacity,
@@ -207,7 +208,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
     for (const p of allKnownPowers) {
       const ver = typeof p.version === 'number' ? p.version : parseAbilityVersion(p.name).version;
       if (ver > 1) {
-        powerUpgradesNet += (ver - 1);
+        powerUpgradesNet += calculateCumulativeVersionAp(ver);
       }
     }
     const powersNet = powersBaseNet + powerUpgradesNet;
@@ -242,7 +243,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
     let functionVersionsNet = 0;
     for (const ver of functionVersionMap.values()) {
       if (ver > 1) {
-        functionVersionsNet += (ver - 1);
+        functionVersionsNet += calculateCumulativeVersionAp(ver);
       }
     }
     const magicItemsNet = loadoutApSpent + functionVersionsNet;

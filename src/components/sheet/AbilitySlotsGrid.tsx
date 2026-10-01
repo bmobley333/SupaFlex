@@ -6,7 +6,7 @@ import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar } from '../common/QuickDeckBar';
-import { AbilitySlot, Power, MagicItem, calculateAvailableAp, getCategorySlotWeight } from '../../types/game';
+import { AbilitySlot, Power, MagicItem, calculateAvailableAp, getCategorySlotWeight, calculateVersionUpgradeCost, calculateTotalPowerRefundAp } from '../../types/game';
 import {
   calculateTotalLoadoutCapacity,
   calculateSpentApOnLoadoutExpansions,
@@ -820,9 +820,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       ) || currentVault.find(
         (s) => parseAbilityVersion(s.name).baseName.toLowerCase() === targetBaseName.toLowerCase()
       );
-      const refundAp = targetPower && typeof targetPower.ap_cost === 'number' && targetPower.ap_cost > 0
-        ? targetPower.ap_cost
+      const targetVersion = targetPower
+        ? typeof targetPower.version === 'number'
+          ? targetPower.version
+          : parseAbilityVersion(targetPower.name).version
         : 1;
+      const refundAp = calculateTotalPowerRefundAp(targetVersion, 1);
 
       updateActiveSheetData((prev) => {
         const slots = Array.isArray(prev.power_slots) ? prev.power_slots : [];
@@ -842,7 +845,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       recordApExpenditure(
         -refundAp,
         'Powers',
-        `Unlearned Power: ${cleanName(abilityName)} (-${refundAp} AP Refunded)`,
+        `Unlearned Power: ${cleanName(abilityName)} (v${targetVersion}: -${refundAp} AP Refunded)`,
         1,
         'Manage Powers'
       );
@@ -961,6 +964,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     const rawClean = cleanName(createName.trim());
     const { baseName, version } = parseAbilityVersion(rawClean);
     const versionedName = `${baseName} v${version}`;
+    const versionCost = version > 1 ? calculateVersionUpgradeCost(version) : 1;
+
+    if (availableAp < versionCost) {
+      alert(`Insufficient AP! ${version > 1 ? `Upgrading to Version ${version}` : 'Creating power'} requires ${versionCost} AP.`);
+      return;
+    }
 
     if (type === 'powers') {
       const newItem: Power = {
@@ -1015,7 +1024,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
       });
 
       const logAction = isUpgrade ? 'Upgraded Power' : 'Created & Learned Power';
-      recordApExpenditure(1, 'Powers', `${logAction}: ${versionedName} (+1 AP)`, 1, 'Manage Powers');
+      recordApExpenditure(versionCost, 'Powers', `${logAction}: ${versionedName} (+${versionCost} AP)`, 1, 'Manage Powers');
 
       saveActiveCharacter();
 
@@ -1111,7 +1120,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         };
       });
 
-      recordApExpenditure(1, 'Magic Items', `Upgraded Gear Power: ${versionedName} (+1 AP)`, 1, "Gear Powers Manager");
+      recordApExpenditure(versionCost, 'Magic Items', `Upgraded Gear Power: ${versionedName} (+${versionCost} AP)`, 1, "Gear Powers Manager");
 
       saveActiveCharacter();
 
@@ -3327,23 +3336,34 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             </div>
                           </div>
 
-                          <button
-                            type="submit"
-                            disabled={availableAp < 1}
-                            className={`w-full mt-1 py-2 font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md ${
-                              availableAp < 1
-                                ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
-                                : 'bg-amber-600 hover:bg-amber-500 text-white cursor-pointer shadow-amber-900/30'
-                            }`}
-                            title={availableAp < 1 ? 'Insufficient AP (1 AP required to create/upgrade a version)' : `Save & Learn ${createName} (Expends 1 AP)`}
-                          >
-                            <Sparkles className="w-4 h-4" />
-                            <span>
-                              {availableAp < 1
-                                ? `Insufficient AP (${availableAp} AP / 1 AP required)`
-                                : `Save & Learn ${createName} (1 AP)`}
-                            </span>
-                          </button>
+                          {(() => {
+                            const { version } = parseAbilityVersion(cleanName(createName || ''));
+                            const cost = version > 1 ? calculateVersionUpgradeCost(version) : 1;
+                            const isInsufficient = availableAp < cost;
+                            return (
+                              <button
+                                type="submit"
+                                disabled={isInsufficient}
+                                className={`w-full mt-1 py-2 font-bold text-xs rounded-lg transition-all flex items-center justify-center gap-1.5 shadow-md ${
+                                  isInsufficient
+                                    ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+                                    : 'bg-amber-600 hover:bg-amber-500 text-white cursor-pointer shadow-amber-900/30'
+                                }`}
+                                title={
+                                  isInsufficient
+                                    ? `Insufficient AP (${cost} AP required to create/upgrade version)`
+                                    : `Save & Learn ${createName} (Expends ${cost} AP)`
+                                }
+                              >
+                                <Sparkles className="w-4 h-4" />
+                                <span>
+                                  {isInsufficient
+                                    ? `Insufficient AP (${availableAp} AP / ${cost} AP required)`
+                                    : `Save & Learn ${createName} (${cost} AP)`}
+                                </span>
+                              </button>
+                            );
+                          })()}
                         </form>
                       </div>
                     )}

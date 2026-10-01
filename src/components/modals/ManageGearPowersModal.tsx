@@ -10,6 +10,7 @@ import {
   getLearnedGearPower,
   cleanAbilityName,
   parseAbilityVersion,
+  calculateVersionUpgradeCost,
   SimpleGearItem,
   AbilitySlot,
   ApLogEntry,
@@ -377,10 +378,11 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
     });
   };
 
-  // Save Version Editor upgrade (deducts 1 AP, writes to spell_slots and custom_magic_items)
+  // Save Version Editor upgrade (deducts (veNextVersion - 1) AP, writes to spell_slots and custom_magic_items)
   const handleSaveVersion = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!veBaseName || availableAp < 1) return;
+    const versionCost = calculateVersionUpgradeCost(veNextVersion);
+    if (!veBaseName || availableAp < versionCost) return;
 
     const versionedName = `${veBaseName} v${veNextVersion}`;
     const newVaultItem: MagicItem = {
@@ -414,7 +416,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
       notes: veTargetPower?.notes || '',
       source_gear: veHostGearName,
       source_mod: veHostModName,
-      ap_cost: 1,
+      ap_cost: versionCost,
     };
 
     updateActiveSheetData((prev) => {
@@ -434,10 +436,10 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
       const logEntry: ApLogEntry = {
         id: String(Date.now()),
         category: 'Gear Powers',
-        description: `Created & Learned ${versionedName}`,
+        description: `Created & Learned ${versionedName} (+${versionCost} AP)`,
         source: veHostGearName,
         tier: 1,
-        cost: 1,
+        cost: versionCost,
         timestamp: new Date().toISOString(),
       };
 
@@ -1267,28 +1269,33 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
                   />
                 </div>
 
-                {/* Save & Learn (1 AP) Action Button */}
-                <button
-                  type="submit"
-                  disabled={availableAp < 1}
-                  className={`w-full py-2.5 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shrink-0 ${
-                    availableAp < 1
-                      ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-emerald-950/40 border border-emerald-400/50'
-                  }`}
-                  title={
-                    availableAp < 1
-                      ? 'Insufficient AP (1 AP required to create version)'
-                      : `Save & Learn ${veBaseName} v${veNextVersion} (1 AP)`
-                  }
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>
-                    {availableAp < 1
-                      ? `Insufficient AP (${availableAp} AP / 1 AP required)`
-                      : `Save & Learn ${veBaseName} v${veNextVersion} (1 AP)`}
-                  </span>
-                </button>
+                {/* Save & Learn Action Button */}
+                {(() => {
+                  const versionCost = calculateVersionUpgradeCost(veNextVersion);
+                  return (
+                    <button
+                      type="submit"
+                      disabled={availableAp < versionCost}
+                      className={`w-full py-2.5 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md shrink-0 ${
+                        availableAp < versionCost
+                          ? 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-emerald-950/40 border border-emerald-400/50'
+                      }`}
+                      title={
+                        availableAp < versionCost
+                          ? `Insufficient AP (${versionCost} AP required to create version)`
+                          : `Save & Learn ${veBaseName} v${veNextVersion} (${versionCost} AP)`
+                      }
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>
+                        {availableAp < versionCost
+                          ? `Insufficient AP (${availableAp} AP / ${versionCost} AP required)`
+                          : `Save & Learn ${veBaseName} v${veNextVersion} (${versionCost} AP)`}
+                      </span>
+                    </button>
+                  );
+                })()}
               </form>
             </div>
           )}
