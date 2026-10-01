@@ -30,7 +30,7 @@ export interface SupabaseTrait {
   stat_hook?: StatHookDefinition | null;
   genres: string[];
   discipline?: string;
-  path?: string;
+  path?: string[] | string;
   sets?: string[];
   kit?: string;
   table_group?: string;
@@ -60,7 +60,7 @@ export interface SupabasePath {
   ap_cost?: number;
   description?: string;
   genres?: string[];
-  linked_elements?: PathLinkedElement[];
+  linked_elements?: never;
   owner?: string;
   created_at?: string;
   updated_at?: string;
@@ -81,7 +81,8 @@ export interface SupabaseSet {
   name: string;
   category: SetCategory;
   description?: string;
-  paths?: string[];
+  path?: string[];
+  paths?: string[]; // Deprecated backward compatibility alias
   genres?: string[];
   items_count?: number;
   owner?: string;
@@ -178,7 +179,7 @@ export interface TraitItem {
   effect?: string;
   is_hidden?: boolean; // When true, hidden from main CS card view
   source?: string;
-  path?: string;
+  path?: string[] | string;
   sets?: string[];
   kit?: string;
   table_group?: string;
@@ -216,7 +217,7 @@ export interface AbilitySlot {
   ready?: PowerReadyType;
   is_readied?: boolean;
   notes?: string;
-  path?: string;
+  path?: string[] | string;
   kit?: string;
   table_group?: string;
   discipline?: string;
@@ -255,7 +256,7 @@ export interface WeaponSlot {
   effect?: string;
   notes?: string;
   ap_cost?: number;
-  path?: string;
+  path?: string[] | string;
   sets?: string[];
   requirement?: string;
   variantType?: 'Melee' | 'Hurled' | 'Shot';
@@ -280,7 +281,7 @@ export interface ArmorData {
   effect?: string;
   notes?: string;
   ap_cost?: number;
-  path?: string;
+  path?: string[] | string;
   sets?: string[];
   ref_id?: number | string;
   ref_table?: EntityCatalogTable;
@@ -298,7 +299,7 @@ export interface SupabaseArmor {
   cost: string;
   domain?: EquipmentDomain | string;
   discipline?: string;
-  path?: string;
+  path?: string[] | string;
   sets?: string[];
   kit?: string;
   bundle?: string;
@@ -448,7 +449,7 @@ export interface SupabaseShield {
   mr: string;
   domain?: EquipmentDomain | string;
   discipline?: string;
-  path?: string;
+  path?: string[] | string;
   sets?: string[];
   kit?: string;
   bundle?: string;
@@ -514,7 +515,7 @@ export interface SupabaseWeapon {
   cost: string;
   domain?: EquipmentDomain | string;
   discipline?: string;
-  path?: string;
+  path?: string[] | string;
   sets?: string[];
   kit?: string;
   bundle?: string;
@@ -624,7 +625,7 @@ export interface ShieldData {
   mr_adjustment?: string;
   notes?: string;
   ap_cost?: number;
-  path?: string;
+  path?: string[] | string;
   sets?: string[];
   ref_id?: number | string;
   ref_table?: EntityCatalogTable;
@@ -859,7 +860,7 @@ export interface Power {
   stat_hook?: any;
   version?: number;
   base_name?: string;
-  path?: string;
+  path?: string[] | string;
   sets?: string[];
   domain?: string;
   owner?: string;
@@ -1263,7 +1264,7 @@ export interface SupabaseSkill {
   sets?: string[];
   genres: string[];
   discipline?: string;
-  path?: string;
+  path?: string[] | string;
   kit?: string;
   table_group?: string;
   notes?: string;

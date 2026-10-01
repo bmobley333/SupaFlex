@@ -157,8 +157,9 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
     const setInCatalog = setsCatalog.find(
       (s) => cleanPathName(normalizeSkillsetName(s.name)).toLowerCase().trim() === clean
     );
-    if (setInCatalog?.paths && Array.isArray(setInCatalog.paths)) {
-      for (const p of setInCatalog.paths) {
+    const setPaths = ((setInCatalog as any)?.path || (setInCatalog as any)?.paths || []) as string[];
+    if (Array.isArray(setPaths)) {
+      for (const p of setPaths) {
         if (knownPaths.has(cleanPathName(p).toLowerCase().trim())) return true;
       }
     }
@@ -199,22 +200,8 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
       }
     }
 
-    // 3. Check pathsCatalog linked_elements for direct skill element in knownPaths
-    for (const p of paths) {
-      const cleanPath = cleanPathName(p.name).toLowerCase().trim();
-      if (knownPaths.has(cleanPath)) {
-        const elements = Array.isArray(p.linked_elements) ? p.linked_elements : [];
-        for (const el of elements) {
-          const elType = el.type || el.element_type;
-          if (elType === 'skill' && el.name && el.name.toLowerCase().trim() === cleanName) {
-            return true;
-          }
-        }
-      }
-    }
-
     return false;
-  }, [isSkillsetInPath, skills, knownPaths, paths]);
+  }, [isSkillsetInPath, skills, knownPaths]);
 
   const getSkillApCost = useCallback((skillName: string, parentSets?: string[]): number => {
     if (isSkillFree(skillName, parentSets)) return 0;

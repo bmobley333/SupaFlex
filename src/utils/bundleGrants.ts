@@ -142,18 +142,22 @@ export const applyKitTraitGrantsToSheet = (
     const existingTraits = updated.traits_quirks || [];
     const newTraits: TraitQuirkItem[] = grants.traits
       .filter((gt) => !existingTraits.some((et) => et.name.toLowerCase() === gt.name.toLowerCase()))
-      .map((gt) => ({
-        name: gt.name,
-        effect: gt.effect || '',
-        notes: gt.notes || '',
-        stat_hook: gt.stat_hook,
-        kit: gt.path || gt.kit || gt.table_group || `${kitLabel} {Free}`,
-        table_group: gt.path || gt.kit || gt.table_group || `${kitLabel} {Free}`,
-        source: `${cleanPathName(gt.path || kitLabel)} {Free}`,
-        path: gt.path,
-        ap_cost: 0,
-        is_hidden: false,
-      }));
+      .map((gt) => {
+        const firstPath = Array.isArray(gt.path) ? gt.path[0] : gt.path;
+        const pathStr = firstPath || gt.kit || gt.table_group || `${kitLabel} {Free}`;
+        return {
+          name: gt.name,
+          effect: gt.effect || '',
+          notes: gt.notes || '',
+          stat_hook: gt.stat_hook,
+          kit: pathStr,
+          table_group: pathStr,
+          source: `${cleanPathName(firstPath || kitLabel)} {Free}`,
+          path: gt.path,
+          ap_cost: 0,
+          is_hidden: false,
+        };
+      });
 
     if (newTraits.length > 0) {
       updated.traits_quirks = [...existingTraits, ...newTraits];
@@ -350,8 +354,16 @@ export const collectPathAndSetGrants = (
   // 1. Identify all Sets that are {Free} on this path
   const freeSets = getCharacterFreeSets(knownPathSet, setsCatalog, pathsCatalog);
 
-  // 2. Identify all direct abilities that are {Free} on this path in linked_elements
-  const freeElementNames = getCharacterFreeElementNames(knownPathSet, pathsCatalog);
+  // 2. Identify all direct abilities that are {Free} on this path
+  const allCatalogItems = [
+    ...catalogPowers,
+    ...catalogSkills,
+    ...catalogTraits,
+    ...catalogWeapons,
+    ...catalogArmor,
+    ...catalogShields,
+  ];
+  const freeElementNames = getCharacterFreeElementNames(knownPathSet, allCatalogItems);
 
   // 3. Harvest legacy trait grants (Powers, Skills, Traits with {Free}/{Trait})
   const baseGrants = collectKitTraitGrants(cleanPath, characterLevel, catalogPowers, catalogSkills, catalogTraits);
@@ -490,18 +502,22 @@ export const applyPathAndSetGrantsToSheet = (
     const existingTraits = updated.traits_quirks || [];
     const newTraits: TraitQuirkItem[] = grants.traits
       .filter((gt) => !existingTraits.some((et) => et.name.toLowerCase() === gt.name.toLowerCase()))
-      .map((gt) => ({
-        name: gt.name,
-        effect: gt.effect || '',
-        notes: gt.notes || '',
-        stat_hook: gt.stat_hook,
-        kit: gt.path || gt.kit || gt.table_group || `${pathLabel} {Free}`,
-        table_group: gt.path || gt.kit || gt.table_group || `${pathLabel} {Free}`,
-        source: `${cleanPathName(gt.path || pathLabel)} {Free}`,
-        path: gt.path,
-        ap_cost: 0,
-        is_hidden: false,
-      }));
+      .map((gt) => {
+        const firstPath = Array.isArray(gt.path) ? gt.path[0] : gt.path;
+        const pathStr = firstPath || gt.kit || gt.table_group || `${pathLabel} {Free}`;
+        return {
+          name: gt.name,
+          effect: gt.effect || '',
+          notes: gt.notes || '',
+          stat_hook: gt.stat_hook,
+          kit: pathStr,
+          table_group: pathStr,
+          source: `${cleanPathName(firstPath || pathLabel)} {Free}`,
+          path: gt.path,
+          ap_cost: 0,
+          is_hidden: false,
+        };
+      });
 
     if (newTraits.length > 0) {
       updated.traits_quirks = [...existingTraits, ...newTraits];

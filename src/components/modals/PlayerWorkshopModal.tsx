@@ -1692,17 +1692,15 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setPathCategory(official.category || 'General');
     setPathCategoryNewText('');
     setPathDescription(official.description || '');
-    const resolvedElements = Array.isArray(official.linked_elements) && official.linked_elements.length > 0
-      ? official.linked_elements
-      : resolvePathElementsFromCatalogs(official.name, {
-          setsCatalog,
-          powers,
-          skills,
-          traits,
-          weaponsCatalog,
-          armorCatalog,
-          shieldsCatalog,
-        });
+    const resolvedElements = resolvePathElementsFromCatalogs(official.name, {
+      setsCatalog,
+      powers,
+      skills,
+      traits,
+      weaponsCatalog,
+      armorCatalog,
+      shieldsCatalog,
+    });
     setLinkedElements(resolvedElements);
     setSelectedGenres(official.genres && official.genres.length > 0 ? official.genres : ['Medieval']);
     setActivePathSelection({ type: 'path_root' });
@@ -4215,20 +4213,16 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     if (Array.isArray(sourcePath.genres) && sourcePath.genres.length > 0) {
       setSelectedGenres(sourcePath.genres);
     }
-    if (Array.isArray(sourcePath.linked_elements) && sourcePath.linked_elements.length > 0) {
-      setLinkedElements(JSON.parse(JSON.stringify(sourcePath.linked_elements)));
-    } else {
-      const resolved = resolvePathElementsFromCatalogs(sourcePath.name, {
-        setsCatalog,
-        powers,
-        skills,
-        traits,
-        weaponsCatalog,
-        armorCatalog,
-        shieldsCatalog,
-      });
-      setLinkedElements(resolved);
-    }
+    const resolved = resolvePathElementsFromCatalogs(sourcePath.name, {
+      setsCatalog,
+      powers,
+      skills,
+      traits,
+      weaponsCatalog,
+      armorCatalog,
+      shieldsCatalog,
+    });
+    setLinkedElements(resolved);
   };
 
   const handleSaveAndLinkCustomAbility = async () => {
@@ -8306,7 +8300,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         <option value="" disabled>-- Clone from Path... --</option>
                         {(paths || []).map((p) => (
                           <option key={p.id || p.name} value={p.id || p.name}>
-                            🧭 {p.name} ({p.category || 'General'}{Array.isArray(p.linked_elements) ? ` • ${p.linked_elements.length}` : ''})
+                            🧭 {p.name} ({p.category || 'General'})
                           </option>
                         ))}
                       </select>

@@ -119,7 +119,7 @@ export const reconcileAbilitiesOnPathAdded = (
   let totalRefund = 0;
   const refundLogDetails: string[] = [];
 
-  const isFreeGrant = (rawKitOrPath?: string | null, rawSource?: string | null, name?: string, itemSets?: string[] | null): boolean => {
+  const isFreeGrant = (rawKitOrPath?: string | string[] | null, rawSource?: string | null, name?: string, itemSets?: string[] | null): boolean => {
     if (freeGrantNames && name && freeGrantNames.has(name.toLowerCase().trim())) {
       return true;
     }
@@ -733,11 +733,13 @@ export const reconcileCharacterFreeTraits = (
       const rawPath = trait.path || trait.kit || trait.table_group || '';
       if (!rawPath) continue;
 
-      const lowerRaw = rawPath.toLowerCase();
-      const isFree = lowerRaw.includes('{free}') || lowerRaw.includes('{perk}') || lowerRaw.includes('{trait}');
+      const itemPaths = parseItemPaths(rawPath);
+      const isFree = itemPaths.some((p) => {
+        const lower = p.toLowerCase();
+        return lower.includes('{free}') || lower.includes('{perk}') || lower.includes('{trait}');
+      });
       if (!isFree) continue;
 
-      const itemPaths = parseItemPaths(rawPath);
       const matchesKnown = itemPaths.some((p) => {
         for (const kp of knownPaths) {
           if (isPathStringMatch(p, kp)) {

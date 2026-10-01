@@ -271,12 +271,29 @@ export function updateCharacterSheetCanonicalItem(
       }
       // Migrate path references in power slots
       const updatePathRef = (slot: AbilitySlot): AbilitySlot => {
-        if (slot.path && slot.path.toLowerCase().includes(cleanOldName)) {
-          wasModified = true;
-          return {
-            ...slot,
-            path: slot.path.replace(new RegExp(oldName, 'gi'), cleanNewName),
-          };
+        if (!slot.path) return slot;
+        if (Array.isArray(slot.path)) {
+          let modified = false;
+          const nextArr = slot.path.map((p) => {
+            if (p.toLowerCase().includes(cleanOldName)) {
+              modified = true;
+              return p.replace(new RegExp(oldName, 'gi'), cleanNewName);
+            }
+            return p;
+          });
+          if (modified) {
+            wasModified = true;
+            return { ...slot, path: nextArr };
+          }
+          return slot;
+        } else if (typeof slot.path === 'string') {
+          if (slot.path.toLowerCase().includes(cleanOldName)) {
+            wasModified = true;
+            return {
+              ...slot,
+              path: slot.path.replace(new RegExp(oldName, 'gi'), cleanNewName),
+            };
+          }
         }
         return slot;
       };

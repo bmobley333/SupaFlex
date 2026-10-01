@@ -145,7 +145,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   const knownPaths = useMemo(() => getCharacterKnownPaths(activeCharacter), [activeCharacter]);
   const knownSets = useMemo(() => getCharacterKnownSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
   const freeSets = useMemo(() => getCharacterFreeSets(knownPaths, setsCatalog, paths), [knownPaths, setsCatalog, paths]);
-  const freeElementNames = useMemo(() => getCharacterFreeElementNames(knownPaths, paths), [knownPaths, paths]);
+  const freeElementNames = useMemo(() => getCharacterFreeElementNames(knownPaths, stockRulesCatalog), [knownPaths, stockRulesCatalog]);
 
   const isTraitInPath = useCallback((rule: SupabaseTrait | TraitItem): boolean => {
     const pathVal = rule.path || rule.kit || rule.table_group;
@@ -176,8 +176,11 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
 
     // Trait MUST be in character's known paths to be inherent
     if (!isTraitInPath(rule)) return false;
-    const pathStr = (rule.path || rule.kit || rule.table_group || (rule as any).source || '').toLowerCase();
-    return pathStr.includes('{free}') || pathStr.includes('{perk}') || pathStr.includes('{trait}');
+    const pathsList = parseItemPaths(rule.path || rule.kit || rule.table_group || (rule as any).source);
+    return pathsList.some((p) => {
+      const lower = p.toLowerCase();
+      return lower.includes('{free}') || lower.includes('{perk}') || lower.includes('{trait}');
+    });
   }, [isTraitInPath, freeElementNames, freeSets]);
 
   const getTraitApCost = useCallback((rule: SupabaseTrait | TraitItem): number => {

@@ -61,36 +61,18 @@ export const getCharacterKnownPaths = (character: Character | null | undefined):
 export const getCharacterKnownSets = (
   knownPaths: Set<string>,
   setsCatalog: SupabaseSet[] = [],
-  pathsCatalog: SupabasePath[] = []
+  _pathsCatalog?: SupabasePath[]
 ): Set<string> => {
   const set = new Set<string>();
   if (!knownPaths || knownPaths.size === 0) return set;
 
-  // 1. From setsCatalog: s.paths contains any known path
   if (setsCatalog && setsCatalog.length > 0) {
     for (const s of setsCatalog) {
-      if (s.paths && Array.isArray(s.paths)) {
-        for (const p of s.paths) {
-          if (knownPaths.has(cleanPathName(p).toLowerCase().trim())) {
-            set.add(cleanPathName(s.name).toLowerCase().trim());
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  // 2. From pathsCatalog: path.linked_elements has { type: 'set', name: setName }
-  if (pathsCatalog && pathsCatalog.length > 0) {
-    for (const p of pathsCatalog) {
-      const cleanPath = cleanPathName(p.name).toLowerCase().trim();
-      if (knownPaths.has(cleanPath)) {
-        const elements = Array.isArray(p.linked_elements) ? p.linked_elements : [];
-        for (const el of elements) {
-          const elType = el.type || el.element_type;
-          if (elType === 'set' && el.name) {
-            set.add(cleanPathName(el.name).toLowerCase().trim());
-          }
+      const pathList = (s.path || s.paths || []) as string[];
+      for (const p of pathList) {
+        if (knownPaths.has(cleanPathName(p).toLowerCase().trim())) {
+          set.add(cleanPathName(s.name).toLowerCase().trim());
+          break;
         }
       }
     }
@@ -106,42 +88,21 @@ export const getCharacterKnownSets = (
 export const getCharacterFreeSets = (
   knownPaths: Set<string>,
   setsCatalog: SupabaseSet[] = [],
-  pathsCatalog: SupabasePath[] = []
+  _pathsCatalog?: SupabasePath[]
 ): Set<string> => {
   const freeSets = new Set<string>();
   if (!knownPaths || knownPaths.size === 0) return freeSets;
 
-  // 1. From setsCatalog: s.paths has a path with {Free} tag matching a known path
   if (setsCatalog && setsCatalog.length > 0) {
     for (const s of setsCatalog) {
-      if (s.paths && Array.isArray(s.paths)) {
-        for (const p of s.paths) {
-          const lower = p.toLowerCase();
-          if (lower.includes('{free}') || lower.includes('{free1}') || lower.includes('{trait}')) {
-            const clean = cleanPathName(p).toLowerCase().trim();
-            if (knownPaths.has(clean)) {
-              freeSets.add(cleanPathName(s.name).toLowerCase().trim());
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // 2. From pathsCatalog: path.linked_elements has { type: 'set', tag: 'Free' }
-  if (pathsCatalog && pathsCatalog.length > 0) {
-    for (const p of pathsCatalog) {
-      const cleanPath = cleanPathName(p.name).toLowerCase().trim();
-      if (knownPaths.has(cleanPath)) {
-        const elements = Array.isArray(p.linked_elements) ? p.linked_elements : [];
-        for (const el of elements) {
-          const elType = el.type || el.element_type;
-          if (elType === 'set' && el.name) {
-            const isFree = el.tag === 'Free' || el.isFree === true || el.is_free === true;
-            if (isFree) {
-              freeSets.add(cleanPathName(el.name).toLowerCase().trim());
-            }
+      const pathList = (s.path || s.paths || []) as string[];
+      for (const p of pathList) {
+        const lower = p.toLowerCase();
+        if (lower.includes('{free}') || lower.includes('{free1}') || lower.includes('{trait}')) {
+          const clean = cleanPathName(p).toLowerCase().trim();
+          if (knownPaths.has(clean)) {
+            freeSets.add(cleanPathName(s.name).toLowerCase().trim());
+            break;
           }
         }
       }
@@ -153,27 +114,27 @@ export const getCharacterFreeSets = (
 
 /**
  * Resolves direct individual abilities (Powers, Skills, Traits, Weapons, Armor, Shields)
- * marked {Free} in the linked_elements of a character's known Paths.
+ * marked {Free} in the path of a character's known Paths.
  * Returns a Set of lowercased, cleaned element names for fast O(1) lookup.
  */
 export const getCharacterFreeElementNames = (
   knownPaths: Set<string>,
-  pathsCatalog: SupabasePath[] = []
+  itemsCatalog?: any[]
 ): Set<string> => {
   const freeElements = new Set<string>();
-  if (!knownPaths || knownPaths.size === 0 || !pathsCatalog) return freeElements;
+  if (!knownPaths || knownPaths.size === 0 || !itemsCatalog) return freeElements;
 
-  for (const p of pathsCatalog) {
-    const cleanPath = cleanPathName(p.name).toLowerCase().trim();
-    if (knownPaths.has(cleanPath)) {
-      const elements = Array.isArray(p.linked_elements) ? p.linked_elements : [];
-      for (const el of elements) {
-        const elType = el.type || el.element_type;
-        if (elType !== 'set' && el.name) {
-          const isFree = el.tag === 'Free' || el.isFree === true || el.is_free === true;
-          if (isFree) {
-            freeElements.add(cleanPathName(el.name).toLowerCase().trim());
-          }
+  for (const item of itemsCatalog) {
+    if (!item) continue;
+    const pathVal = item.path || item.kit || item.table_group;
+    const pathsList = parseItemPaths(pathVal);
+    for (const p of pathsList) {
+      const lower = p.toLowerCase();
+      if (lower.includes('{free}') || lower.includes('{free1}') || lower.includes('{trait}')) {
+        const clean = cleanPathName(p).toLowerCase().trim();
+        if (knownPaths.has(clean) && item.name) {
+          freeElements.add(cleanPathName(item.name).toLowerCase().trim());
+          break;
         }
       }
     }
@@ -186,8 +147,20 @@ export const getCharacterFreeElementNames = (
  * Parses raw path values (which can be a single string, comma-separated string, or JSON array string)
  * into a list of normalized, cleaned path names.
  */
-export const parseItemPaths = (rawPath?: string | null): string[] => {
-  if (!rawPath || rawPath === 'None' || rawPath.trim() === '') {
+export const parseItemPaths = (rawPath?: string | string[] | null): string[] => {
+  if (!rawPath) {
+    return [];
+  }
+
+  if (Array.isArray(rawPath)) {
+    return rawPath.map((p) => cleanPathName(String(p)).trim()).filter(Boolean);
+  }
+
+  if (typeof rawPath !== 'string') {
+    return [];
+  }
+
+  if (rawPath === 'None' || rawPath.trim() === '') {
     return [];
   }
 
@@ -251,7 +224,7 @@ export const isPathStringMatch = (
  * Items with NO path specified and NO sets specified (None, empty, General, Universal) are considered universally In-Path.
  */
 export const isItemInPath = (
-  rawPath: string | null | undefined,
+  rawPath: string | string[] | null | undefined,
   knownPaths: Set<string>,
   itemSets?: string[] | null,
   knownSets?: Set<string>
@@ -354,7 +327,7 @@ export const isItemRequirementMet = (
  * 4 AP: Out-of-Path & Unmet Requirement (~Path, ~Req)
  */
 export const evaluateItemAp = (
-  rawPath: string | null | undefined,
+  rawPath: string | string[] | null | undefined,
   requirementStr: string | null | undefined,
   attributeDice: Record<string, string>,
   knownPaths: Set<string>,
@@ -396,21 +369,18 @@ export const evaluateItemAp = (
     }
   }
   if (!isFree && inPath && rawPath) {
-    const rawLower = rawPath.toLowerCase();
-    if (rawLower.includes('{free}') || rawLower.includes('{free1}') || rawLower.includes('{perk}') || rawLower.includes('{trait}')) {
-      const paths = parseItemPaths(rawPath);
-      for (const p of paths) {
-        const pLower = p.toLowerCase();
-        if (pLower.includes('{free}') || pLower.includes('{free1}') || pLower.includes('{perk}') || pLower.includes('{trait}')) {
-          for (const kp of knownPaths) {
-            if (isPathStringMatch(p, kp)) {
-              isFree = true;
-              break;
-            }
+    const paths = parseItemPaths(rawPath);
+    for (const p of paths) {
+      const pLower = p.toLowerCase();
+      if (pLower.includes('{free}') || pLower.includes('{free1}') || pLower.includes('{perk}') || pLower.includes('{trait}')) {
+        for (const kp of knownPaths) {
+          if (isPathStringMatch(p, kp)) {
+            isFree = true;
+            break;
           }
         }
-        if (isFree) break;
       }
+      if (isFree) break;
     }
   }
 
@@ -507,25 +477,31 @@ export const matchesApCategoryFilter = (
  * returns 'Shanask (mso) {Free}'.
  */
 export const getCharacterMatchingPath = (
-  rawPath: string | null | undefined,
+  rawPath: string | string[] | null | undefined,
   character: Character | null | undefined
 ): string => {
-  if (!rawPath || !rawPath.trim() || rawPath === 'None') return 'General';
+  if (!rawPath) return 'General';
 
-  const trimmed = rawPath.trim();
   let entries: string[] = [];
 
-  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) {
-        entries = parsed.map((p) => String(p).trim()).filter(Boolean);
-      }
-    } catch (_) {}
-  }
+  if (Array.isArray(rawPath)) {
+    entries = rawPath.map((p) => String(p).trim()).filter(Boolean);
+  } else if (typeof rawPath === 'string') {
+    const trimmed = rawPath.trim();
+    if (!trimmed || trimmed === 'None') return 'General';
 
-  if (entries.length === 0) {
-    entries = trimmed.split(/[,;]/).map((p) => p.trim()).filter(Boolean);
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          entries = parsed.map((p) => String(p).trim()).filter(Boolean);
+        }
+      } catch (_) {}
+    }
+
+    if (entries.length === 0) {
+      entries = trimmed.split(/[,;]/).map((p) => p.trim()).filter(Boolean);
+    }
   }
 
   if (entries.length === 0) return 'General';
@@ -608,7 +584,7 @@ export const resolvePathElementsFromCatalogs = (
   // 1. Sets
   (catalogs.setsCatalog || []).forEach((s) => {
     if (!s || !s.name) return;
-    const entries = extractPathEntriesWithTags(s.paths);
+    const entries = extractPathEntriesWithTags(s.path || s.paths);
     const match = entries.find((e) => isPathStringMatch(e.cleanPath, cleanTarget));
     if (match) {
       const elId = `set_${s.id || s.name}`;

@@ -3230,18 +3230,19 @@ export const gameApi = {
           .forEach((el) => prevSetNames.add(el.name.trim().toLowerCase()));
       }
 
-      // 3. For any sets that were unlinked: strip this path from set.paths
+      // 3. For any sets that were unlinked: strip this path from set.path
       for (const oldLowerName of prevSetNames) {
         if (!currentSetMap.has(oldLowerName)) {
           const { data: setItem, error: fetchErr } = await supabase
             .from('sets')
-            .select('id, paths')
+            .select('id, path')
             .ilike('name', oldLowerName)
             .maybeSingle();
 
-          if (!fetchErr && setItem && Array.isArray(setItem.paths)) {
-            const nextPaths = setItem.paths.filter((p: string) => !isPathStringMatch(p, cleanPath));
-            await supabase.from('sets').update({ paths: nextPaths }).eq('id', setItem.id);
+          const currPathArray: string[] = (setItem as any)?.path || (setItem as any)?.paths || [];
+          if (!fetchErr && setItem && Array.isArray(currPathArray)) {
+            const nextPaths = currPathArray.filter((p: string) => !isPathStringMatch(p, cleanPath));
+            await supabase.from('sets').update({ path: nextPaths }).eq('id', setItem.id);
           }
         }
       }
@@ -3250,19 +3251,23 @@ export const gameApi = {
       for (const [, setInfo] of currentSetMap.entries()) {
         const { data: setItem, error: fetchErr } = await supabase
           .from('sets')
-          .select('id, paths')
+          .select('id, path')
           .ilike('name', setInfo.name)
           .maybeSingle();
 
         if (!fetchErr && setItem) {
-          const existingPaths: string[] = Array.isArray(setItem.paths) ? setItem.paths : [];
+          const existingPaths: string[] = Array.isArray((setItem as any).path)
+            ? (setItem as any).path
+            : Array.isArray((setItem as any).paths)
+            ? (setItem as any).paths
+            : [];
           const targetEntry = setInfo.tag === 'Free' ? `${cleanPath} {Free}` : cleanPath;
 
           // Remove any existing variant of this path
           const nextPaths = existingPaths.filter((p: string) => !isPathStringMatch(p, cleanPath));
           nextPaths.push(targetEntry);
 
-          await supabase.from('sets').update({ paths: nextPaths }).eq('id', setItem.id);
+          await supabase.from('sets').update({ path: nextPaths }).eq('id', setItem.id);
         }
       }
 
@@ -3356,10 +3361,8 @@ export const gameApi = {
               const nextPaths = itemPaths.filter((p) => !isPathStringMatch(p, cleanPath));
               const newPathVal =
                 nextPaths.length === 0
-                  ? table === 'powers' ? 'General' : ''
-                  : nextPaths.length === 1
-                  ? nextPaths[0]
-                  : JSON.stringify(nextPaths);
+                  ? table === 'powers' ? ['General'] : []
+                  : nextPaths;
               await supabase.from(table).update({ path: newPathVal }).eq('id', item.id);
             }
           }
@@ -3376,7 +3379,7 @@ export const gameApi = {
             .maybeSingle();
 
           if (!fetchErr && item) {
-            const existingRaw = item.path || '';
+            const existingRaw = item.path || [];
             const existingPaths = parseItemPaths(existingRaw);
             const targetEntry = info.tag === 'Free' ? `${cleanPath} {Free}` : cleanPath;
 
@@ -3392,8 +3395,7 @@ export const gameApi = {
             if (!alreadyHasExact) {
               const nextPaths = existingPaths.filter((p) => !isPathStringMatch(p, cleanPath));
               nextPaths.push(targetEntry);
-              const newPathVal = nextPaths.length === 1 ? nextPaths[0] : JSON.stringify(nextPaths);
-              await supabase.from(table).update({ path: newPathVal }).eq('id', item.id);
+              await supabase.from(table).update({ path: nextPaths }).eq('id', item.id);
             }
           }
         }
@@ -3407,9 +3409,11 @@ export const gameApi = {
   },
 
   async saveCanonicalPath(payload: any): Promise<any> {
+    const cleanPayload = { ...payload };
+    delete cleanPayload.linked_elements;
     const { data, error } = await supabase
       .from('paths')
-      .insert([{ ...payload, owner: payload.owner || 'Designer', created_at: new Date().toISOString() }])
+      .insert([{ ...cleanPayload, owner: cleanPayload.owner || 'Designer', created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -3425,34 +3429,26 @@ export const gameApi = {
   },
 
   async updateCanonicalPath(id: string | number, payload: any): Promise<any> {
-    // Fetch existing path first to get previous linked_elements
     const { data: existing } = await supabase
       .from('paths')
-      .select('name, linked_elements')
+      .select('name')
       .eq('id', id)
       .maybeSingle();
 
+    const cleanPayload = { ...payload };
+    delete cleanPayload.linked_elements;
     const { data, error } = await supabase
       .from('paths')
-      .update(payload)
+      .update(cleanPayload)
       .eq('id', id)
       .select('*')
       .single();
     if (error) throw error;
 
     if (data && Array.isArray(payload.linked_elements)) {
-      const prevElements = existing ? existing.linked_elements : undefined;
       await Promise.all([
-        this.syncPathLinkedSets(
-          data.name || (existing ? existing.name : ''),
-          payload.linked_elements,
-          prevElements
-        ),
-        this.syncPathLinkedIndividuals(
-          data.name || (existing ? existing.name : ''),
-          payload.linked_elements,
-          prevElements
-        ),
+        this.syncPathLinkedSets(data.name || (existing ? existing.name : ''), payload.linked_elements),
+        this.syncPathLinkedIndividuals(data.name || (existing ? existing.name : ''), payload.linked_elements),
       ]);
     }
     await this.updateCatalogBeacon();
@@ -3460,21 +3456,9 @@ export const gameApi = {
   },
 
   async deleteCanonicalPath(id: string | number): Promise<boolean> {
-    const { data: existing } = await supabase
-      .from('paths')
-      .select('name, linked_elements')
-      .eq('id', id)
-      .maybeSingle();
-
     const { error } = await supabase.from('paths').delete().eq('id', id);
     if (error) throw error;
 
-    if (existing && existing.name) {
-      await Promise.all([
-        this.syncPathLinkedSets(existing.name, [], existing.linked_elements),
-        this.syncPathLinkedIndividuals(existing.name, [], existing.linked_elements),
-      ]);
-    }
     await this.updateCatalogBeacon();
     return true;
   },
@@ -3490,7 +3474,11 @@ export const gameApi = {
       updated_at: new Date().toISOString(),
     };
     if (payload.description !== undefined) cleanPayload.description = payload.description;
-    if (payload.paths !== undefined) cleanPayload.paths = payload.paths;
+    if (payload.path !== undefined) {
+      cleanPayload.path = payload.path;
+    } else if (payload.paths !== undefined) {
+      cleanPayload.path = payload.paths;
+    }
     if (payload.genres !== undefined) cleanPayload.genres = payload.genres;
 
     const { data, error } = await supabase
@@ -3510,7 +3498,11 @@ export const gameApi = {
     if (payload.name !== undefined) cleanPayload.name = payload.name.trim();
     if (payload.category !== undefined) cleanPayload.category = payload.category;
     if (payload.description !== undefined) cleanPayload.description = payload.description;
-    if (payload.paths !== undefined) cleanPayload.paths = payload.paths;
+    if (payload.path !== undefined) {
+      cleanPayload.path = payload.path;
+    } else if (payload.paths !== undefined) {
+      cleanPayload.path = payload.paths;
+    }
     if (payload.genres !== undefined) cleanPayload.genres = payload.genres;
     if (payload.owner !== undefined) cleanPayload.owner = payload.owner;
 
