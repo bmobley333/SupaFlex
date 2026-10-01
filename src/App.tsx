@@ -614,6 +614,9 @@ export default function App() {
                 setShowUnifiedLaunchHubModal(true);
               }}
             />
+
+            {/* 🌐 Compact Reactive Sync Status Pill */}
+            <SyncStatusPillSwitch />
           </div>
 
           {/* Center Zone: S-Tier Glassmorphic GM Screen (GM Mode) vs Prominent Hero Title (Player Mode) */}
@@ -753,8 +756,6 @@ export default function App() {
                 )}
               </div>
             )}
-
-            <SyncStatusPillSwitch />
           </div>
         </div>
 
