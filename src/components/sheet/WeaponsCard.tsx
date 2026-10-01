@@ -10,11 +10,18 @@ import {
   WeaponVariantOption,
   splitWeaponIntoVariants,
   calculateAvailableAp,
+  SimpleGearItem,
 } from '../../types/game';
 
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { compareMsoItems, compareMsoOptions, isMsoEntry } from '../../utils/kitUtils';
+import { parseCostToSilver, deductFundsWithChange } from '../../utils/moneyUtils';
+import {
+  getFunctionsForGearItem,
+  isModCompatibleWithItem,
+  reconcileCharacterVaultWithGear,
+} from '../../utils/gearFunctionSync';
 import {
   getCharacterKnownPaths,
   getCharacterKnownSets,
@@ -90,7 +97,18 @@ const calculateWeaponDmg = (name: string, mhsCategory: string, attributeDice: Re
 export const WeaponsCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter, recordApExpenditure, weaponsCatalog: storeWeapons, paths, setsCatalog } = useCharacterStore();
+  const {
+    activeCharacter,
+    updateActiveSheetData,
+    saveActiveCharacter,
+    recordApExpenditure,
+    weaponsCatalog: storeWeapons,
+    paths,
+    setsCatalog,
+    functionsCatalog,
+    modsCatalog,
+    setExoticGearManagerModalOpen,
+  } = useCharacterStore();
   const rawWeapons: WeaponSlot[] = activeCharacter?.sheet_data?.weapons || [];
   const weapons: WeaponSlot[] = useMemo(() => {
     return rawWeapons.filter((w) => w && w.name && w.name.trim() !== '');
@@ -102,6 +120,22 @@ export const WeaponsCard: React.FC = () => {
     magic: 'd4',
     moxie: 'd4',
   }) as Record<string, string>;
+
+  const gold = activeCharacter?.sheet_data?.gold || 0;
+  const silver = activeCharacter?.sheet_data?.silver || 0;
+  const totalAvailableSilver = gold * 100 + silver;
+
+  const isWeaponExotic = useCallback(
+    (wep: { name: string; notes?: string }) => {
+      const fns = getFunctionsForGearItem(wep.name, functionsCatalog || []);
+      if (fns.length > 0) return true;
+      const mods = (modsCatalog || []).filter((m) =>
+        isModCompatibleWithItem(m, { name: wep.name, notes: wep.notes } as any)
+      );
+      return mods.length > 0;
+    },
+    [functionsCatalog, modsCatalog]
+  );
 
   const [showManageModal, setShowManageModal] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -225,7 +259,7 @@ export const WeaponsCard: React.FC = () => {
     [knownPaths, knownSets, freeSets, freeElementNames, attributeDice]
   );
 
-  // Equip all variants of a weapon to the character sheet
+  // Acquire (learn proficiency & buy unowned physical gear) for a weapon
   const handleEquipWeapon = (weapon: SupabaseWeapon, variantsToEquip: WeaponVariantOption[]) => {
     const evalResult = getWeaponEvalResult(weapon);
 
@@ -236,9 +270,51 @@ export const WeaponsCard: React.FC = () => {
       if (!confirmed) return;
     }
 
+    const currentGear = activeCharacter?.sheet_data?.simple_gear || [];
+    const isOwnedInGear = currentGear.some(
+      (g) => g.name.trim().toLowerCase() === weapon.name.trim().toLowerCase()
+    );
+
+    const costStr = weapon.cost || '0s';
+    const costInSilver = parseCostToSilver(costStr);
+    const canAffordMoney = totalAvailableSilver >= costInSilver;
+
     const apCost = evalResult.apCost;
-    const canAfford = availableAp >= apCost;
-    const isSkilled = canAfford;
+    const canAffordAp = availableAp >= apCost;
+    const isSkilled = canAffordAp;
+
+    let proceedWithoutBuying = false;
+    if (!isOwnedInGear && costInSilver > 0 && !canAffordMoney) {
+      let shortageMsg = `⚠️ Insufficient Funds to Buy "${weapon.name}"!\n\n` +
+        `• Purchase Cost: ${costStr} (${costInSilver}s)\n` +
+        `• Your Wallet: ${gold}g ${silver}s (${totalAvailableSilver}s)\n` +
+        `• Shortfall: ${costInSilver - totalAvailableSilver}s\n\n`;
+      if (!canAffordAp) {
+        shortageMsg += `• Note: You also only have ${availableAp} AP (requires ${apCost} AP), so this skill will be learned as Unskilled.\n\n`;
+      }
+      shortageMsg += `Would you like to learn the weapon skill anyway WITHOUT purchasing the physical copy?`;
+
+      const userAgrees = window.confirm(shortageMsg);
+      if (!userAgrees) return;
+      proceedWithoutBuying = true;
+    }
+
+    const shouldBuyGear = !isOwnedInGear && costInSilver > 0 && canAffordMoney && !proceedWithoutBuying;
+    const deduction = shouldBuyGear ? deductFundsWithChange(gold, silver, costInSilver) : null;
+
+    const newGearItem: SimpleGearItem | null = shouldBuyGear
+      ? {
+          id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          name: weapon.name,
+          category: 'Weapons',
+          cost: costStr,
+          qty: 1,
+          notes: weapon.notes || '',
+          item_type: 'weapon',
+          genres: weapon.genres,
+          pic: weapon.pic,
+        }
+      : null;
 
     const newSlots: WeaponSlot[] = variantsToEquip.map((variant) => {
       const calculatedAtk = calculateWeaponAtk(variant.name, variant.mhs, attributeDice);
@@ -276,10 +352,26 @@ export const WeaponsCard: React.FC = () => {
           'Manage Weapons'
         );
       }
-      return {
+      const updatedWeapons = [...(prev.weapons || []), ...filteredNewSlots].sort((a, b) =>
+        compareMsoItems(a, b, isGsUnlocked)
+      );
+
+      const intermediateSheet = {
         ...prev,
-        weapons: [...(prev.weapons || []), ...filteredNewSlots].sort((a, b) => compareMsoItems(a, b, isGsUnlocked)),
+        weapons: updatedWeapons,
+        ...(shouldBuyGear && deduction && newGearItem
+          ? {
+              gold: deduction.newGold,
+              silver: deduction.newSilver,
+              simple_gear: [...(prev.simple_gear || []), newGearItem],
+            }
+          : {}),
       };
+
+      if (shouldBuyGear) {
+        return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
+      }
+      return intermediateSheet;
     });
     saveActiveCharacter();
 
@@ -629,6 +721,9 @@ export const WeaponsCard: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2.5">
+                    <div className="px-3 py-1 bg-teal-950/60 border border-teal-500/40 rounded-xl font-mono font-bold text-xs text-teal-300 shadow-sm flex items-center justify-center shrink-0">
+                      💰 {gold}g {silver}s
+                    </div>
                     <div className="px-3 py-1 bg-amber-950/60 border border-amber-500/50 rounded-xl font-mono font-black text-xs text-amber-300 shadow-sm flex items-center justify-center shrink-0">
                       AP {availableAp}
                     </div>
@@ -750,6 +845,17 @@ export const WeaponsCard: React.FC = () => {
                                       <X className="w-3 h-3 stroke-[3]" />
                                     </button>
                                   </div>
+
+                                  {isWeaponExotic({ name: group.baseName, notes: group.notes }) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setExoticGearManagerModalOpen(true, group.baseName)}
+                                      className="px-2 py-0.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/50 text-cyan-300 font-mono font-bold text-[10px] shadow-sm flex items-center gap-1 transition-all cursor-pointer"
+                                      title={`Open Exotic Gear Manager for ${group.baseName}`}
+                                    >
+                                      <span>🧿 Powers</span>
+                                    </button>
+                                  )}
 
                                   <button
                                     type="button"
@@ -1056,6 +1162,14 @@ export const WeaponsCard: React.FC = () => {
                                         🗂️ {evalResult.matchedSetName}
                                       </span>
                                     )}
+                                    {isWeaponExotic(weapon) && (
+                                      <span
+                                        className="text-[10px] font-mono px-1.5 py-0.2 rounded border font-bold bg-cyan-950/80 text-cyan-300 border-cyan-500/50 flex items-center gap-1 shadow-sm select-none"
+                                        title="Exotic Weapon: Has tactical gear powers or compatible modifications in the Exotic Gear Manager"
+                                      >
+                                        <span>🧿 Exotic</span>
+                                      </span>
+                                    )}
                                   </div>
 
                                   <div className="flex items-center gap-2 shrink-0">
@@ -1072,9 +1186,9 @@ export const WeaponsCard: React.FC = () => {
                                           ? 'bg-indigo-600/30 text-indigo-200 border-indigo-500/50 hover:bg-indigo-600/50 shadow-sm'
                                           : 'bg-rose-600/30 text-rose-200 border-rose-500/50 hover:bg-rose-600/50 shadow-sm'
                                       }`}
-                                      title={`Learn ${weapon.name} for ${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' (Requires GM Approval)' : ''}`}
+                                      title={`Acquire ${weapon.name} for ${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' (Requires GM Approval)' : ''}`}
                                     >
-                                      + Learn ({evalResult.isFree || evalResult.apCost === 0 ? '0 AP' : `${evalResult.apCost} AP`})
+                                      + Acquire
                                     </button>
                                   </div>
                                 </div>

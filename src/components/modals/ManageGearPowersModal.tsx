@@ -27,7 +27,7 @@ import {
   reconcileCharacterVaultWithGear,
 } from '../../utils/gearFunctionSync';
 import { ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
-import { parseCostToSilver, formatCostAbbreviated } from '../../utils/moneyUtils';
+import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 import { gameApi } from '../../services/api';
 
 interface ManageGearPowersModalProps {
@@ -95,6 +95,9 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
     activeCharacter,
     modsCatalog,
     functionsCatalog,
+    weaponsCatalog,
+    armorCatalog,
+    shieldsCatalog,
     learnGearPower,
     unlearnGearPower,
     installModToGearItem,
@@ -232,6 +235,45 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
           ...(Array.isArray(prev.ap_log) ? prev.ap_log : []),
           ...(refundEntry ? [refundEntry] : []),
         ],
+      };
+      return reconcileCharacterVaultWithGear(intermediateSheet, effectiveFunctions, effectiveMods).updatedSheet;
+    });
+    saveActiveCharacter();
+  };
+
+  // Purchase unowned physical chassis into simple_gear
+  const handleBuyHostItem = (item: SimpleGearItem) => {
+    const costStr = item.cost || '1g';
+    const costSilver = parseCostToSilver(costStr);
+    const deduction = deductFundsWithChange(gold, silver, costSilver);
+
+    if (!deduction.success) {
+      alert(
+        `Insufficient funds to purchase "${item.name}"!\n\n` +
+        `Cost: ${formatCostAbbreviated(costStr)} (${costSilver}s)\n` +
+        `Wallet: ${gold}g ${silver}s (${totalSilver}s)\n` +
+        `Shortage: ${costSilver - totalSilver}s`
+      );
+      return;
+    }
+
+    const newPhysicalItem: SimpleGearItem = {
+      id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      name: item.name,
+      qty: 1,
+      cost: costStr,
+      category: item.category || (item.item_type === 'weapon' ? 'Weapons' : item.item_type === 'armor' ? 'Armor' : item.item_type === 'shield' ? 'Shields' : 'Gear'),
+      item_type: item.item_type || 'gear',
+      notes: item.notes,
+      installed_mods: item.installed_mods || [],
+    };
+
+    updateActiveSheetData((prev) => {
+      const intermediateSheet = {
+        ...prev,
+        gold: deduction.newGold,
+        silver: deduction.newSilver,
+        simple_gear: [...(prev.simple_gear || []), newPhysicalItem],
       };
       return reconcileCharacterVaultWithGear(intermediateSheet, effectiveFunctions, effectiveMods).updatedSheet;
     });
@@ -376,10 +418,103 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
     setIsVersionEditorOpen(false);
   };
 
-  // Filter owned gear to all exotic gear owned (gear with direct functions, compatible mods, or installed mods)
+  // Candidate host items aggregated from simple_gear + learned weapons + learned armor + learned shields
+  const candidateItems = useMemo(() => {
+    interface ExoticHostItem extends SimpleGearItem {
+      isHostOwned: boolean;
+    }
+
+    const pool: ExoticHostItem[] = [];
+    const seen = new Set<string>();
+
+    // 1. Physically owned gear in simple_gear
+    simpleGear.forEach((g) => {
+      if (!g || !g.name) return;
+      const cleanBase = cleanBelongsToName(g.name.replace(/\s*\[[MHS]\]$/i, '').trim());
+      seen.add(cleanBase);
+      pool.push({
+        ...g,
+        isHostOwned: true,
+      });
+    });
+
+    // 2. Learned weapons in sheet.weapons
+    const learnedWeapons = Array.isArray(sheet?.weapons) ? sheet.weapons : [];
+    learnedWeapons.forEach((w) => {
+      if (!w || !w.name) return;
+      const baseName = w.name.replace(/\s*\[[MHS]\]$/i, '').trim();
+      const cleanBase = cleanBelongsToName(baseName);
+      if (seen.has(cleanBase)) return;
+      seen.add(cleanBase);
+
+      const stock = (weaponsCatalog || []).find(
+        (sw) => cleanBelongsToName(sw.name) === cleanBase
+      );
+      pool.push({
+        id: `learned_weapon_${w.id || baseName}`,
+        name: baseName,
+        cost: w.cost || stock?.cost || '1g',
+        notes: w.notes || stock?.notes,
+        item_type: 'weapon',
+        category: 'Weapons',
+        qty: 0,
+        isHostOwned: false,
+      });
+    });
+
+    // 3. Learned armor in sheet.wardrobe
+    const learnedArmor = Array.isArray(sheet?.wardrobe) ? sheet.wardrobe : [];
+    learnedArmor.forEach((a) => {
+      if (!a || !a.name) return;
+      const cleanBase = cleanBelongsToName(a.name);
+      if (seen.has(cleanBase)) return;
+      seen.add(cleanBase);
+
+      const stock = (armorCatalog || []).find(
+        (sa) => cleanBelongsToName(sa.name) === cleanBase
+      );
+      pool.push({
+        id: `learned_armor_${a.id || a.name}`,
+        name: a.name,
+        cost: a.cost || stock?.cost || '1g',
+        notes: a.notes || stock?.notes,
+        item_type: 'armor',
+        category: 'Armor',
+        qty: 0,
+        isHostOwned: false,
+      });
+    });
+
+    // 4. Learned shields in sheet.armory
+    const learnedShields = Array.isArray(sheet?.armory) ? sheet.armory : [];
+    learnedShields.forEach((s) => {
+      if (!s || !s.name) return;
+      const cleanBase = cleanBelongsToName(s.name);
+      if (seen.has(cleanBase)) return;
+      seen.add(cleanBase);
+
+      const stock = (shieldsCatalog || []).find(
+        (ss) => cleanBelongsToName(ss.name) === cleanBase
+      );
+      pool.push({
+        id: `learned_shield_${s.id || s.name}`,
+        name: s.name,
+        cost: s.cost || stock?.cost || '1g',
+        notes: s.notes || stock?.notes,
+        item_type: 'shield',
+        category: 'Shields',
+        qty: 0,
+        isHostOwned: false,
+      });
+    });
+
+    return pool;
+  }, [simpleGear, sheet?.weapons, sheet?.wardrobe, sheet?.armory, weaponsCatalog, armorCatalog, shieldsCatalog]);
+
+  // Filter candidate gear to all exotic gear (gear with direct functions, compatible mods, or installed mods)
   const exoticGearItems = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return simpleGear
+    return candidateItems
       .filter((item) => {
         const hostName = item.name || '';
         const cleanHost = cleanBelongsToName(hostName);
@@ -403,16 +538,16 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
         return true;
       })
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-  }, [simpleGear, searchQuery, effectiveMods, effectiveFunctions, spellSlots]);
+  }, [candidateItems, searchQuery, effectiveMods, effectiveFunctions, spellSlots]);
 
   const targetItem = initialTargetItem || exoticGearManagerTargetItem;
 
   // Auto-expand and scroll to target item when modal opens
   useEffect(() => {
     if (!isOpen || !targetItem) return;
-    const cleanTarget = cleanBelongsToName(targetItem);
+    const cleanTarget = cleanBelongsToName(targetItem.replace(/\s*\[[MHS]\]$/i, '').trim());
     const matched = exoticGearItems.find(
-      (g) => cleanBelongsToName(g.name) === cleanTarget || g.id === targetItem
+      (g) => cleanBelongsToName(g.name.replace(/\s*\[[MHS]\]$/i, '').trim()) === cleanTarget || g.id === targetItem
     );
     if (!matched) return;
 
@@ -434,7 +569,8 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
     fn: FunctionItem,
     hostName: string,
     modName?: string,
-    isHostModInstalled: boolean = true
+    isHostModInstalled: boolean = true,
+    isHostOwned: boolean = true
   ) => {
     const cleaned = cleanName(fn.name);
     const { baseName, version: nameVersion } = parseAbilityVersion(cleaned);
@@ -564,7 +700,18 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
             </>
           ) : (
             <>
-              {isHostModInstalled ? (
+              {!isHostOwned ? (
+                /* Disabled Learn Button (Must own physical gear first) */
+                <button
+                  type="button"
+                  disabled
+                  className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800/60 text-slate-500 border border-slate-700/60 cursor-not-allowed opacity-50 flex items-center gap-1"
+                  title={`Must own physical ${hostName} in Gear to learn powers`}
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Learn (1 AP)</span>
+                </button>
+              ) : isHostModInstalled ? (
                 <>
                   {/* Green + Learn (1 AP) Button */}
                   <button
@@ -666,7 +813,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
               <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Filter owned exotic gear, mods, or powers..."
+                placeholder="Filter exotic gear, mods, or powers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-950/90 text-xs pl-9 pr-3 py-2 rounded-xl border border-slate-800 text-white outline-none focus:border-cyan-500 transition-all placeholder:text-slate-500 shadow-inner"
@@ -725,12 +872,16 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
 
                 return (
                   <div key={itemKey} id={domId} className="flex flex-col gap-2 pb-3 border-b border-slate-800/50 last:border-none scroll-mt-2">
-                    {/* Gear Item Header Row: Compact w-fit Pill + Chassis Trashcan */}
-                    <div className="flex items-center gap-2">
+                    {/* Gear Item Header Row: Compact w-fit Pill + Ownership badge / Buy button / Drop Chassis Trashcan */}
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         type="button"
                         onClick={() => toggleItemExpanded(itemKey)}
-                        className="w-fit inline-flex items-center gap-2 py-1.5 px-3 rounded-xl bg-cyan-950/90 hover:bg-cyan-900/90 border border-cyan-500/60 hover:border-cyan-400 text-xs font-bold text-cyan-100 transition-all shadow-[0_0_14px_rgba(6,182,212,0.25)] cursor-pointer select-none group"
+                        className={`w-fit inline-flex items-center gap-2 py-1.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer select-none group ${
+                          item.isHostOwned
+                            ? 'bg-cyan-950/90 hover:bg-cyan-900/90 border-cyan-500/60 hover:border-cyan-400 text-cyan-100 shadow-[0_0_14px_rgba(6,182,212,0.25)]'
+                            : 'bg-slate-950/90 hover:bg-slate-900/90 border-amber-500/50 hover:border-amber-400 text-slate-200'
+                        }`}
                       >
                         <span className="truncate">{item.name}</span>
                         {item.notes && item.notes.trim() ? (
@@ -743,15 +894,34 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
                         />
                       </button>
 
-                      {/* Drop Chassis Trashcan */}
-                      <button
-                        type="button"
-                        onClick={() => handleDropGearItem(item)}
-                        className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 border border-transparent hover:border-rose-500/40 rounded-lg transition-all cursor-pointer shadow-sm"
-                        title={`Delete ${item.name} (removes chassis and all mods/powers, refunds all AP spent on powers)`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {!item.isHostOwned ? (
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-500/50 font-mono font-bold text-[10px] shadow-sm select-none flex items-center gap-1">
+                            <span>⚠️</span>
+                            <span>Unowned in Gear</span>
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => handleBuyHostItem(item)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1 shadow-sm bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50 cursor-pointer shadow-emerald-950/30"
+                            title={`Buy physical copy of ${item.name} for ${formatCostAbbreviated(item.cost || '1g')}`}
+                          >
+                            <span>🪙</span>
+                            <span>Buy {formatCostAbbreviated(item.cost || '1g')}</span>
+                          </button>
+                        </div>
+                      ) : (
+                        /* Drop Chassis Trashcan */
+                        <button
+                          type="button"
+                          onClick={() => handleDropGearItem(item)}
+                          className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 border border-transparent hover:border-rose-500/40 rounded-lg transition-all cursor-pointer shadow-sm"
+                          title={`Delete ${item.name} (removes chassis and all mods/powers, refunds all AP spent on powers)`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
 
                     {/* Dropdown Contents: Vertical Guide Line from Gear Item down across all Mods */}
@@ -772,7 +942,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
 
                             {/* Indented Power Cards (left border under 'h' in Inherent) */}
                             <div className="flex flex-col gap-2 pl-3.5 sm:pl-4">
-                              {directFns.map((fn) => renderPowerCard(fn, hostName, undefined, true))}
+                              {directFns.map((fn) => renderPowerCard(fn, hostName, undefined, true, item.isHostOwned))}
                             </div>
                           </div>
                         )}
@@ -821,19 +991,21 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => handleBuyMod(mod, hostName)}
-                                    disabled={!canAfford}
+                                    disabled={!item.isHostOwned || !canAfford}
                                     className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1 shadow-sm ${
-                                      canAfford
+                                      item.isHostOwned && canAfford
                                         ? 'bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-400/50 cursor-pointer shadow-emerald-950/30'
                                         : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
                                     }`}
                                     title={
-                                      canAfford
+                                      !item.isHostOwned
+                                        ? `Must own physical ${hostName} in Gear to install mods`
+                                        : canAfford
                                         ? `Buy and install ${mod.name} for ${costFormatted}`
                                         : `Insufficient funds (Requires ${costFormatted}, you have ${gold}g ${silver}s)`
                                     }
                                   >
-                                    <Plus className="w-3.5 h-3.5" />
+                                    {!item.isHostOwned ? <Lock className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                                     <span>Buy {costFormatted}</span>
                                   </button>
                                 )}
@@ -842,7 +1014,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
                               {/* Indented Power Cards under this Mod */}
                               {modFns.length > 0 && (
                                 <div className="flex flex-col gap-2 pl-3.5 sm:pl-4">
-                                  {modFns.map((fn) => renderPowerCard(fn, hostName, mod.name, isInstalled))}
+                                  {modFns.map((fn) => renderPowerCard(fn, hostName, mod.name, isInstalled, item.isHostOwned))}
                                 </div>
                               )}
                             </div>
@@ -856,9 +1028,9 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
             ) : (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
                 <Zap className="w-10 h-10 text-slate-600 mb-3 opacity-40" />
-                <p className="font-bold text-sm text-slate-300">No Owned Exotic Gear Found</p>
+                <p className="font-bold text-sm text-slate-300">No Exotic Gear Found</p>
                 <p className="text-xs text-slate-500 mt-1 max-w-md">
-                  Purchase weapons, armor, shields, or equipment with compatible mods or combat functions in the Gear Manager to unlock exotic power trees.
+                  No owned or learned weapons, armor, or gear items with tactical exotic powers or compatible mods were found matching your filter.
                 </p>
               </div>
             )}
