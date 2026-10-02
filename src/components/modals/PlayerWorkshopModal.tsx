@@ -8710,24 +8710,91 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 isPathViewer ? (
                   (() => {
                     const el = activePathSelection.element;
-                    const cat = activePathElementCategory || el?.type || 'power';
-                    const rawRecord: any = (allCatalogItemsPool || []).find(
-                      (item: any) => String(item.id) === String(el?.id) || item.name === el?.name
-                    ) || el?.item_data || el;
+                    const cat = activePathElementCategory || el?.type || el?.element_type || 'power';
+                    const cleanName = (el?.name || '').toLowerCase().trim();
+                    const cleanId = String(el?.id || '').replace(/^(power|trait|skill|weapon|armor|shield)_/, '');
 
-                    const elementName = rawRecord?.name || el?.name || pathElementFormName || 'Ability';
-                    const actionVal = rawRecord?.action || el?.item_data?.action || pathElementFormAction;
-                    const usageVal = rawRecord?.usage || el?.item_data?.usage || pathElementFormUsage;
-                    const disciplineVal = rawRecord?.discipline || el?.item_data?.discipline || pathElementFormDiscipline;
-                    const attributeVal = rawRecord?.attribute || el?.item_data?.attribute || pathElementFormAttribute;
-                    const effectText = rawRecord?.effect || rawRecord?.item_data?.effect || el?.item_data?.effect || el?.effect || pathElementFormEffect;
-                    const notesText = rawRecord?.notes || rawRecord?.item_data?.notes || el?.item_data?.notes || el?.notes || pathElementFormNotes;
-                    const reqVal = rawRecord?.requirement || el?.item_data?.requirement;
-                    const damageVal = rawRecord?.damage || rawRecord?.dmg || el?.item_data?.damage;
-                    const arVal = rawRecord?.ar !== undefined ? rawRecord.ar : el?.item_data?.ar;
-                    const maxBlockVal = rawRecord?.max_block || el?.item_data?.max_block;
-                    const costVal = rawRecord?.cost || el?.item_data?.cost;
+                    // Strict Category-Scoped Catalog Resolution (eliminates cross-table ID collisions)
+                    let rawRecord: any = null;
+                    if (cat === 'power') {
+                      rawRecord = (powers || []).find(
+                        (p) => String(p.id) === String(el?.id) || String(p.id) === cleanId || (p.name || '').toLowerCase().trim() === cleanName
+                      );
+                    } else if (cat === 'trait') {
+                      rawRecord = (traits || []).find(
+                        (t) => String(t.id) === String(el?.id) || String(t.id) === cleanId || (t.name || '').toLowerCase().trim() === cleanName
+                      );
+                    } else if (cat === 'skill') {
+                      rawRecord = (skills || []).find(
+                        (s) => String(s.id) === String(el?.id) || String(s.id) === cleanId || (s.name || '').toLowerCase().trim() === cleanName
+                      );
+                    } else if (cat === 'weapon') {
+                      rawRecord = (weaponsCatalog || []).find(
+                        (w) => String(w.id) === String(el?.id) || String(w.id) === cleanId || (w.name || '').toLowerCase().trim() === cleanName
+                      );
+                    } else if (cat === 'armor') {
+                      rawRecord = (armorCatalog || []).find(
+                        (a) => String(a.id) === String(el?.id) || String(a.id) === cleanId || (a.name || '').toLowerCase().trim() === cleanName
+                      );
+                    } else if (cat === 'shield') {
+                      rawRecord = (shieldsCatalog || []).find(
+                        (s) => String(s.id) === String(el?.id) || String(s.id) === cleanId || (s.name || '').toLowerCase().trim() === cleanName
+                      );
+                    }
+                    if (!rawRecord) {
+                      rawRecord = el?.item_data || el;
+                    }
+
+                    const elementName = rawRecord?.name || el?.name || 'Ability';
                     const tagVal = el?.tag || (el?.isFree || el?.is_free ? 'Free' : '1 AP');
+
+                    // 1. Powers ONLY: Action & Usage
+                    const isPower = cat === 'power';
+                    const actionVal = isPower ? (rawRecord?.action || el?.item_data?.action || null) : null;
+                    const usageVal = isPower ? (rawRecord?.usage || el?.item_data?.usage || null) : null;
+
+                    // 2. Skills: Governing Attribute
+                    const isSkill = cat === 'skill';
+                    const attributeVal = isSkill ? (rawRecord?.attribute || el?.item_data?.attribute || null) : null;
+
+                    // 3. Weapons: Weapon Type
+                    const isWeapon = cat === 'weapon';
+                    const weaponTypeVal = isWeapon ? (rawRecord?.type || el?.item_data?.type || null) : null;
+
+                    // 4. Discipline (Powers, Traits, Skills)
+                    const isTrait = cat === 'trait';
+                    const isArmor = cat === 'armor';
+                    const isShield = cat === 'shield';
+                    const disciplineVal = (isPower || isTrait || isSkill)
+                      ? (rawRecord?.discipline || el?.item_data?.discipline || null)
+                      : null;
+
+                    // 5. Requirements (Weapons, Armor, Shields, Powers, Traits)
+                    const reqVal = rawRecord?.requirement || el?.item_data?.requirement || null;
+
+                    // 6. Combat Stats
+                    const damageVal = (isWeapon || isPower)
+                      ? (rawRecord?.damage || rawRecord?.dmg || el?.item_data?.damage || el?.item_data?.dmg || null)
+                      : null;
+                    const arVal = (isArmor || isShield)
+                      ? (rawRecord?.ar !== undefined ? rawRecord.ar : el?.item_data?.ar !== undefined ? el?.item_data?.ar : null)
+                      : null;
+                    const maxBlockVal = isShield
+                      ? (rawRecord?.max_block || rawRecord?.block || el?.item_data?.max_block || null)
+                      : null;
+                    const mrVal = (isArmor || isShield)
+                      ? (rawRecord?.mr || el?.item_data?.mr || null)
+                      : null;
+                    const costVal = (isWeapon || isArmor || isShield)
+                      ? (rawRecord?.cost || el?.item_data?.cost || null)
+                      : null;
+
+                    // 7. Text Contents
+                    const effectText = (isPower || isTrait)
+                      ? (rawRecord?.effect || rawRecord?.item_data?.effect || el?.item_data?.effect || el?.effect || '').trim()
+                      : '';
+                    const rawNotes = (rawRecord?.notes || rawRecord?.item_data?.notes || rawRecord?.description || el?.item_data?.notes || el?.notes || '').trim();
+                    const notesText = rawNotes === effectText ? '' : rawNotes;
 
                     return (
                       <div
@@ -8770,53 +8837,85 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
                         {/* Attribute & Combat Badges Ribbon */}
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          {actionVal && (
+                          {/* Powers Only: Action & Usage */}
+                          {isPower && actionVal && (
                             <span className="px-2.5 py-1 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
                               <span>⚡</span>
                               <span>{actionVal}</span>
                             </span>
                           )}
-                          {usageVal && (
+                          {isPower && usageVal && (
                             <span className="px-2.5 py-1 rounded-lg bg-amber-950/80 border border-amber-500/40 text-amber-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
                               <span>⌛</span>
                               <span>{usageVal}</span>
                             </span>
                           )}
-                          {reqVal && (
-                            <span className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-slate-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
-                              <span>Req:</span>
-                              <span className="text-white">{reqVal}</span>
+
+                          {/* Skills: Governing Attribute */}
+                          {isSkill && attributeVal && (
+                            <span className="px-2.5 py-1 rounded-lg bg-purple-950/80 border border-purple-500/40 text-purple-200 font-bold text-xs flex items-center gap-1.5 shadow-sm">
+                              <span>{attributeVal.includes('💪') || attributeVal.includes('🏃') || attributeVal.includes('👁️') || attributeVal.includes('🫀') || attributeVal.includes('🧠') ? '' : '🎯'}</span>
+                              <span>{attributeVal}</span>
                             </span>
                           )}
-                          {damageVal && (
-                            <span className="px-2.5 py-1 rounded-lg bg-rose-950/80 border border-rose-500/40 text-rose-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
-                              <span>💥</span>
-                              <span>{damageVal}</span>
+
+                          {/* Weapons: Type */}
+                          {isWeapon && weaponTypeVal && (
+                            <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>{weaponTypeVal.includes('💪') || weaponTypeVal.includes('🏃') || weaponTypeVal.includes('👁️') ? '' : '⚔️'}</span>
+                              <span>{weaponTypeVal}</span>
                             </span>
                           )}
-                          {arVal !== undefined && (
-                            <span className="px-2.5 py-1 rounded-lg bg-sky-950/80 border border-sky-500/40 text-sky-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
-                              <span>🛡️</span>
-                              <span>{arVal} AR</span>
-                            </span>
-                          )}
-                          {maxBlockVal && (
-                            <span className="px-2.5 py-1 rounded-lg bg-sky-950/80 border border-sky-500/40 text-sky-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
-                              <span>🛡️</span>
-                              <span>{maxBlockVal} Block</span>
-                            </span>
-                          )}
+
+                          {/* Powers, Traits, Skills: Discipline */}
                           {disciplineVal && disciplineVal !== 'General' && (
                             <span className="px-2.5 py-1 rounded-lg bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
                               <span>🔮</span>
                               <span>{disciplineVal}</span>
                             </span>
                           )}
-                          {attributeVal && cat === 'skill' && (
-                            <span className="px-2.5 py-1 rounded-lg bg-purple-950/80 border border-purple-500/40 text-purple-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
-                              <span>{attributeVal}</span>
+
+                          {/* Requirements */}
+                          {reqVal && (
+                            <span className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-slate-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span className="text-slate-400">Req:</span>
+                              <span className="text-white font-bold">{reqVal}</span>
                             </span>
                           )}
+
+                          {/* Damage */}
+                          {damageVal && (
+                            <span className="px-2.5 py-1 rounded-lg bg-rose-950/80 border border-rose-500/40 text-rose-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>💥</span>
+                              <span>{damageVal}</span>
+                            </span>
+                          )}
+
+                          {/* Armor & Shield: AR */}
+                          {arVal !== null && arVal !== undefined && (
+                            <span className="px-2.5 py-1 rounded-lg bg-sky-950/80 border border-sky-500/40 text-sky-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>🛡️</span>
+                              <span>{arVal} AR</span>
+                            </span>
+                          )}
+
+                          {/* Shield: Max Block */}
+                          {maxBlockVal && (
+                            <span className="px-2.5 py-1 rounded-lg bg-sky-950/80 border border-sky-500/40 text-sky-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>🛡️</span>
+                              <span>{maxBlockVal} Block</span>
+                            </span>
+                          )}
+
+                          {/* Armor & Shield: MR */}
+                          {mrVal && (
+                            <span className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-slate-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>👣</span>
+                              <span>MR {mrVal}</span>
+                            </span>
+                          )}
+
+                          {/* Cost */}
                           {costVal && costVal !== '0s' && (
                             <span className="px-2.5 py-1 rounded-lg bg-yellow-950/80 border border-yellow-500/40 text-yellow-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
                               <span>💰</span>
@@ -8825,7 +8924,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           )}
                         </div>
 
-                        {/* Rules Effect / Mechanics Box */}
+                        {/* Rules Effect / Mechanics Box (for Powers & Traits) */}
                         {effectText && (
                           <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 shadow-inner">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-1.5">
@@ -8838,14 +8937,26 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                           </div>
                         )}
 
-                        {/* Notes / Lore Box */}
+                        {/* Notes / Description Box */}
                         {notesText && (
-                          <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                          <div className={`flex flex-col gap-1.5 p-3.5 rounded-xl border ${
+                            effectText
+                              ? 'bg-slate-900/60 border-slate-800/80'
+                              : 'bg-slate-950/90 border-slate-800 shadow-inner'
+                          }`}>
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-1.5">
-                              <span>📖</span>
-                              <span>Lore & Tactical Notes</span>
+                              <span>{isSkill ? '📜' : effectText ? '📖' : '📜'}</span>
+                              <span>
+                                {isSkill
+                                  ? 'Skill Description & Mechanics'
+                                  : effectText
+                                  ? 'Lore & Tactical Notes'
+                                  : 'Description & Mechanics'}
+                              </span>
                             </span>
-                            <p className="text-xs text-slate-300 italic leading-relaxed whitespace-pre-wrap">
+                            <p className={`text-xs leading-relaxed whitespace-pre-wrap ${
+                              effectText ? 'text-slate-300 italic' : 'text-slate-200 font-mono'
+                            }`}>
                               {notesText}
                             </p>
                           </div>
