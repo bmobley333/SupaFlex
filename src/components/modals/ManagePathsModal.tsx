@@ -487,7 +487,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                       <ItemNotesPopover
                         notes={
                           resolvedPathsCatalog.find((p) => p.name.toLowerCase() === 'universal')?.description ||
-                          'Heroic stunts, clutch fortune, and general utility abilities accessible to all adventurers.'
+                          'Heroic stunts, clutch fortune, and general adventure abilities accessible to all adventurers.'
                         }
                         itemName="Universal Path"
                         inline
