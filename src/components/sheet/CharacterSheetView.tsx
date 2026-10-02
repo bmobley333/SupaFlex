@@ -73,12 +73,12 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-[60vh] relative">
       {/* Top Section: Character Card (Left) & Paths Card (Right) */}
-      <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch scroll-mt-32">
-        <div id="card-hero-hub" className="w-full h-full scroll-mt-28 flex flex-col">
-          <HeroHubCard onOpenApManager={onOpenApManager} className="w-full h-full" />
+      <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
+        <div id="card-hero-hub" className="w-full scroll-mt-28 flex flex-col">
+          <HeroHubCard onOpenApManager={onOpenApManager} className="w-full" />
         </div>
-        <div id="card-paths" className="w-full h-full scroll-mt-28 flex flex-col">
-          <PathsCard className="w-full h-full" />
+        <div id="card-paths" className="w-full scroll-mt-28 flex flex-col">
+          <PathsCard className="w-full" />
         </div>
       </div>
 

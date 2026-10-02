@@ -26,7 +26,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({ onOpenApManager, c
   };
 
   return (
-    <div className={`bg-gradient-to-b from-slate-800/40 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-slate-400/90 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap shadow-lg shadow-slate-950/20 ${className}`}>
+    <div className={`bg-gradient-to-b from-slate-800/40 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-slate-400/90 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap shadow-lg shadow-slate-950/20 h-fit ${className}`}>
       {/* Left Zone: Level & AP Identity & Informative Stat Pills */}
       <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
         <button

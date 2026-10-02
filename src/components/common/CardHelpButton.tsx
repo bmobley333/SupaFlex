@@ -183,14 +183,31 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
     );
   };
 
+  const sanitizeSummary = (rawText: string) => {
+    // Strip HTML comments (popover, rule, dev, etc.) except <!-- tab: ... --> which is handled by tabs
+    return rawText
+      .replace(/<!--\s*[/@]?(?:rule|popover|dev)[\s\S]*?-->/gi, '')
+      .replace(/<!--\s*(?!\s*tab:)[\s\S]*?-->/gi, '')
+      .trim();
+  };
+
   const renderFormattedSummary = (summaryText: string) => {
-    const lines = summaryText.split('\n');
+    const sanitizedText = sanitizeSummary(summaryText);
+    const rawLines = sanitizedText.split('\n');
+
+    // Drop leading and trailing empty lines to eliminate ghost padding
+    let start = 0;
+    while (start < rawLines.length && !rawLines[start].trim()) start++;
+    let end = rawLines.length - 1;
+    while (end >= start && !rawLines[end].trim()) end--;
+    const lines = start <= end ? rawLines.slice(start, end + 1) : [];
+
     const isStructured = lines.some((l) => l.trim().startsWith('•') || l.trim().startsWith('-') || l.trim().startsWith('|') || l.toLowerCase().includes('gain 2 ap') || l.trim().endsWith(':') || l.trim() === 'Rolls' || l.trim() === 'Action');
 
     if (!isStructured) {
       return (
         <div className="text-slate-200 leading-relaxed mb-3 text-[12px] whitespace-pre-line font-sans select-text">
-          {summaryText}
+          {sanitizedText}
         </div>
       );
     }
@@ -204,6 +221,12 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
 
       if (!trimmed) {
         elements.push(<div key={`blank-${i}`} className="h-1.5" />);
+        i++;
+        continue;
+      }
+
+      // Skip any residual HTML comment line
+      if (trimmed.startsWith('<!--') && !trimmed.toLowerCase().includes('tab:')) {
         i++;
         continue;
       }

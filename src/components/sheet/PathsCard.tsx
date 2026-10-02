@@ -50,9 +50,9 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
 
   return (
     <>
-      <div className={`bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-purple-500/90 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap shadow-lg shadow-slate-950/20 ${className}`}>
+      <div className={`bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-purple-500/90 p-3.5 flex items-start justify-between transition-all gap-3 shadow-lg shadow-slate-950/20 h-fit ${className}`}>
         {/* Left Zone: 🧭 Paths Header & Active Path Pills */}
-        <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
+        <div className="flex items-center gap-2.5 min-w-0 flex-wrap flex-1">
           <button
             type="button"
             onClick={() => setShowPathsModal(true)}
@@ -155,7 +155,7 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
         </div>
 
         {/* Right Zone: Edit Pencil Button */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 self-start">
           <button
             type="button"
             onClick={() => setShowPathsModal(true)}
