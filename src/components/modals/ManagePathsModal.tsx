@@ -304,7 +304,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
             </div>
             <div>
               <h2 className="font-outfit font-black text-lg text-purple-200 tracking-wide uppercase flex items-center gap-2">
-                <span>Manage Paths</span>
+                <span>Paths Manager</span>
                 <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-500/40">
                   Race • Class • Bonus Paths
                 </span>

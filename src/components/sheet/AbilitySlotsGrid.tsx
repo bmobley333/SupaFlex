@@ -1440,7 +1440,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   }, [type, filteredRoster, functionsCatalog, modsCatalog, activeCharacter, sheetData.character_vault, isGsUnlocked]);
 
   const sectionIcon = type === 'powers' ? '🔥' : '🧿';
-  const displayTitle = title || (type === 'powers' ? 'MY POWERS' : "GEAR POWERS");
+  const displayTitle = title || (type === 'powers' ? 'POWERS' : "GEAR POWERS");
 
   // Action Economy or Alphabetical Sorting for Active Sheet (with Action Channel Filtering for Powers & Loadout)
   const sortedSlots = useMemo(() => {

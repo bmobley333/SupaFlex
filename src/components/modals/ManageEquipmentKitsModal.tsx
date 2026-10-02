@@ -169,7 +169,7 @@ export const ManageEquipmentKitsModal: React.FC<ManageEquipmentKitsModalProps> =
             </div>
             <div>
               <h2 className="text-xl font-black text-cyan-400 font-outfit uppercase tracking-wide flex items-center gap-2">
-                <span>Equipment Kits</span>
+                <span>Equipment Kits Manager</span>
                 <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/40">
                   Armor • Weapons • Survival • Tech
                 </span>

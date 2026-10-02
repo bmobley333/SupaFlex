@@ -125,7 +125,7 @@ export const TraitsQuirksCard: React.FC<TraitsQuirksCardProps> = ({ onTogglePosi
             type="button"
             onClick={() => setShowManageModal(true)}
             className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm bg-purple-950/80 hover:bg-purple-900/90 border-purple-500/40 hover:border-purple-400 text-purple-200 hover:text-white cursor-pointer group"
-            title="Manage Character Traits"
+            title="Traits Manager"
           >
             <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
           </button>
@@ -203,7 +203,7 @@ export const TraitsQuirksCard: React.FC<TraitsQuirksCardProps> = ({ onTogglePosi
               onClick={() => setShowManageModal(true)}
               className="text-purple-400 hover:text-purple-300 font-bold underline cursor-pointer text-xs"
             >
-              + Open Manage Traits to Learn Stock Traits & Boons
+              + Open Traits Manager to Learn Stock Traits & Boons
             </button>
           </div>
         )}

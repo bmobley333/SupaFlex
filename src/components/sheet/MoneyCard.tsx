@@ -205,7 +205,7 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
                 </div>
                 <div>
                   <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                    Money & Valuables
+                    Money & Valuables Manager
                   </h3>
                   <p className="text-xs text-slate-400 hidden sm:block">
                     Manage currency, trade goods, precious gems, and treasure valuables.

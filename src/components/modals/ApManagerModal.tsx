@@ -413,7 +413,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
           <div className="flex items-center gap-3">
             <div>
               <h2 className="font-outfit font-black text-xl text-slate-100 tracking-wide flex items-center gap-2">
-                ⭐ Manage Level & AP
+                ⭐ Level & AP Manager
                 <CardHelpButton ruleKey="leveling.advancement_steps" />
               </h2>
               <p className="text-xs text-slate-400">
@@ -431,7 +431,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
             <button
               onClick={onClose}
               className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
-              title="Close Manage Level & AP"
+              title="Close Level & AP Manager"
             >
               <X className="w-5 h-5" />
             </button>

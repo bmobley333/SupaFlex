@@ -101,7 +101,7 @@ export const HardwareBundlesCard: React.FC = () => {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm bg-cyan-950/80 hover:bg-cyan-900/90 border-cyan-500/40 hover:border-cyan-400 text-cyan-200 hover:text-white cursor-pointer group"
-            title="Manage Character Hardware Bundles"
+            title="Equipment Kits Manager"
           >
             <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
           </button>

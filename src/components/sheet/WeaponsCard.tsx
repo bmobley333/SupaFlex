@@ -377,7 +377,7 @@ export const WeaponsCard: React.FC = () => {
 
     if (!isSkilled) {
       window.alert(
-        `Learned "${weapon.name}" as Unskilled!\n\nYou have ${availableAp} AP available, but becoming Skilled requires ${apCost} AP.\n\nYou can toggle this to Skilled in the Weapon SK Manager once you have enough AP.`
+        `Learned "${weapon.name}" as Unskilled!\n\nYou have ${availableAp} AP available, but becoming Skilled requires ${apCost} AP.\n\nYou can toggle this to Skilled in the Weapons Manager once you have enough AP.`
       );
     }
   };
@@ -670,13 +670,13 @@ export const WeaponsCard: React.FC = () => {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-            title="Click to open Weapon SK Manager"
+            title="Click to open Weapons Manager"
           >
             <div className="p-1.5 rounded-xl bg-rose-950/90 border border-rose-500/50 text-rose-300 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.25)] group-hover:scale-105 group-hover:border-rose-400 transition-all">
               <span className="text-base leading-none">⚔️</span>
             </div>
             <h3 className="font-outfit font-extrabold text-sm tracking-widest text-rose-200 uppercase group-hover:text-white transition-colors">
-              Weapon SK
+              Weapons
             </h3>
           </button>
           <CardHelpButton ruleKey="weapons.basics" />
@@ -692,7 +692,7 @@ export const WeaponsCard: React.FC = () => {
                 ? 'bg-rose-600/30 text-rose-200 border-rose-400 shadow-rose-500/30'
                 : 'bg-rose-950/40 hover:bg-rose-900/50 border-rose-500/30 text-rose-300 hover:text-white'
             }`}
-            title="Open Weapon SK Manager"
+            title="Open Weapons Manager"
           >
             <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
           </button>
@@ -712,7 +712,7 @@ export const WeaponsCard: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                        Weapon SK Manager
+                        Weapons Manager
                       </h3>
                       <p className="text-xs text-slate-400 hidden sm:block">
                         Manage character weapon proficiencies and combat skills side-by-side with stock catalog.
@@ -851,7 +851,7 @@ export const WeaponsCard: React.FC = () => {
                                       type="button"
                                       onClick={() => setExoticGearManagerModalOpen(true, group.baseName)}
                                       className="px-2 py-0.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/50 text-cyan-300 font-mono font-bold text-[10px] shadow-sm flex items-center gap-1 transition-all cursor-pointer"
-                                      title={`Open Exotic Gear Manager for ${group.baseName}`}
+                                      title={`Open Exotics Manager for ${group.baseName}`}
                                     >
                                       <span>🧿 Powers</span>
                                     </button>
@@ -1165,7 +1165,7 @@ export const WeaponsCard: React.FC = () => {
                                     {isWeaponExotic(weapon) && (
                                       <span
                                         className="text-[10px] font-mono px-1.5 py-0.2 rounded border font-bold bg-cyan-950/80 text-cyan-300 border-cyan-500/50 flex items-center gap-1 shadow-sm select-none"
-                                        title="Exotic Weapon: Has tactical gear powers or compatible modifications in the Exotic Gear Manager"
+                                        title="Exotic Weapon: Has tactical gear powers or compatible modifications in the Exotics Manager"
                                       >
                                         <span>🧿 Exotic</span>
                                       </span>
@@ -1258,7 +1258,7 @@ export const WeaponsCard: React.FC = () => {
                 {/* Modal Footer Status Bar with Standardized "Done" Button */}
                 <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400 shrink-0">
                   <div className="flex items-center gap-3">
-                    <span className="font-outfit font-bold text-slate-300">⚔️ Weapon SK Manager</span>
+                    <span className="font-outfit font-bold text-slate-300">⚔️ Weapons Manager</span>
                   </div>
                   
                   {/* Standardized Master Blueprint Done Footer Button */}
@@ -1278,7 +1278,7 @@ export const WeaponsCard: React.FC = () => {
       {/* Weapons Table View on Active Character Sheet */}
       {weapons.length === 0 ? (
         <p className="text-xs text-slate-500 italic py-3 text-center">
-          No weapons equipped. Click "Manage Weapons" above to add weapons to your arsenal.
+          No weapons equipped. Click "Weapons Manager" above to add weapons to your arsenal.
         </p>
       ) : (
         <div className="flex flex-col gap-1.5 overflow-x-auto pb-1">
@@ -1314,7 +1314,7 @@ export const WeaponsCard: React.FC = () => {
                   key={item.id}
                   className="grid grid-cols-[34px_68px_1fr_48px_48px_56px_60px] gap-2 items-center px-2 py-1.5 bg-slate-950/60 rounded-lg border border-slate-850 hover:border-slate-750 transition-all"
                 >
-                  {/* Read-Only Sk Indicator (Managed via Weapon SK Manager) */}
+                  {/* Read-Only Sk Indicator (Managed via Weapons Manager) */}
                   <div className="flex justify-center">
                     <div
                       className={`w-5 h-5 flex items-center justify-center rounded border transition-all cursor-default select-none shrink-0 ${
@@ -1322,7 +1322,7 @@ export const WeaponsCard: React.FC = () => {
                           ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm'
                           : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md'
                       }`}
-                      title={item.sk ? 'Skilled (Manage in Weapon SK Manager)' : 'Unskilled (Manage in Weapon SK Manager)'}
+                      title={item.sk ? 'Skilled (Manage in Weapons Manager)' : 'Unskilled (Manage in Weapons Manager)'}
                     >
                       {item.sk ? (
                         <Check className="w-3.5 h-3.5 stroke-[3]" />

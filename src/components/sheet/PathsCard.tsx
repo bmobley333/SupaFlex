@@ -160,7 +160,7 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
             type="button"
             onClick={() => setShowPathsModal(true)}
             className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm bg-purple-950/80 hover:bg-purple-900/90 border-purple-500/40 hover:border-purple-400 text-purple-200 hover:text-white cursor-pointer group"
-            title="Manage Paths (Species, Class, and Learned Paths)"
+            title="Paths Manager (Species, Class, and Learned Paths)"
           >
             <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
           </button>

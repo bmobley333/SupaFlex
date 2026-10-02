@@ -1155,7 +1155,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                     </span>
                   </div>
 
-                  {/* 🧿 Exotic Gear Manager Shortcut Button */}
+                  {/* 🧿 Exotics Manager Shortcut Button */}
                   <button
                     type="button"
                     onClick={() => {
@@ -1163,10 +1163,10 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       setExoticGearManagerModalOpen(true);
                     }}
                     className="px-2.5 py-1 bg-cyan-950/90 hover:bg-cyan-900/90 border border-cyan-500/50 hover:border-cyan-400 text-cyan-200 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 group"
-                    title="Open Exotic Gear Manager to manage mods and learn combat powers"
+                    title="Open Exotics Manager to manage mods and learn combat powers"
                   >
                     <span className="text-sm leading-none group-hover:scale-110 transition-transform">🧿</span>
-                    <span className="font-outfit uppercase tracking-wider text-[11px] font-extrabold">Exotic Gear Manager</span>
+                    <span className="font-outfit uppercase tracking-wider text-[11px] font-extrabold">Exotics Manager</span>
                   </button>
                 </div>
 
@@ -1406,11 +1406,11 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                                   setExoticGearManagerModalOpen(true, item.name);
                                 }}
                                 className="w-fit py-0.5 px-2 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/40 hover:border-cyan-400 text-cyan-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 group cursor-pointer shadow-sm"
-                                title={`Open ${item.name} in Exotic Gear Manager`}
+                                title={`Open ${item.name} in Exotics Manager`}
                               >
                                 <span className="text-xs leading-none">🧿</span>
                                 <span className="font-outfit uppercase tracking-wider text-[11px] text-cyan-300 group-hover:text-cyan-100 font-extrabold">
-                                  Exotic Gear Manager
+                                  Exotics Manager
                                 </span>
                                 <span className="text-xs text-cyan-400/80 group-hover:text-cyan-200 transition-transform group-hover:translate-x-0.5">→</span>
                               </button>

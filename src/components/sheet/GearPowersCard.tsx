@@ -278,13 +278,13 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
                 type="button"
                 onClick={() => setExoticGearManagerModalOpen(true)}
                 className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-                title="Click to open Exotic Gear Manager"
+                title="Click to open Exotics Manager"
               >
                 <div className="p-1.5 rounded-xl bg-cyan-950/90 border border-cyan-500/50 text-cyan-300 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.25)] group-hover:scale-105 group-hover:border-cyan-400 transition-all">
                   <span className="text-base leading-none">🧿</span>
                 </div>
                 <h3 className="font-outfit font-extrabold text-sm tracking-widest text-cyan-200 uppercase group-hover:text-white transition-colors">
-                  Exotic Gear
+                  Exotics
                 </h3>
               </button>
             </div>
@@ -308,7 +308,7 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
                 type="button"
                 onClick={() => setExoticGearManagerModalOpen(true)}
                 className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm cursor-pointer group bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300 hover:text-white"
-                title="Open Exotic Gear Manager"
+                title="Open Exotics Manager"
               >
                 <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
               </button>
@@ -559,7 +559,7 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
                   onClick={() => setExoticGearManagerModalOpen(true)}
                   className="mt-3 px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-200 transition shadow-sm cursor-pointer"
                 >
-                  Open Exotic Gear Manager
+                  Open Exotics Manager
                 </button>
               )}
             </div>

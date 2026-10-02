@@ -146,9 +146,9 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
           </div>
         </div>
 
-        {/* Column 2 (Right): My Powers */}
+        {/* Column 2 (Right): Powers */}
         <div id="card-powers" className="scroll-mt-28">
-          <AbilitySlotsGrid title="MY POWERS" type="powers" />
+          <AbilitySlotsGrid title="POWERS" type="powers" />
         </div>
       </div>
 

@@ -33,7 +33,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({ onOpenApManager, c
           type="button"
           onClick={handleOpenApManager}
           className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left shrink-0"
-          title="Click to open Manage Level & AP"
+          title="Click to open Level & AP Manager"
         >
           <div className="p-1.5 rounded-xl bg-amber-950/80 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)] group-hover:scale-105 group-hover:border-amber-400 transition-all shrink-0">
             <span className="text-base leading-none">⭐</span>
@@ -72,7 +72,7 @@ export const CharacterCard: React.FC<CharacterCardProps> = ({ onOpenApManager, c
           type="button"
           onClick={handleOpenApManager}
           className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm bg-amber-950/80 hover:bg-amber-900/90 border-amber-500/40 hover:border-amber-400 text-amber-200 hover:text-white cursor-pointer group"
-          title="Manage Level & AP"
+          title="Level & AP Manager"
         >
           <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
         </button>

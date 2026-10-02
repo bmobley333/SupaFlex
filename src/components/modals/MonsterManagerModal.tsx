@@ -564,7 +564,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
             </div>
             <div>
               <h2 className="text-xl font-bold text-amber-400 tracking-wide flex items-center gap-2">
-                {title || 'Manage Monsters'}
+                {title || 'Monster Manager'}
                 <span className="text-xs font-mono px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 font-bold border border-slate-700">
                   {monsters.length}
                 </span>

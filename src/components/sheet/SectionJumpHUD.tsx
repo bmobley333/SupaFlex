@@ -73,7 +73,7 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
       items: [
         {
           id: 'card-weapons',
-          title: 'Weapon SK',
+          title: 'Weapons',
           icon: '⚔️',
           activeColorClass: 'bg-rose-500/20 text-rose-200 border-rose-400/80 shadow-[0_0_10px_rgba(244,63,94,0.35)]',
         },
@@ -85,13 +85,13 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
         },
         {
           id: 'card-armor',
-          title: 'Armor SK',
+          title: 'Armor',
           icon: '🧥',
           activeColorClass: 'bg-amber-500/20 text-amber-200 border-amber-400/80 shadow-[0_0_10px_rgba(245,158,11,0.35)]',
         },
         {
           id: 'card-shield',
-          title: 'Shield SK',
+          title: 'Shield',
           icon: '🛡️',
           activeColorClass: 'bg-cyan-500/20 text-cyan-200 border-cyan-400/80 shadow-[0_0_10px_rgba(6,182,212,0.35)]',
         },
@@ -142,13 +142,13 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
         },
         {
           id: 'card-exotic-gear',
-          title: 'Exotic Gear',
+          title: 'Exotics',
           icon: '🧿',
           activeColorClass: 'bg-cyan-500/20 text-cyan-200 border-cyan-400/80 shadow-[0_0_10px_rgba(6,182,212,0.35)]',
         },
         {
           id: 'card-powers',
-          title: 'My Powers',
+          title: 'Powers',
           icon: '🔥',
           activeColorClass: 'bg-orange-500/20 text-orange-200 border-orange-400/80 shadow-[0_0_10px_rgba(249,115,22,0.35)]',
         },

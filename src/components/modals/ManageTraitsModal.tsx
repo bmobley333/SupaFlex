@@ -354,7 +354,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     };
     addTraitQuirk(item);
     if (cost > 0) {
-      recordApExpenditure(cost, 'Skills', `${isUni ? 'Universal' : 'Learned'} Trait: ${rule.name} (${cost} AP)`, 1, 'Manage Traits');
+      recordApExpenditure(cost, 'Skills', `${isUni ? 'Universal' : 'Learned'} Trait: ${rule.name} (${cost} AP)`, 1, 'Traits Manager');
     }
   };
 
@@ -368,7 +368,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     if (!removed) return;
     const cost = typeof rule.ap_cost === 'number' && rule.ap_cost > 0 ? rule.ap_cost : (inherent ? 0 : 1);
     if (cost > 0) {
-      recordApExpenditure(-cost, 'Skills', `Removed Trait: ${rule.name} (-${cost} AP Refunded)`, 1, 'Manage Traits');
+      recordApExpenditure(-cost, 'Skills', `Removed Trait: ${rule.name} (-${cost} AP Refunded)`, 1, 'Traits Manager');
     }
   };
 
@@ -389,7 +389,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-outfit font-black text-base text-slate-100 uppercase tracking-wide">
-                  Manage Traits
+                  Traits Manager
                 </h3>
               </div>
               <p className="text-xs text-slate-400">
