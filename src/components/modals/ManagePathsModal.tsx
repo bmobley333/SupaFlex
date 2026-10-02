@@ -744,7 +744,36 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                         <span>{selectedExtraPathToBuy}</span>
                         <ItemNotesPopover notes={resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy)?.description || (resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy) as any)?.notes} itemName={selectedExtraPathToBuy} inline />
                       </span>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {activeRole === 'gm' && (
+                          <button
+                            type="button"
+                            onClick={() => handleLearnNewPath(0)}
+                            className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer shadow-sm"
+                            title="Unlock as Free GM grant (0 AP)"
+                          >
+                            <span>🎁</span>
+                            <span>GM Grant</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={availableAp < 4}
+                          onClick={() => handleLearnNewPath(4)}
+                          title={
+                            availableAp < 4
+                              ? `Insufficient AP: Requires 4 AP (${availableAp} AP available)`
+                              : 'Unlock Path (4 AP)'
+                          }
+                          className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-sm ${
+                            availableAp >= 4
+                              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white cursor-pointer active:scale-95'
+                              : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                          }`}
+                        >
+                          <Sparkles className="w-3 h-3 text-purple-200" />
+                          <span>Unlock Path (4 AP)</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleInspectPath(selectedExtraPathToBuy, false)}
@@ -834,57 +863,6 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                     })()}
                   </div>
                 )}
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2.5 pt-2 border-t border-slate-800/80">
-                  {selectedExtraPathToBuy && (
-                    <button
-                      type="button"
-                      onClick={() => handleInspectPath(selectedExtraPathToBuy, false)}
-                      className="py-2.5 px-4 rounded-xl font-outfit font-bold text-xs flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white transition cursor-pointer shadow-md shrink-0"
-                      title={`Inspect all elements in ${selectedExtraPathToBuy}`}
-                    >
-                      <span>🔍</span>
-                      <span>Inspect Path</span>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    disabled={!selectedExtraPathToBuy || availableAp < 4}
-                    onClick={() => handleLearnNewPath(4)}
-                    title={
-                      !selectedExtraPathToBuy
-                        ? 'Select a path to unlock'
-                        : availableAp < 4
-                        ? `Insufficient AP: Requires 4 AP (${availableAp} AP available)`
-                        : 'Unlock Path (4 AP)'
-                    }
-                    className={`flex-1 py-2.5 px-4 rounded-xl font-outfit font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all ${
-                      selectedExtraPathToBuy && availableAp >= 4
-                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white cursor-pointer active:scale-95'
-                        : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                    }`}
-                  >
-                    <Sparkles className="w-4 h-4 text-purple-300" />
-                    <span>Unlock Path (4 AP)</span>
-                  </button>
-
-                  {activeRole === 'gm' && (
-                    <button
-                      type="button"
-                      disabled={!selectedExtraPathToBuy}
-                      onClick={() => handleLearnNewPath(0)}
-                      className={`py-2.5 px-4 rounded-xl font-outfit font-bold text-xs flex items-center justify-center gap-1.5 border transition-all ${
-                        selectedExtraPathToBuy
-                          ? 'bg-slate-900 hover:bg-slate-800 text-emerald-300 border-emerald-500/40 cursor-pointer'
-                          : 'bg-slate-950 text-slate-600 border-slate-800 cursor-not-allowed'
-                      }`}
-                      title="Unlock as Free GM grant (0 AP)"
-                    >
-                      <span>🎁 Free GM Grant</span>
-                    </button>
-                  )}
-                </div>
               </div>
             </div>
           </div>

@@ -20,7 +20,8 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
     const handleOpen = (e: CustomEvent) => {
       if (e.detail === 'paths' || e.detail === 'kits') setShowPathsModal(true);
     };
-    const handlePathViewerClosed = () => {
+    const handlePathViewerClosed = (e: any) => {
+      if (e?.detail?.returnTo === 'launch_hub') return;
       setShowPathsModal(true);
     };
     window.addEventListener('supaflex:open-manager' as any, handleOpen);

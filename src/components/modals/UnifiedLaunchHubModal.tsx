@@ -234,6 +234,19 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     return [...base].sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
   }, [paths, isGsUnlocked]);
 
+  const handleInspectPath = (pathName: string) => {
+    if (!pathName) return;
+    window.dispatchEvent(
+      new CustomEvent('supaflex:open-path-viewer', {
+        detail: {
+          pathName,
+          isOwned: false,
+          returnTo: 'launch_hub',
+        },
+      })
+    );
+  };
+
   const handleUnlockGuildSpace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guildSpacePasskey.trim()) return;
@@ -821,7 +834,19 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Race</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">Race</label>
+                          <button
+                            type="button"
+                            disabled={!newHeroRace}
+                            onClick={() => handleInspectPath(newHeroRace)}
+                            className="px-1.5 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 border border-purple-500/40 text-purple-300 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer shadow-sm disabled:opacity-40"
+                            title={`Inspect ${newHeroRace} Path elements`}
+                          >
+                            <span>🔍</span>
+                            <span>Inspect</span>
+                          </button>
+                        </div>
                         <select
                           value={newHeroRace}
                           onChange={(e) => setNewHeroRace(e.target.value)}
@@ -839,7 +864,19 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-300 uppercase tracking-wider mb-1">Class</label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">Class</label>
+                          <button
+                            type="button"
+                            disabled={!newHeroClass}
+                            onClick={() => handleInspectPath(newHeroClass)}
+                            className="px-1.5 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 border border-purple-500/40 text-purple-300 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer shadow-sm disabled:opacity-40"
+                            title={`Inspect ${newHeroClass} Path elements`}
+                          >
+                            <span>🔍</span>
+                            <span>Inspect</span>
+                          </button>
+                        </div>
                         <select
                           value={newHeroClass}
                           onChange={(e) => setNewHeroClass(e.target.value)}

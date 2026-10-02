@@ -24,6 +24,7 @@ interface PlayerWorkshopModalProps {
   pathViewerTarget?: {
     pathName: string;
     isOwned?: boolean;
+    returnTo?: string;
     onUnlock?: () => void;
   } | null;
 }
@@ -5857,7 +5858,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isPathViewer && pathViewerTarget && !pathViewerTarget.isOwned && (
+            {isPathViewer && pathViewerTarget && !pathViewerTarget.isOwned && pathViewerTarget.returnTo !== 'launch_hub' && (
               <button
                 type="button"
                 onClick={handleUnlockPathFromViewer}
@@ -5885,7 +5886,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             <button
               onClick={onClose}
               className="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
-              title={isPathViewer ? "Back to Paths Manager (Esc)" : "Close Forge"}
+              title={isPathViewer ? (pathViewerTarget?.returnTo === 'launch_hub' ? "Back to Hero Creator (Esc)" : "Back to Paths Manager (Esc)") : "Close Forge"}
             >
               <X className="w-5 h-5" />
             </button>
@@ -5909,12 +5910,20 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                 {linkedElements.length} Total Elements
               </span>
             </div>
-            <div className="flex items-center gap-2 font-mono text-[11px]">
-              <span className="text-slate-400">Character AP:</span>
-              <span className="font-bold text-amber-300 bg-amber-950/50 border border-amber-500/40 px-2 py-0.5 rounded">
-                {calculateAvailableAp(activeCharacter?.sheet_data?.level || 1, activeCharacter?.sheet_data)} AP
-              </span>
-            </div>
+            {pathViewerTarget?.returnTo === 'launch_hub' ? (
+              <div className="flex items-center gap-2 font-mono text-[11px]">
+                <span className="font-bold text-indigo-300 bg-indigo-950/80 border border-indigo-500/40 px-2 py-0.5 rounded">
+                  ✨ Hero Creation Preview
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 font-mono text-[11px]">
+                <span className="text-slate-400">Character AP:</span>
+                <span className="font-bold text-amber-300 bg-amber-950/50 border border-amber-500/40 px-2 py-0.5 rounded">
+                  {calculateAvailableAp(activeCharacter?.sheet_data?.level || 1, activeCharacter?.sheet_data)} AP
+                </span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex items-center justify-between gap-4">
@@ -10682,7 +10691,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             type="button"
             onClick={onClose}
             className="py-2 px-6 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold rounded-xl transition cursor-pointer shadow-sm"
-            title="Close Forge"
+            title={isPathViewer ? (pathViewerTarget?.returnTo === 'launch_hub' ? "Back to Hero Creator" : "Back to Paths Manager") : "Close Forge"}
           >
             Done
           </button>

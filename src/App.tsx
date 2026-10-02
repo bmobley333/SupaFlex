@@ -54,7 +54,7 @@ export default function App() {
   const [showVitalityManagerModal, setShowVitalityManagerModal] = useState(false);
   const [showFocusManagerModal, setShowFocusManagerModal] = useState(false);
   const [openedFromApManager, setOpenedFromApManager] = useState(false);
-  const [pathViewerTarget, setPathViewerTarget] = useState<{ pathName: string; isOwned?: boolean } | null>(null);
+  const [pathViewerTarget, setPathViewerTarget] = useState<{ pathName: string; isOwned?: boolean; returnTo?: string } | null>(null);
 
   useEffect(() => {
     const handleOpenPathViewer = (e: any) => {
@@ -931,11 +931,12 @@ export default function App() {
       {/* ⚒️ Forge Modal / Path Viewer */}
       <ErrorBoundary fallbackTitle="Forge Error" onClose={() => {
         const wasPathViewer = Boolean(pathViewerTarget);
+        const returnTo = pathViewerTarget?.returnTo;
         setShowPlayerWorkshopModal(false);
         setEditingWorkshopItem(null);
         setPathViewerTarget(null);
         if (wasPathViewer) {
-          window.dispatchEvent(new CustomEvent('supaflex:path-viewer-closed'));
+          window.dispatchEvent(new CustomEvent('supaflex:path-viewer-closed', { detail: { returnTo } }));
         }
       }}>
         <PlayerWorkshopModal
@@ -945,11 +946,12 @@ export default function App() {
           pathViewerTarget={pathViewerTarget}
           onClose={() => {
             const wasPathViewer = Boolean(pathViewerTarget);
+            const returnTo = pathViewerTarget?.returnTo;
             setShowPlayerWorkshopModal(false);
             setEditingWorkshopItem(null);
             setPathViewerTarget(null);
             if (wasPathViewer) {
-              window.dispatchEvent(new CustomEvent('supaflex:path-viewer-closed'));
+              window.dispatchEvent(new CustomEvent('supaflex:path-viewer-closed', { detail: { returnTo } }));
             }
           }}
           onOpenWorkshop={() => {
