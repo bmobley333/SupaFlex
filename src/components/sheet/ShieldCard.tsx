@@ -315,7 +315,7 @@ export const ShieldCard: React.FC = () => {
 
     if (!isSkilled) {
       window.alert(
-        `Learned "${item.name}" as Unskilled!\n\nYou have ${availableAp} AP available, but becoming Skilled requires ${apCost} AP.\n\nYou can toggle this to Skilled in the Shield Manager once you have enough AP.`
+        `Learned "${item.name}" as Unskilled!\n\nYou have ${availableAp} AP available, but becoming Skilled requires ${apCost} AP.\n\nYou can toggle this to Skilled in the Shields Manager once you have enough AP.`
       );
     }
   };
@@ -580,13 +580,13 @@ export const ShieldCard: React.FC = () => {
             type="button"
             onClick={() => setShowManageModal(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
-            title="Click to open Shield Manager"
+            title="Click to open Shields Manager"
           >
             <div className="p-1.5 rounded-xl bg-cyan-950/90 border border-cyan-500/50 text-cyan-300 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.25)] group-hover:scale-105 group-hover:border-cyan-400 transition-all">
               <span className="text-base leading-none">🛡️</span>
             </div>
             <h3 className="font-outfit font-extrabold text-sm tracking-widest text-cyan-200 uppercase group-hover:text-white transition-colors">
-              Shield
+              Shields
             </h3>
           </button>
           <CardHelpButton ruleKey="col.shields.block" />
@@ -606,7 +606,7 @@ export const ShieldCard: React.FC = () => {
               ? 'bg-cyan-600/30 text-cyan-200 border-cyan-400 shadow-cyan-500/30'
               : 'bg-cyan-950/40 hover:bg-cyan-900/50 border-cyan-500/30 text-cyan-300 hover:text-white'
           }`}
-          title="Open Shield Manager"
+          title="Open Shields Manager"
         >
           <span className="text-xs group-hover:rotate-12 transition-transform">✏️</span>
         </button>
@@ -624,7 +624,7 @@ export const ShieldCard: React.FC = () => {
                   <div className="p-2 rounded-xl bg-cyan-950/80 border border-cyan-500/30 text-cyan-300">🛡️</div>
                   <div>
                     <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide">
-                      Shield Manager
+                      Shields Manager
                     </h3>
                     <p className="text-xs text-slate-400 hidden sm:block">
                       Manage character shield block proficiencies and combat defensive techniques.
@@ -1071,7 +1071,7 @@ export const ShieldCard: React.FC = () => {
               <div className="px-4 py-3 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between text-xs text-slate-400 shrink-0">
                 <div className="flex items-center gap-2.5">
                   <span className="text-base">🛡️</span>
-                  <span className="font-outfit font-bold text-slate-300">Shield Manager</span>
+                  <span className="font-outfit font-bold text-slate-300">Shields Manager</span>
                 </div>
                 
                 {/* Standardized Master Blueprint Done Footer Button */}
@@ -1090,7 +1090,7 @@ export const ShieldCard: React.FC = () => {
       {/* Main Character Sheet Card View */}
       {shield.equipped ? (
         <div className="flex flex-wrap items-center gap-2.5 pt-1 animate-fadeIn">
-          {/* Read-Only Sk Indicator (Managed via Shield Manager) */}
+          {/* Read-Only Sk Indicator (Managed via Shields Manager) */}
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-xs font-bold text-slate-300 select-none">
               Sk
@@ -1101,7 +1101,7 @@ export const ShieldCard: React.FC = () => {
                   ? 'bg-cyan-600/30 text-cyan-300 border-cyan-500/60 shadow-sm'
                   : 'bg-rose-950/80 text-rose-400 border-rose-500/60 shadow-md'
               }`}
-              title={shield.sk ? 'Skilled (Manage in Shield Manager)' : 'Unskilled (Manage in Shield Manager)'}
+              title={shield.sk ? 'Skilled (Manage in Shields Manager)' : 'Unskilled (Manage in Shields Manager)'}
             >
               {shield.sk ? (
                 <Check className="w-3.5 h-3.5 stroke-[3]" />

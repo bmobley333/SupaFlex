@@ -91,7 +91,7 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
         },
         {
           id: 'card-shield',
-          title: 'Shield',
+          title: 'Shields',
           icon: '🛡️',
           activeColorClass: 'bg-cyan-500/20 text-cyan-200 border-cyan-400/80 shadow-[0_0_10px_rgba(6,182,212,0.35)]',
         },
