@@ -246,7 +246,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
         ? {
             id: `refund_gear_powers_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
             cost: -refundAp,
-            category: 'Gear Powers',
+            category: 'Exotics',
             description: `Refund ${refundAp} AP from dropped gear: ${item.name}`,
             tier: 'Manual',
             source: item.name,
@@ -394,10 +394,10 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
       usage: veUsage,
       effect: veEffect.trim(),
       notes: veTargetPower?.notes || '',
-      source: 'Custom Gear Power Version',
+      source: 'Custom Exotic Power Version',
       source_gear: veHostGearName,
       source_mod: veHostModName,
-      category: 'Gear Powers',
+      category: 'Exotics',
       is_hardware: true,
       slot_weight: 1,
       checked_state: [false, false, false],
@@ -435,7 +435,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
 
       const logEntry: ApLogEntry = {
         id: String(Date.now()),
-        category: 'Gear Powers',
+        category: 'Exotics',
         description: `Created & Learned ${versionedName} (+${versionCost} AP)`,
         source: veHostGearName,
         tier: 1,
@@ -560,7 +560,7 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
         const hasInstalledMods = Array.isArray(item.installed_mods) && item.installed_mods.length > 0;
         const hasLearnedSlot = spellSlots.some((s) => cleanBelongsToName(s.source_gear) === cleanHost);
 
-        // Must have at least 1 mod (compatible or installed) or 1 gear power
+        // Must have at least 1 mod (compatible or installed) or 1 exotic power
         const hasModsOrPowers = directFns.length > 0 || compMods.length > 0 || hasInstalledMods || hasLearnedSlot;
         if (!hasModsOrPowers) return false;
 

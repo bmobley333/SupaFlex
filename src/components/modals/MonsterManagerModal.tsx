@@ -382,7 +382,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const gearPart = editGearText.trim() ? ` (${editGearText.trim()})` : '';
     const abilitiesPart = editAbilitiesText.trim() ? ` (${editAbilitiesText.trim()})` : '';
 
-    const iconPosMatch = editText.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️💔]/u);
+    const iconPosMatch = editText.match(/[🚩👣🥊⚔️⚔️🛡️🧥🥋❤️💔]/u);
     let reconstructed = '';
     if (iconPosMatch && iconPosMatch.index !== undefined) {
       const namePart = editText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
@@ -522,7 +522,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const nish = extractFirstInt(sm.nish, 10);
     const mr = extractFirstInt(sm.mr, 10);
     const vit = extractFirstInt(sm.vit, 10);
-    const atk = String(sm.atk_dmg_ftg || '10/5').replace(/[⚔️⚔]/g, '').trim();
+    const atk = String(sm.atk_dmg_ftg || '10/5').replace(/[⚔️⚔️]/g, '').trim();
     const def = String(sm.dod_ar || '10/1').replace(/[🧥🛡️]/g, '').trim();
     
     let attrNums = extractAllInts(sm.attributes);
@@ -995,7 +995,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
                               </div>
                               <span className="text-[11px] text-slate-400 font-mono flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-0.5">
                                 <span>🚩 {extractFirstInt(sm.nish, 10)}</span>
-                                <span>⚔️ {(sm.atk_dmg_ftg || '10/5').replace(/[⚔️⚔]/g, '').trim()}</span>
+                                <span>⚔️ {(sm.atk_dmg_ftg || '10/5').replace(/[⚔️⚔️]/g, '').trim()}</span>
                                 <span>🧥 {(sm.dod_ar || '10/0').replace(/[🧥🛡️]/g, '').trim()}</span>
                                 <span>❤️ {extractFirstInt(sm.vit, 10)}</span>
                               </span>

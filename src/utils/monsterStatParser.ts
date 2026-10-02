@@ -37,8 +37,8 @@ export function parseMonsterLine(line: string): ParsedMonster {
     };
   }
 
-  // 1. Extract Attack Stat (⚔️ or ⚔)
-  const atkMatch = trimmed.match(/(?:⚔️|⚔)\s*[\d\/\(\)\s\-+]+/u);
+  // 1. Extract Attack Stat (⚔️ or ⚔️)
+  const atkMatch = trimmed.match(/(?:⚔️|⚔️)\s*[\d\/\(\)\s\-+]+/u);
   const attackStat = atkMatch ? atkMatch[0].trim() : '';
 
   // 2. Extract Defense/Armor Stat (🛡️, 🧥, or 🥋)
@@ -52,7 +52,7 @@ export function parseMonsterLine(line: string): ParsedMonster {
   const parsedMinionVit = isMinionHeart && vitMatch ? parseInt(vitMatch[1], 10) : undefined;
 
   // 4. Extract Name / Prefix (everything before first stat icon 🚩, 👣, 🥊, ⚔️, 🛡️, 🧥, 🥋, ❤️, 💔)
-  const iconPosMatch = trimmed.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️💔]/u);
+  const iconPosMatch = trimmed.match(/[🚩👣🥊⚔️⚔️🛡️🧥🥋❤️💔]/u);
   let nameWithEquip = trimmed;
   if (iconPosMatch && iconPosMatch.index !== undefined) {
     nameWithEquip = trimmed.substring(0, iconPosMatch.index).trim();
@@ -198,8 +198,8 @@ export function isMonsterContinuationLine(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
 
-  // 1. Starts with a combat stat icon (🚩, 👣, ⚔️, ⚔, 🛡️, 🧥, ❤️)
-  if (/^[🚩👣⚔️⚔🛡️🧥❤️]/u.test(trimmed)) {
+  // 1. Starts with a combat stat icon (🚩, 👣, ⚔️, ⚔️, 🛡️, 🧥, ❤️)
+  if (/^[🚩👣⚔️⚔️🛡️🧥❤️]/u.test(trimmed)) {
     return true;
   }
 
@@ -319,9 +319,9 @@ export function decomposeMonsterStatblock(raw: string): {
     }
   }
 
-  // 2. Extract gear from () before first combat icon (🚩, 👣, 🥊, ⚔️, ⚔, 🛡️, 🧥, 🥋, ❤️, 💔)
+  // 2. Extract gear from () before first combat icon (🚩, 👣, 🥊, ⚔️, ⚔️, 🛡️, 🧥, 🥋, ❤️, 💔)
   let gear = '';
-  const firstIconMatch = statline.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️💔]/u);
+  const firstIconMatch = statline.match(/[🚩👣🥊⚔️⚔️🛡️🧥🥋❤️💔]/u);
   if (firstIconMatch && firstIconMatch.index !== undefined) {
     const preIcon = statline.substring(0, firstIconMatch.index);
     const postIcon = statline.substring(firstIconMatch.index);

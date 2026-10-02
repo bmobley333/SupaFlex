@@ -11,7 +11,7 @@
   },
   "leveling.creation_steps": {
     "title": "Character Creation Steps",
-    "summary": "1. 🧭 Starting Paths — Race Path & Class Path (0 AP free Trait grants).\n2. ✅ Attributes — Assign 1x d4, 2x d6, 2x d8 across Might, Motion, Mind, Magic, Moxie.\n3. ❤️ Vitality — Starting Vit = 10 + 1d(Moxie).\n4. 🔮 Focus Die — Starting Focus Die at d4.\n5. 💍 Gear Power Slots — 5 Base Gear Power Slots (0 AP).\n6. 💰 Currency — 1 Gold (1g) + 1d100 Silver (s) (100s = 1g).\n7. 🧩 8 Starting AP — Spend across Skills, Weapons, Armor, Powers, and flexible boons.",
+    "summary": "1. 🧭 Starting Paths — Race Path & Class Path (0 AP free Trait grants).\n2. ✅ Attributes — Assign 1x d4, 2x d6, 2x d8 across Might, Motion, Mind, Magic, Moxie.\n3. ❤️ Vitality — Starting Vit = 10 + 1d(Moxie).\n4. 🔮 Focus Die — Starting Focus Die at d4.\n5. 💍 Exotic Slots — 5 Base Exotic Slots (0 AP).\n6. 💰 Currency — 1 Gold (1g) + 1d100 Silver (s) (100s = 1g).\n7. 🧩 8 Starting AP — Spend across Skills, Weapons, Armor, Powers, and flexible boons.",
     "anchor": "#character-creation"
   },
   "leveling.advancement_steps": {
@@ -40,8 +40,8 @@
     "anchor": "#abilities-powers-magic-items-skills"
   },
   "magic_items.basics": {
-    "title": "Equipment & Gear Power Slots",
-    "summary": "Universal Capacity Pool:\n• Base Capacity — Every character starts with 5 Gear Power Slots at Level 1.\n• Shared Bandwidth — Both Artifacts (💍 Magic Relics) and Gear Powers (🧿 Tech/Cyber/Biotech) draw from the same Gear Power Slots Pool.\n• Mundane Gear — Standard gear, weapons, armor, and tools consume 0 Gear Power Slots.\n\nGear Power Slot Weights:\n• ⭕ Free Utility — 0 Gear Power Slots\n• 🧿 Standard Gear Power — 1 Gear Power Slot\n\nGear Powers vs. Vault:\n• Active Gear Powers — The equipment abilities actively attuned, wired, or holstered on your person.\n• The Gear Powers Vault — Unlimited inactive storage. Swap gear powers between Vault and active Gear Power Slots during a 5-minute out-of-combat breather.",
+    "title": "Equipment & Exotic Slots",
+    "summary": "Universal Capacity Pool:\n• Base Capacity — Every character starts with 5 Exotic Slots at Level 1.\n• Shared Bandwidth — Both Artifacts (💍 Magic Relics) and Exotics (🧿 Tech/Cyber/Biotech) draw from the same Exotic Slots Pool.\n• Mundane Gear — Standard gear, weapons, armor, and tools consume 0 Exotic Slots.\n\nGear Power Slot Weights:\n• ⭕ Free Utility — 0 Exotic Slots\n• 🧿 Standard Exotic Power — 1 Exotic Power Slot\n\nGear Powers vs. Vault:\n• Active Exotics — The equipment abilities actively attuned, wired, or holstered on your person.\n• The Exotics Vault — Unlimited inactive storage. Swap exotics between Vault and active Exotic Slots during a 5-minute out-of-combat breather.",
     "anchor": "#equipment-loadout"
   },
   "weapons.basics": {
@@ -100,7 +100,7 @@
     "anchor": "#leveling-advancement"
   },
   "col.magic_items.category": {
-    "title": "Item Category & Gear Power Slots (💫)",
+    "title": "Item Category & Exotic Slots (💫)",
     "summary": "Item tier and slot cost: ⭕ Free (0 Slots), 🧿 Standard (1 Slot).",
     "anchor": "#equipment-loadout"
   },

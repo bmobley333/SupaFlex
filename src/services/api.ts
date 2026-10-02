@@ -480,7 +480,7 @@ export const gameApi = {
     query = applyOwnerScope(query, scope);
     const { data, error } = await query.order('name', { ascending: true });
     if (error) {
-      console.error('[gameApi] Error fetching gear powers catalog:', error);
+      console.error('[gameApi] Error fetching exotics catalog:', error);
       return [];
     }
     return (data || []) as GearPowerItem[];
@@ -3886,7 +3886,7 @@ export const gameApi = {
     }
   },
 
-  // 11. GEAR POWERS
+  // 11. EXOTICS
   async saveCanonicalGearPower(payload: any): Promise<any> {
     const { data, error } = await supabase
       .from('gear_powers')

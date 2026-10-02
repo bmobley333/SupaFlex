@@ -56,7 +56,6 @@ const EMOJI_MAP: Record<string, { key: AttributeKey; label: string; icon: string
   '💪': { key: 'might', label: 'Might', icon: '💪' },
   '🏃': { key: 'motion', label: 'Motion', icon: '🏃' },
   '👁️': { key: 'mind', label: 'Mind', icon: '👁️' },
-  '👁': { key: 'mind', label: 'Mind', icon: '👁️' },
   '✨': { key: 'magic', label: 'Magic', icon: '✨' },
   '🫀': { key: 'moxie', label: 'Moxie', icon: '🫀' },
   '🎭': { key: 'moxie', label: 'Moxie', icon: '🫀' },
@@ -1584,7 +1583,7 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                         ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
                                         : sk.emoji === '🏃'
                                         ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
-                                        : sk.emoji === '👁️' || sk.emoji === '👁'
+                                        : sk.emoji === '👁️' || sk.emoji === '👁️'
                                         ? 'bg-cyan-950/80 text-cyan-300 border-cyan-500/40'
                                         : sk.emoji === '✨'
                                         ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'

@@ -243,7 +243,7 @@ interface CharacterStore {
   setActivePartyId: (partyId: string | null) => void;
   recordApExpenditure: (
     cost: number,
-    category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Gear Powers' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual',
+    category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Exotics' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual',
     description: string,
     tier: 1 | 2 | 3 | 'Creation' | 'Manual',
     source: string
@@ -280,7 +280,7 @@ interface CharacterStore {
   removeHardwareBundle: (bundleNameOrId: string | number) => void;
   toggleHardwareBundleVisibility: (bundleNameOrId: string | number) => void;
 
-  // Gear Powers Actions (1 AP Universal Learning)
+  // Exotics Actions (1 AP Universal Learning)
   learnGearPower: (power: GearPowerItem, hostGearName: string, hostModName?: string) => boolean;
   unlearnGearPower: (powerName: string) => void;
   toggleGearPowerUsage: (powerName: string, checkIndex: number) => void;
@@ -2252,7 +2252,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
     const newLogEntry: ApLogEntry = {
       id: String(Date.now()),
-      category: 'Gear Powers',
+      category: 'Exotics',
       description: `Learned ${power.name}`,
       source: hostGearName,
       tier: 1,
@@ -2295,7 +2295,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
     const newLogEntry: ApLogEntry = {
       id: String(Date.now()),
-      category: 'Gear Powers',
+      category: 'Exotics',
       description: `Refunded ${powerName} (v${targetVer}: -${refundAp} AP)`,
       source: 'Refund',
       tier: 1,
@@ -2464,7 +2464,7 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       refundAp > 0
         ? {
             id: `refund_mod_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-            category: 'Gear Powers',
+            category: 'Exotics',
             description: `Refund ${refundAp} AP from removed mod: ${modName}`,
             source: hostName,
             tier: 1,

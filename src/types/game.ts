@@ -674,7 +674,7 @@ export interface SimpleGearItem {
 export interface ApLogEntry {
   id: string;
   timestamp: string;
-  category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Gear Powers' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual';
+  category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Exotics' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual';
   cost: number;
   description: string;
   tier: 1 | 2 | 3 | 'Creation' | 'Manual';
@@ -946,7 +946,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     }
   }
 
-  // 1 AP per learned Gear Power in spell_slots (plus escalating version upgrades)
+  // 1 AP per learned Exotic Power in spell_slots (plus escalating version upgrades)
   const spellSlots = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
   let gearPowersNet = spellSlots.reduce((sum: number, s: any) => sum + (typeof s?.ap_cost === 'number' ? s.ap_cost : 1), 0);
   for (const s of spellSlots) {
@@ -994,7 +994,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     Attributes: attributesNet,
     Capstones: capstonesNet,
     Focus: focusNet,
-    'Gear Powers': gearPowersNet,
+    'Exotics': gearPowersNet,
     'GM Bonus': gmBonus,
     'Loadout Slots': gearPowersNet,
     'Magic Items': gearPowersNet,
@@ -1043,7 +1043,7 @@ export const calculateCumulativeVersionAp = (version: number): number => {
 };
 
 /**
- * Calculates the total AP refund when unlearning/deleting a power or gear power at version V.
+ * Calculates the total AP refund when unlearning/deleting a power or exotic power at version V.
  * Returns initial AP (baseCost, default 1) + cumulative version AP.
  */
 export const calculateTotalPowerRefundAp = (version: number, baseCost: number = 1): number => {
@@ -1242,7 +1242,7 @@ export type HardwareItem = ExoticItem;
 
 export type LoadoutItem = MagicItem | ExoticItem | HardwareItem;
 
-/** Canonical S-Tier Interface for Gear Powers (Actionable abilities derived from Equipment/Mods/Artifacts) */
+/** Canonical S-Tier Interface for Exotics (Actionable abilities derived from Equipment/Mods/Artifacts) */
 export interface GearPowerItem {
   id: number;
   name: string;

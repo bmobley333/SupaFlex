@@ -676,7 +676,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                               <span className="text-amber-400 text-xs shrink-0 font-mono">
-                                {isCollapsed ? '▶' : '▼'}
+                                {isCollapsed ? '▶️' : '▼'}
                               </span>
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-1.5 flex-wrap">

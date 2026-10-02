@@ -3617,7 +3617,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             try {
               await gameApi.unlinkCanonicalGearPower(pId, hostBelongsTo);
             } catch (err) {
-              console.warn('[handleSubmit] Error unlinking gear power:', err);
+              console.warn('[handleSubmit] Error unlinking exotic power:', err);
             }
           }
           for (const mId of deletedModIds) {

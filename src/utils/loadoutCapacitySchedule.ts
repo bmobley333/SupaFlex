@@ -40,8 +40,8 @@ export function getItemSlotWeight(item: any): 0 | 1 | 2 | 3 | 4 {
 }
 
 /**
- * Calculates the total Loadout Slots consumed by an array of active loadout items (Artifacts + Gear Powers).
- * Items occupy: 0 Slots for Free utilities, 1 Slot for standard Gear Powers.
+ * Calculates the total Loadout Slots consumed by an array of active loadout items (Artifacts + Exotics).
+ * Items occupy: 0 Slots for Free utilities, 1 Slot for standard Exotics.
  */
 export function calculateTotalLoadoutSlotsUsed(items: (any | null | undefined)[]): number {
   let totalSlots = 0;

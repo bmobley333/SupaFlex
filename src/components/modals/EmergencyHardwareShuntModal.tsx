@@ -28,7 +28,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
 
   const sheet = activeCharacter?.sheet_data;
 
-  // Slot setup (Active Gear Powers are stored in spell_slots)
+  // Slot setup (Active Exotics are stored in spell_slots)
   const slotKey = 'spell_slots';
   const rawActiveSlots: AbilitySlot[] = Array.isArray(sheet?.[slotKey]) ? (sheet[slotKey] as AbilitySlot[]) : [];
   const activeSlots = useMemo(() => {
@@ -166,7 +166,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Hot-swap 1 Gear Powers Vault power into your active loadout. Costs <strong className="text-emerald-300">1 Luck Chit</strong> and 1 <strong className="text-amber-300">[M] Move Action</strong>.
+                Hot-swap 1 Exotics Vault power into your active loadout. Costs <strong className="text-emerald-300">1 Luck Chit</strong> and 1 <strong className="text-amber-300">[M] Move Action</strong>.
               </p>
             </div>
           </div>
@@ -191,7 +191,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
         <div className="px-4 py-2 bg-slate-950/70 border-b border-slate-800 flex items-center justify-between text-xs font-mono flex-wrap gap-2">
           <div className="flex items-center gap-2 text-[11px] text-slate-300">
             <span className="font-bold text-cyan-300">Workflow:</span>
-            <span>1. Select 1 Gear Powers Vault power (Right)</span>
+            <span>1. Select 1 Exotics Vault power (Right)</span>
             <ArrowRight className="w-3 h-3 text-slate-500 inline" />
             <span>2. Remove active powers (Left) if over capacity</span>
             <ArrowRight className="w-3 h-3 text-slate-500 inline" />
@@ -210,7 +210,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
             <div className="flex items-center justify-between">
               <span className="font-outfit font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
                 <span>🧿</span>
-                <span>Active Gear Powers</span>
+                <span>Active Exotics</span>
               </span>
               <span
                 className={`text-[11px] font-mono font-extrabold px-2 py-0.5 rounded border ${
@@ -242,7 +242,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono font-bold text-cyan-300 flex items-center gap-1">
                     <Sparkles className="w-3 h-3 text-cyan-400" />
-                    <span>INCOMING FROM GEAR POWERS VAULT (1 of 1)</span>
+                    <span>INCOMING FROM Exotics Vault (1 of 1)</span>
                   </span>
                   <button
                     type="button"
@@ -267,7 +267,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
             {/* Equipped Active Functions List */}
             <div className="flex-1 overflow-y-auto max-h-[340px] border border-slate-800/80 rounded-xl bg-slate-950/40 p-1.5 flex flex-col gap-1.5">
               {activeSlots.length === 0 ? (
-                <div className="py-8 text-center text-slate-500 text-xs">No active gear powers equipped.</div>
+                <div className="py-8 text-center text-slate-500 text-xs">No Active Exotics equipped.</div>
               ) : (
                 activeSlots.map((slot, sIdx) => {
                   const isRemoved = removedSlotNames.has(slot.name.trim().toLowerCase());
@@ -319,11 +319,11 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
             </div>
           </div>
 
-          {/* PANE 2 (RIGHT): Gear Powers Vault Catalog (1 Add Allowed) */}
+          {/* PANE 2 (RIGHT): Exotics Vault Catalog (1 Add Allowed) */}
           <div className="flex flex-col gap-2.5 min-h-0">
             <div className="flex items-center justify-between">
               <span className="font-outfit font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
-                <span>📦</span> Gear Powers Vault Catalog
+                <span>📦</span> Exotics Vault Catalog
               </span>
               <span className="text-[11px] font-mono text-slate-400">{availableVaultItems.length} available</span>
             </div>
@@ -335,7 +335,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search Gear Powers Vault..."
+                placeholder="Search Exotics Vault..."
                 className="w-full pl-8 pr-3 py-1.5 bg-slate-950/70 border border-slate-800 rounded-xl text-slate-200 text-xs placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
               />
             </div>
@@ -343,7 +343,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
             {/* Vault Functions List */}
             <div className="flex-1 overflow-y-auto max-h-[380px] border border-slate-800/80 rounded-xl bg-slate-950/40 p-1.5 flex flex-col gap-1.5">
               {availableVaultItems.length === 0 ? (
-                <div className="py-8 text-center text-slate-500 text-xs">No matching powers in Gear Powers Vault.</div>
+                <div className="py-8 text-center text-slate-500 text-xs">No matching powers in Exotics Vault.</div>
               ) : (
                 availableVaultItems.map((item) => {
                   const isSelected = selectedVaultItem?.name === item.name;
@@ -420,7 +420,7 @@ export const EmergencyHardwareShuntModal: React.FC<EmergencyHardwareShuntModalPr
             )}
             {!errorMessage && !successMessage && !selectedVaultItem && (
               <div className="text-slate-500">
-                Select 1 power from the Gear Powers Vault on the right to begin shunting.
+                Select 1 power from the Exotics Vault on the right to begin shunting.
               </div>
             )}
           </div>

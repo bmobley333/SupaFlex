@@ -976,7 +976,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
         ? {
             id: `refund_gear_powers_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
             cost: -refundAp,
-            category: 'Gear Powers',
+            category: 'Exotics',
             description: `Refund ${refundAp} AP from dropped gear: ${droppedItem.name}`,
             tier: 'Manual',
             source: droppedItem.name,

@@ -59,8 +59,8 @@ export function parseMonsterForGmRoster(
   const trimmed = (raw || '').trim();
   const monId = explicitId || `${idPrefixOrId}${Math.random().toString(36).substring(2, 9)}`;
 
-  // Extract Name (before first combat stat icon 🚩, 👣, ⚔️, ⚔, 🛡️, 🧥, 🥋, ❤️, 💔)
-  const firstIconMatch = trimmed.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️💔]/u);
+  // Extract Name (before first combat stat icon 🚩, 👣, ⚔️, ⚔️, 🛡️, 🧥, 🥋, ❤️, 💔)
+  const firstIconMatch = trimmed.match(/[🚩👣🥊⚔️⚔️🛡️🧥🥋❤️💔]/u);
   let rawName = trimmed;
   if (firstIconMatch && firstIconMatch.index !== undefined) {
     rawName = trimmed.substring(0, firstIconMatch.index).trim();
@@ -95,8 +95,8 @@ export function parseMonsterForGmRoster(
   const mrMatch = trimmed.match(/👣\s*(\d+)/u);
   const mr = mrMatch ? parseInt(mrMatch[1], 10) : 10;
 
-  // Attack & Damage: match ⚔️ or ⚔
-  const atkMatch = trimmed.match(/(?:⚔️|⚔)\s*(\d+)\s*\/\s*(\d+)(?:\s*\((\d+)\))?/u);
+  // Attack & Damage: match ⚔️ or ⚔️
+  const atkMatch = trimmed.match(/(?:⚔️|⚔️)\s*(\d+)\s*\/\s*(\d+)(?:\s*\((\d+)\))?/u);
   const atk = atkMatch ? atkMatch[1] : '10';
   const dmg = atkMatch ? atkMatch[2] : '5';
   const wounds = atkMatch && atkMatch[3] ? `(${atkMatch[3]})` : '';
@@ -113,7 +113,7 @@ export function parseMonsterForGmRoster(
   const minionVitVal = isMinionHeart && vitMatch ? parseInt(vitMatch[1], 10) : undefined;
 
   // Attributes: [✨.../💪.../👁️.../🏃.../(🫀|💖)...]
-  const attrMatch = trimmed.match(/\[\s*✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*(?:👁️|👁)\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(🫀|💖)\s*(\d+)\s*\]/u);
+  const attrMatch = trimmed.match(/\[\s*✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*(?:👁️|👁️)\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(🫀|💖)\s*(\d+)\s*\]/u);
 
   let attrBlock = '';
   if (attrMatch) {
@@ -309,8 +309,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
   // Re-sync Monster Preset when selected party changes
   const handleSaveMonsters = (updated: ParsedMonster[]) => {
     const sorted = [...updated].sort((a, b) => {
-      const nameA = (a.nameWithEquip || a.fullText || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
-      const nameB = (b.nameWithEquip || b.fullText || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+      const nameA = (a.nameWithEquip || a.fullText || '').replace(/^[🚩👣⚔️⚔️🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+      const nameB = (b.nameWithEquip || b.fullText || '').replace(/^[🚩👣⚔️⚔️🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
       return nameA.localeCompare(nameB);
     });
     setEncounterMonsters(sorted);
@@ -363,7 +363,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const gearPart = editGearText.trim() ? ` (${editGearText.trim()})` : '';
     const abilitiesPart = editAbilitiesText.trim() ? ` (${editAbilitiesText.trim()})` : '';
 
-    const iconPosMatch = editText.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️💔]/u);
+    const iconPosMatch = editText.match(/[🚩👣🥊⚔️⚔️🛡️🧥🥋❤️💔]/u);
     let reconstructed = '';
     if (iconPosMatch && iconPosMatch.index !== undefined) {
       const namePart = editText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
@@ -625,7 +625,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const gearPart = rosterMonsterEditGear.trim() ? ` (${rosterMonsterEditGear.trim()})` : '';
     const abilitiesPart = rosterMonsterEditAbilities.trim() ? ` (${rosterMonsterEditAbilities.trim()})` : '';
 
-    const iconPosMatch = rosterMonsterEditText.match(/[🚩👣🥊⚔️⚔🛡️🧥🥋❤️💔]/u);
+    const iconPosMatch = rosterMonsterEditText.match(/[🚩👣🥊⚔️⚔️🛡️🧥🥋❤️💔]/u);
     let reconstructed = '';
     if (iconPosMatch && iconPosMatch.index !== undefined) {
       const namePart = rosterMonsterEditText.substring(0, iconPosMatch.index).trim().replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim();
@@ -1782,8 +1782,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                       <div className="max-h-48 overflow-y-auto pr-1 flex flex-col gap-1.5 border-l-2 border-rose-500/40 pl-3 ml-2 mt-1">
                         {[...(activeEncounter.monsters || [])]
                           .sort((a, b) => {
-                            const nameA = (a.fullText || a.nameWithEquip || (a as any).name || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
-                            const nameB = (b.fullText || b.nameWithEquip || (b as any).name || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+                            const nameA = (a.fullText || a.nameWithEquip || (a as any).name || '').replace(/^[🚩👣⚔️⚔️🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+                            const nameB = (b.fullText || b.nameWithEquip || (b as any).name || '').replace(/^[🚩👣⚔️⚔️🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
                             return nameA.localeCompare(nameB);
                           })
                           .map((m) => renderMonsterRow(m, activeEncounter.id))}
@@ -1843,8 +1843,8 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
                     const isCurrentEncounter = enc.id === activeEncounter?.id;
                     const monCount = (enc.monsters || []).length;
                     const sortedMonsters = [...(enc.monsters || [])].sort((a, b) => {
-                      const nameA = (a.fullText || a.nameWithEquip || (a as any).name || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
-                      const nameB = (b.fullText || b.nameWithEquip || (b as any).name || '').replace(/^[🚩👣⚔️⚔🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+                      const nameA = (a.fullText || a.nameWithEquip || (a as any).name || '').replace(/^[🚩👣⚔️⚔️🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
+                      const nameB = (b.fullText || b.nameWithEquip || (b as any).name || '').replace(/^[🚩👣⚔️⚔️🛡️🧥❤️\:\–\-\s]+/, '').toLowerCase();
                       return nameA.localeCompare(nameB);
                     });
 

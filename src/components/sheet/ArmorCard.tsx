@@ -958,7 +958,7 @@ export const ArmorCard: React.FC = () => {
                                     {isArmorExotic(item) && (
                                       <span
                                         className="text-[10px] font-mono px-1.5 py-0.2 rounded border font-bold bg-cyan-950/80 text-cyan-300 border-cyan-500/50 flex items-center gap-1 shadow-sm select-none"
-                                        title="Exotic Armor: Has tactical gear powers or compatible modifications in the Exotics Manager"
+                                        title="Exotic Armor: Has tactical exotics or compatible modifications in the Exotics Manager"
                                       >
                                         <span>🧿 Exotic</span>
                                       </span>

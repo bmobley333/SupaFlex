@@ -304,7 +304,7 @@ export const isItemRequirementMet = (
   if (requirementStr.includes('🏃')) {
     return parseAttributeNum(attributeDice.motion) >= reqNum;
   }
-  if (requirementStr.includes('👁️') || requirementStr.includes('👁')) {
+  if (requirementStr.includes('👁️') || requirementStr.includes('👁️')) {
     return parseAttributeNum(attributeDice.mind) >= reqNum;
   }
   if (requirementStr.includes('✨')) {

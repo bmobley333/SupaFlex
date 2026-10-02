@@ -1165,7 +1165,7 @@ export const WeaponsCard: React.FC = () => {
                                     {isWeaponExotic(weapon) && (
                                       <span
                                         className="text-[10px] font-mono px-1.5 py-0.2 rounded border font-bold bg-cyan-950/80 text-cyan-300 border-cyan-500/50 flex items-center gap-1 shadow-sm select-none"
-                                        title="Exotic Weapon: Has tactical gear powers or compatible modifications in the Exotics Manager"
+                                        title="Exotic Weapon: Has tactical exotics or compatible modifications in the Exotics Manager"
                                       >
                                         <span>🧿 Exotic</span>
                                       </span>

@@ -183,7 +183,7 @@ export const GearModFunctionTree: React.FC<GearModFunctionTreeProps> = ({
             </>
           ) : (
             <>
-              <span className="font-bold text-slate-200">Inherent Gear Powers:</span>
+              <span className="font-bold text-slate-200">Inherent Exotics:</span>
               <span className="text-emerald-400 font-semibold">{directLearnedPowers.length} / {directFunctions.length} Learned</span>
             </>
           )}
@@ -237,7 +237,7 @@ export const GearModFunctionTree: React.FC<GearModFunctionTreeProps> = ({
           </>
         ) : (
           <>
-            <span className="font-bold text-slate-200">Inherent Gear Powers:</span>
+            <span className="font-bold text-slate-200">Inherent Exotics:</span>
             <span className="text-emerald-400 font-semibold">{directFunctions.length} Installed</span>
           </>
         )}

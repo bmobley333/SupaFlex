@@ -295,7 +295,7 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
                 type="button"
                 onClick={clearAllGearPowerUses}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-950/80 hover:bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition shadow-sm cursor-pointer whitespace-nowrap"
-                title="Reset all tracked uses on learned gear powers"
+                title="Reset all tracked uses on learned exotics"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
                 <span>Clear Uses</span>

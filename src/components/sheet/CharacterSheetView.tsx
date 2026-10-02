@@ -129,9 +129,9 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </div>
       </div>
 
-      {/* 2-Column Responsive Section: 🧿 GEAR POWERS & COMMERCE (Left) & 🔥 MY POWERS (Right) */}
+      {/* 2-Column Responsive Section: 🧿 EXOTICS & COMMERCE (Left) & 🔥 MY POWERS (Right) */}
       <div id="section-powers-magic" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
-        {/* Column 1 (Left): Physical Commerce, Inventory & Gear Powers Combat Impacts */}
+        {/* Column 1 (Left): Physical Commerce, Inventory & Exotics Combat Impacts */}
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch">
             <div id="card-money" className="sm:col-span-7 flex scroll-mt-28">
