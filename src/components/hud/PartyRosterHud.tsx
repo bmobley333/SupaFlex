@@ -32,6 +32,34 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
   sessionMembersRef.current = sessionMembers;
   const markedTurnIdsRef = useRef<string[]>(markedTurnIds);
   markedTurnIdsRef.current = markedTurnIds;
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+
+  // Auto-close sort menu on outside click, touchstart, or Escape key
+  useEffect(() => {
+    if (!isSortMenuOpen) return;
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
+        setIsSortMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsSortMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isSortMenuOpen]);
 
   // Optimistic 0ms local event listener for self-nish changes
   useEffect(() => {
@@ -412,7 +440,15 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
 
           {/* Quick-Sort Presets Trigger */}
           {orderedMembers.length > 1 && (
-            <div className="relative">
+            <div
+              ref={sortMenuRef}
+              className="relative"
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                  setIsSortMenuOpen(false);
+                }
+              }}
+            >
               <button
                 type="button"
                 onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
