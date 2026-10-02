@@ -5,12 +5,14 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { X, Plus, Check, AlertCircle, Pencil, Trash2, RefreshCw, Search, ChevronDown, ArrowRight } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { gameApi } from '../../services/api';
-import { CustomCreationType, CustomCreationItem, CustomCreationData, PathElementType, PathLinkedElement, StudioPower, StudioMod, SupabaseChaosGem, SetCategory, SupabaseSet, SetMemberItem, SupabasePath } from '../../types/game';
+import { CustomCreationType, CustomCreationItem, CustomCreationData, PathElementType, PathLinkedElement, StudioPower, StudioMod, SupabaseChaosGem, SetCategory, SupabaseSet, SetMemberItem, SupabasePath, calculateAvailableAp } from '../../types/game';
 import { InfoTooltip } from '../common/InfoTooltip';
-import { compareMsoOptions } from '../../utils/kitUtils';
+import { compareMsoOptions, cleanPathName } from '../../utils/kitUtils';
 import { parseCostToSilver } from '../../utils/moneyUtils';
 import { isBelongsToMatch } from '../../utils/gearFunctionSync';
 import { resolvePathElementsFromCatalogs } from '../../utils/pathApUtils';
+import { collectPathAndSetGrants, applyPathAndSetGrantsToSheet } from '../../utils/bundleGrants';
+import { reconcileAbilitiesOnPathAdded } from '../../utils/pathReconciliationUtils';
 
 interface PlayerWorkshopModalProps {
   isOpen: boolean;
@@ -18,6 +20,12 @@ interface PlayerWorkshopModalProps {
   onItemSaved?: () => void;
   onOpenWorkshop?: () => void;
   initialItem?: CustomCreationItem | null;
+  isPathViewer?: boolean;
+  pathViewerTarget?: {
+    pathName: string;
+    isOwned?: boolean;
+    onUnlock?: () => void;
+  } | null;
 }
 
 // Canonical SupaFlex Rules Constants
@@ -252,6 +260,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   onItemSaved,
   onOpenWorkshop,
   initialItem,
+  isPathViewer = false,
+  pathViewerTarget = null,
 }) => {
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const playerEmail = useCharacterStore((state) => state.playerEmail);
@@ -273,6 +283,9 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
   const modsCatalog = useCharacterStore((state) => state.modsCatalog);
   const setsCatalog = useCharacterStore((state) => state.setsCatalog);
   const refreshCatalogs = useCharacterStore((state) => state.refreshCatalogs);
+  const updateActiveSheetData = useCharacterStore((state) => state.updateActiveSheetData);
+  const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter);
+  const recordApExpenditure = useCharacterStore((state) => state.recordApExpenditure);
 
   const isMasterAccount = (playerEmail || '').toLowerCase().trim() === 'metascapegame@gmail.com';
   const [workshopMode, setWorkshopMode] = useState<'player' | 'designer'>('player');
@@ -1680,7 +1693,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setEditingItem(null);
     setIsCreatingNewPath(false);
     setSelectedPathId(`official_${official.id || official.name}`);
-    if (workshopMode === 'designer') {
+    if (workshopMode === 'designer' || isPathViewer) {
       setCanonicalSelectedId(official.id || official.name);
       setOriginalCanonicalName(official.name);
       setName(official.name);
@@ -2112,12 +2125,118 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     }
   };
 
+  // Handle unlocking path directly from Path Viewer
+  const handleUnlockPathFromViewer = () => {
+    if (!name) return;
+    const clean = cleanPathName(name);
+    const sheet = activeCharacter?.sheet_data;
+    const currentList: string[] = Array.isArray(sheet?.favorite_trait_kits) ? sheet.favorite_trait_kits : [];
+    if (currentList.map((k) => cleanPathName(k).toLowerCase().trim()).includes(clean.toLowerCase().trim())) {
+      setFeedback({
+        type: 'error',
+        message: `⚠️ Character has already learned ${clean}.`,
+      });
+      setTimeout(() => setFeedback(null), 3000);
+      return;
+    }
+    const avail = calculateAvailableAp(sheet?.level || 1, sheet);
+    if (avail < 4) {
+      setFeedback({
+        type: 'error',
+        message: `❌ Not enough AP. Unlocking this Path requires 4 AP (Available: ${avail} AP).`,
+      });
+      setTimeout(() => setFeedback(null), 4000);
+      return;
+    }
+
+    recordApExpenditure(4, 'Manual', `Learned New Path: ${clean}`, 'Creation', 'Paths Hub');
+
+    updateActiveSheetData((prev) => {
+      const prevList = Array.isArray(prev.favorite_trait_kits) ? prev.favorite_trait_kits : [];
+      const updatedKits = Array.from(new Set([...prevList, clean]));
+      const grants = collectPathAndSetGrants(
+        clean,
+        prev?.level || 1,
+        powers,
+        skills,
+        traits,
+        weaponsCatalog,
+        armorCatalog,
+        shieldsCatalog,
+        setsCatalog,
+        paths
+      );
+      const freeGrantNames = new Set<string>();
+      grants.powers.forEach((p) => freeGrantNames.add(p.name.toLowerCase().trim()));
+      grants.skills.forEach((s) => freeGrantNames.add(s.name.toLowerCase().trim()));
+      grants.traits.forEach((t) => freeGrantNames.add(t.name.toLowerCase().trim()));
+      grants.weapons.forEach((w) => freeGrantNames.add(w.name.toLowerCase().trim()));
+      grants.armor.forEach((a) => freeGrantNames.add(a.name.toLowerCase().trim()));
+      grants.shields.forEach((s) => freeGrantNames.add(s.name.toLowerCase().trim()));
+
+      const intermediateSheet = {
+        ...prev,
+        favorite_trait_kits: updatedKits,
+      };
+      const grantedSheet = applyPathAndSetGrantsToSheet(intermediateSheet, grants);
+      const reconciliation = reconcileAbilitiesOnPathAdded(
+        grantedSheet,
+        clean,
+        activeCharacter,
+        freeGrantNames,
+        setsCatalog,
+        paths
+      );
+      return reconciliation.updatedSheetData;
+    });
+
+    saveActiveCharacter();
+    setFeedback({
+      type: 'success',
+      message: `✓ Successfully unlocked Path: ${clean}! All starting grants and in-path proficiencies applied.`,
+    });
+    if (pathViewerTarget) {
+      pathViewerTarget.isOwned = true;
+    }
+    setTimeout(() => setFeedback(null), 4000);
+  };
+
   // Load custom items, personal items, and canonical gems when modal is opened
   useEffect(() => {
     if (isOpen) {
       loadPersonalItems();
       loadCanonicalChaosGems();
-      if (initialItem) {
+      if (isPathViewer && pathViewerTarget?.pathName) {
+        setCreationType('paths_abilities');
+        setPathStudioMode('path');
+        setIsCreatingNewPath(false);
+        const cleanTarget = cleanPathName(pathViewerTarget.pathName).toLowerCase().trim();
+        const p = (paths || []).find(
+          (item) => cleanPathName(item.name).toLowerCase().trim() === cleanTarget
+        );
+        if (p) {
+          handlePopulateOfficialPath(p);
+        } else {
+          setName(pathViewerTarget.pathName);
+          setOriginalCanonicalName(pathViewerTarget.pathName);
+          setCanonicalSelectedId(pathViewerTarget.pathName);
+          setPathCategory(pathViewerTarget.pathName.toLowerCase().includes('race') ? 'Race' : 'General');
+          setPathDescription(
+            (paths || []).find((catP: any) => cleanPathName(catP.name).toLowerCase().trim() === cleanTarget)?.description || ''
+          );
+          const resolved = resolvePathElementsFromCatalogs(pathViewerTarget.pathName, {
+            setsCatalog,
+            powers,
+            skills,
+            traits,
+            weaponsCatalog,
+            armorCatalog,
+            shieldsCatalog,
+          });
+          setLinkedElements(resolved);
+        }
+        setActivePathSelection({ type: 'path_root' });
+      } else if (initialItem) {
         handlePopulateItemForEdit(initialItem);
       } else {
         handleResetForm();
@@ -2127,7 +2246,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       setFeedback(null);
       setEditingItem(null);
     }
-  }, [isOpen, initialItem, playerEmail]);
+  }, [isOpen, initialItem, playerEmail, isPathViewer, pathViewerTarget]);
 
   // --- Sets Studio Constants & Helpers ---
   const SET_CATEGORIES: { id: SetCategory; label: string; icon: string }[] = [
@@ -5685,45 +5804,71 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn font-outfit">
-      <div className={`bg-slate-900 border ${workshopMode === 'designer' ? 'border-amber-500/80 shadow-amber-950/70' : 'border-amber-500/40 shadow-amber-950/50'} rounded-2xl w-full max-w-5xl lg:max-w-6xl shadow-2xl flex flex-col h-[90vh] max-h-[92vh] overflow-hidden`}>
+      <div className={`bg-slate-900 border ${isPathViewer ? 'border-purple-500/60 shadow-purple-950/50' : workshopMode === 'designer' ? 'border-amber-500/80 shadow-amber-950/70' : 'border-amber-500/40 shadow-amber-950/50'} rounded-2xl w-full max-w-5xl lg:max-w-6xl shadow-2xl flex flex-col h-[90vh] max-h-[92vh] overflow-hidden`}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950/70 shrink-0">
           <div className="flex items-center gap-3">
             <div className={`p-2.5 rounded-xl border flex items-center justify-center text-xl ${
-              workshopMode === 'designer'
+              isPathViewer
+                ? 'bg-purple-950/80 border-purple-500/50 text-purple-300 shadow-sm'
+                : workshopMode === 'designer'
                 ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm'
                 : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
             }`}>
-              {workshopMode === 'designer' ? '👑' : '♨️'}
+              {isPathViewer ? '🧭' : (workshopMode === 'designer' ? '👑' : '♨️')}
             </div>
             <div>
               <h3 className="font-outfit font-extrabold text-base text-amber-300 tracking-wide flex items-center gap-2">
-                Forge
-                {workshopMode === 'designer' ? (
-                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/50 uppercase tracking-wider font-mono">
-                    👑 Designer Mode (Master Database Canon)
-                  </span>
-                ) : isGm ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                    👑 GM Mode {activePartyId ? `[Party: ${activePartyId}]` : ''}
-                  </span>
-                ) : (
-                  activePartyId && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
-                      Party: {activePartyId}
+                {isPathViewer ? (
+                  <>
+                    <span className="text-purple-200 font-black">Path Viewer</span>
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-950/90 text-purple-300 border border-purple-500/50 uppercase tracking-wider font-mono">
+                      Read-Only Inspection
                     </span>
-                  )
+                  </>
+                ) : (
+                  <>
+                    Forge
+                    {workshopMode === 'designer' ? (
+                      <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/50 uppercase tracking-wider font-mono">
+                        👑 Designer Mode (Master Database Canon)
+                      </span>
+                    ) : isGm ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        👑 GM Mode {activePartyId ? `[Party: ${activePartyId}]` : ''}
+                      </span>
+                    ) : (
+                      activePartyId && (
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300">
+                          Party: {activePartyId}
+                        </span>
+                      )
+                    )}
+                  </>
                 )}
               </h3>
               <p className="text-xs text-slate-400">
-                {workshopMode === 'designer'
+                {isPathViewer
+                  ? 'Inspect all included traits, powers, skills, weapons, armor, and sets for this path.'
+                  : workshopMode === 'designer'
                   ? 'Author, edit, & curate canonical Master Database records. Edits automatically propagate to all characters.'
                   : 'Craft custom Paths & Abilities, Chaos Gems, and Gear (including Exotics and Artifacts).'}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {onOpenWorkshop && (
+            {isPathViewer && pathViewerTarget && !pathViewerTarget.isOwned && (
+              <button
+                type="button"
+                onClick={handleUnlockPathFromViewer}
+                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-md flex items-center gap-1.5 cursor-pointer transition-all hover:scale-[1.02] border border-purple-400/30"
+                title="Unlock this Path for 4 AP"
+              >
+                <span>🧭</span>
+                <span>Unlock Path (4 AP)</span>
+              </button>
+            )}
+            {!isPathViewer && onOpenWorkshop && (
               <button
                 type="button"
                 onClick={() => {
@@ -5740,128 +5885,153 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             <button
               onClick={onClose}
               className="p-1 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors cursor-pointer"
-              title="Close Forge"
+              title={isPathViewer ? "Back to Paths Manager (Esc)" : "Close Forge"}
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* S-Tier 3-Pillar Master Navigation */}
-        <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex items-center justify-between gap-4">
-          {/* Left: Sets Feeder & Pillar Navigation */}
-          <div className="flex items-center gap-2">
-            {/* Feeder Sub-Tab: Sets */}
-            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('set')}
-                className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  creationType === 'set'
-                    ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                <span>🗂️</span>
-                <span>Sets</span>
-              </button>
+        {/* S-Tier 3-Pillar Master Navigation / Path Viewer Ribbon */}
+        {isPathViewer ? (
+          <div className="px-6 py-2 bg-slate-950/60 border-b border-purple-500/20 shrink-0 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-purple-300 font-bold flex items-center gap-1.5">
+                <span className="text-sm">🧭</span>
+                <span className="font-outfit uppercase tracking-wider text-sm font-black">{name || pathViewerTarget?.pathName}</span>
+              </span>
+              <span className="text-slate-600">•</span>
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-500/40 font-bold">
+                {finalPathCat} Path
+              </span>
+              <span className="text-slate-600">•</span>
+              <span className="text-[11px] text-slate-400">
+                {linkedElements.length} Total Elements
+              </span>
             </div>
-
-            {/* Feeder Indicator Arrow: Sets feed into Paths */}
-            <div className="flex items-center text-slate-500 hover:text-indigo-400 transition-colors px-0.5" title="Sets feed into Paths">
-              <ArrowRight className="w-4 h-4 text-slate-500" />
-            </div>
-
-            {/* Core Creation Pillars: Paths, Chaos Gems, Gear */}
-            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('paths_abilities')}
-                className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  creationType === 'paths_abilities'
-                    ? 'bg-blue-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                <span>🧭</span>
-                <span>Paths</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('chaos_gem')}
-                className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  creationType === 'chaos_gem'
-                    ? 'bg-violet-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                <span>💎</span>
-                <span>Chaos Gems</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSwitchTab('gear')}
-                className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                  creationType === 'gear'
-                    ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-              >
-                <span>⚙️</span>
-                <span>Gear</span>
-              </button>
+            <div className="flex items-center gap-2 font-mono text-[11px]">
+              <span className="text-slate-400">Character AP:</span>
+              <span className="font-bold text-amber-300 bg-amber-950/50 border border-amber-500/40 px-2 py-0.5 rounded">
+                {calculateAvailableAp(activeCharacter?.sheet_data?.level || 1, activeCharacter?.sheet_data)} AP
+              </span>
             </div>
           </div>
-
-          {/* Right: Sync Catalogs Button & Scope Switch */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleManualCatalogSync}
-              disabled={isSyncingCatalogs}
-              className={`py-1.5 px-3 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer shadow-inner backdrop-blur-md ${
-                isSyncingCatalogs
-                  ? 'bg-blue-900/60 border-blue-500/80 text-blue-200 animate-pulse cursor-wait'
-                  : 'bg-slate-950/80 border-slate-800/80 text-slate-300 hover:text-white hover:border-slate-700 hover:bg-slate-900'
-              }`}
-              title="Force-sync master database catalogs and bust local client cache"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCatalogs ? 'animate-spin text-blue-400' : 'text-slate-400'}`} />
-              <span>{isSyncingCatalogs ? 'Syncing...' : 'Sync'}</span>
-            </button>
-
-            {isMasterAccount && (
+        ) : (
+          <div className="px-6 py-2 bg-slate-950/40 border-b border-slate-800/80 shrink-0 flex items-center justify-between gap-4">
+            {/* Left: Sets Feeder & Pillar Navigation */}
+            <div className="flex items-center gap-2">
+              {/* Feeder Sub-Tab: Sets */}
               <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
                 <button
                   type="button"
-                  onClick={() => handleSwitchScope('player')}
-                  className={`py-1.5 px-3.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                    workshopMode === 'player'
-                      ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                  onClick={() => handleSwitchTab('set')}
+                  className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    creationType === 'set'
+                      ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
                       : 'text-slate-400 hover:text-slate-200 border border-transparent'
                   }`}
-                  title="Personal Creations mode (saves to Custom Elements / personal scope)"
                 >
-                  <span>🎨</span>
-                  <span>My Creations</span>
+                  <span>🗂️</span>
+                  <span>Sets</span>
+                </button>
+              </div>
+
+              {/* Feeder Indicator Arrow: Sets feed into Paths */}
+              <div className="flex items-center text-slate-500 hover:text-indigo-400 transition-colors px-0.5" title="Sets feed into Paths">
+                <ArrowRight className="w-4 h-4 text-slate-500" />
+              </div>
+
+              {/* Core Creation Pillars: Paths, Chaos Gems, Gear */}
+              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchTab('paths_abilities')}
+                  className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    creationType === 'paths_abilities'
+                      ? 'bg-blue-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  <span>🧭</span>
+                  <span>Paths</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleSwitchScope('designer')}
-                  className={`py-1.5 px-3.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                    workshopMode === 'designer'
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
+                  onClick={() => handleSwitchTab('chaos_gem')}
+                  className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    creationType === 'chaos_gem'
+                      ? 'bg-violet-600 text-white shadow-sm font-extrabold'
                       : 'text-slate-400 hover:text-slate-200 border border-transparent'
                   }`}
-                  title="Master Database Canon mode (edits canonical Supabase records)"
                 >
-                  <span>👑</span>
-                  <span>Canon</span>
+                  <span>💎</span>
+                  <span>Chaos Gems</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchTab('gear')}
+                  className={`py-1.5 px-4 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                    creationType === 'gear'
+                      ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                >
+                  <span>⚙️</span>
+                  <span>Gear</span>
                 </button>
               </div>
-            )}
+            </div>
+
+            {/* Right: Sync Catalogs Button & Scope Switch */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleManualCatalogSync}
+                disabled={isSyncingCatalogs}
+                className={`py-1.5 px-3 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer shadow-inner backdrop-blur-md ${
+                  isSyncingCatalogs
+                    ? 'bg-blue-900/60 border-blue-500/80 text-blue-200 animate-pulse cursor-wait'
+                    : 'bg-slate-950/80 border-slate-800/80 text-slate-300 hover:text-white hover:border-slate-700 hover:bg-slate-900'
+                }`}
+                title="Force-sync master database catalogs and bust local client cache"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCatalogs ? 'animate-spin text-blue-400' : 'text-slate-400'}`} />
+                <span>{isSyncingCatalogs ? 'Syncing...' : 'Sync'}</span>
+              </button>
+
+              {isMasterAccount && (
+                <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchScope('player')}
+                    className={`py-1.5 px-3.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      workshopMode === 'player'
+                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                    title="Personal Creations mode (saves to Custom Elements / personal scope)"
+                  >
+                    <span>🎨</span>
+                    <span>My Creations</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchScope('designer')}
+                    className={`py-1.5 px-3.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                      workshopMode === 'designer'
+                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-sm font-extrabold shadow-amber-950/40'
+                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                    title="Master Database Canon mode (edits canonical Supabase records)"
+                  >
+                    <span>👑</span>
+                    <span>Canon</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 2-Pane Grid Architecture */}
         <div className="grid grid-cols-1 lg:grid-cols-12 flex-1 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-800/80 overflow-hidden">
@@ -6125,187 +6295,191 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           ) : creationType === 'paths_abilities' ? (
             <div className="lg:col-span-5 flex flex-col min-h-0 bg-slate-950/50 p-4 overflow-hidden gap-3">
-              {/* Row 1: Category Filter Multi-Option Pill Switch & Other Dropdown */}
-              <div className="flex items-center gap-1.5 text-xs shrink-0">
-                <span className="font-bold text-slate-300 text-xs shrink-0">Category:</span>
+              {!isPathViewer && (
+                <>
+                  {/* Row 1: Category Filter Multi-Option Pill Switch & Other Dropdown */}
+                  <div className="flex items-center gap-1.5 text-xs shrink-0">
+                    <span className="font-bold text-slate-300 text-xs shrink-0">Category:</span>
 
-                {/* Multi-Option Pill Switch for Race and Class */}
-                <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleSelectPathCategoryFilter('Race')}
-                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                      selectedPathCategoryFilter.toLowerCase() === 'race'
-                        ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    <span>🧬</span>
-                    <span>Race</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectPathCategoryFilter('Class')}
-                    className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                      selectedPathCategoryFilter.toLowerCase() === 'class'
-                        ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                        : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                    }`}
-                  >
-                    <span>⚔️</span>
-                    <span>Class</span>
-                  </button>
-                </div>
+                    {/* Multi-Option Pill Switch for Race and Class */}
+                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectPathCategoryFilter('Race')}
+                        className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                          selectedPathCategoryFilter.toLowerCase() === 'race'
+                            ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>🧬</span>
+                        <span>Race</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectPathCategoryFilter('Class')}
+                        className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                          selectedPathCategoryFilter.toLowerCase() === 'class'
+                            ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                            : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                        }`}
+                      >
+                        <span>⚔️</span>
+                        <span>Class</span>
+                      </button>
+                    </div>
 
-                <span className="font-bold text-slate-300 text-xs shrink-0 ml-1">Other:</span>
+                    <span className="font-bold text-slate-300 text-xs shrink-0 ml-1">Other:</span>
 
-                <select
-                  value={
-                    selectedPathCategoryFilter.toLowerCase() !== 'race' && selectedPathCategoryFilter.toLowerCase() !== 'class'
-                      ? selectedPathCategoryFilter
-                      : ''
-                  }
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      handleSelectPathCategoryFilter(e.target.value);
-                    }
-                  }}
-                  className={`flex-1 min-w-[120px] bg-slate-950 border text-xs px-2.5 py-1 rounded-xl outline-none font-medium cursor-pointer transition ${
-                    selectedPathCategoryFilter.toLowerCase() !== 'race' && selectedPathCategoryFilter.toLowerCase() !== 'class'
-                      ? 'border-blue-500/80 text-blue-300 font-bold bg-blue-950/30'
-                      : 'border-slate-800 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <option value="" disabled>
-                    -- Select Other --
-                  </option>
-                  {otherPathCategories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                    <select
+                      value={
+                        selectedPathCategoryFilter.toLowerCase() !== 'race' && selectedPathCategoryFilter.toLowerCase() !== 'class'
+                          ? selectedPathCategoryFilter
+                          : ''
+                      }
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          handleSelectPathCategoryFilter(e.target.value);
+                        }
+                      }}
+                      className={`flex-1 min-w-[120px] bg-slate-950 border text-xs px-2.5 py-1 rounded-xl outline-none font-medium cursor-pointer transition ${
+                        selectedPathCategoryFilter.toLowerCase() !== 'race' && selectedPathCategoryFilter.toLowerCase() !== 'class'
+                          ? 'border-blue-500/80 text-blue-300 font-bold bg-blue-950/30'
+                          : 'border-slate-800 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <option value="" disabled>
+                        -- Select Other --
+                      </option>
+                      {otherPathCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              {/* Header: Title / Count, Search Bar, and + New Button */}
-              <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
-                <span className="flex items-center gap-1.5 shrink-0">
-                  <span>{workshopMode === 'designer' ? '👑' : '🎨'}</span>
-                  <span>
-                    {workshopMode === 'designer' ? 'Paths' : 'My Paths'} (
-                    {workshopMode === 'designer' ? filteredCanonicalPaths.length : myPathsList.length})
-                  </span>
-                </span>
+                  {/* Header: Title / Count, Search Bar, and + New Button */}
+                  <div className="flex items-center justify-between text-xs text-slate-300 font-bold shrink-0 gap-2">
+                    <span className="flex items-center gap-1.5 shrink-0">
+                      <span>{workshopMode === 'designer' ? '👑' : '🎨'}</span>
+                      <span>
+                        {workshopMode === 'designer' ? 'Paths' : 'My Paths'} (
+                        {workshopMode === 'designer' ? filteredCanonicalPaths.length : myPathsList.length})
+                      </span>
+                    </span>
 
-                {/* Inline Search Bar */}
-                <div className="flex-1 min-w-[120px] max-w-xs relative flex items-center">
-                  <input
-                    type="text"
-                    value={canonicalSearchQuery}
-                    onChange={(e) => setCanonicalSearchQuery(e.target.value)}
-                    placeholder="Search paths..."
-                    className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/80 transition"
-                  />
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
-                  {canonicalSearchQuery && (
+                    {/* Inline Search Bar */}
+                    <div className="flex-1 min-w-[120px] max-w-xs relative flex items-center">
+                      <input
+                        type="text"
+                        value={canonicalSearchQuery}
+                        onChange={(e) => setCanonicalSearchQuery(e.target.value)}
+                        placeholder="Search paths..."
+                        className="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-7 pr-7 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500/80 transition"
+                      />
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 pointer-events-none" />
+                      {canonicalSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setCanonicalSearchQuery('')}
+                          className="absolute right-2 text-slate-400 hover:text-slate-200 cursor-pointer"
+                          title="Clear search"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
                     <button
                       type="button"
-                      onClick={() => setCanonicalSearchQuery('')}
-                      className="absolute right-2 text-slate-400 hover:text-slate-200 cursor-pointer"
-                      title="Clear search"
+                      onClick={() => {
+                        if (workshopMode === 'designer') {
+                          handleNewMasterEntry();
+                        } else {
+                          handleResetForm();
+                        }
+                        setCreationType('paths_abilities');
+                        setPathStudioMode('path');
+                        setIsCreatingNewPath(true);
+                        setCanonicalSelectedId('');
+                        setSelectedPathId('');
+                        setActivePathSelection({ type: 'path_root' });
+                        setPathCategory(selectedPathCategoryFilter || 'Race');
+                        setPathCategoryNewText('');
+                      }}
+                      className={`text-[10px] font-bold px-2 py-1 rounded-lg transition cursor-pointer shrink-0 ${
+                        workshopMode === 'designer'
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+                          : 'bg-blue-500/20 text-blue-300 border border-blue-500/40 hover:bg-blue-500/30'
+                      }`}
+                      title={workshopMode === 'designer' ? "Author a new canonical Path in Supabase" : "Create a new custom Path"}
                     >
-                      <X className="w-3.5 h-3.5" />
+                      + New Path
                     </button>
-                  )}
-                </div>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (workshopMode === 'designer') {
-                      handleNewMasterEntry();
-                    } else {
-                      handleResetForm();
-                    }
-                    setCreationType('paths_abilities');
-                    setPathStudioMode('path');
-                    setIsCreatingNewPath(true);
-                    setCanonicalSelectedId('');
-                    setSelectedPathId('');
-                    setActivePathSelection({ type: 'path_root' });
-                    setPathCategory(selectedPathCategoryFilter || 'Race');
-                    setPathCategoryNewText('');
-                  }}
-                  className={`text-[10px] font-bold px-2 py-1 rounded-lg transition cursor-pointer shrink-0 ${
-                    workshopMode === 'designer'
-                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
-                      : 'bg-blue-500/20 text-blue-300 border border-blue-500/40 hover:bg-blue-500/30'
-                  }`}
-                  title={workshopMode === 'designer' ? "Author a new canonical Path in Supabase" : "Create a new custom Path"}
-                >
-                  + New Path
-                </button>
-              </div>
-
-              {/* Dropdown Selector */}
-              <select
-                value={canonicalSelectedId || selectedPathId || (editingItem ? String(editingItem.id) : '')}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (!val) {
-                    handleResetForm();
-                    setCreationType('paths_abilities');
-                    setPathStudioMode('path');
-                    setIsCreatingNewPath(false);
-                    setSelectedPathId('');
-                    return;
-                  }
-                  setIsCreatingNewPath(false);
-                  setSelectedPathId(val);
-                  if (workshopMode === 'designer') {
-                    const p = (paths || []).find((item) => String(item.id) === val || item.name === val);
-                    if (p) {
-                      handlePopulateOfficialPath(p);
-                      setActivePathSelection({ type: 'path_root' });
-                    }
-                  } else {
-                    const found = myPathsList.find((p) => p.id === val || String(p.rawItem?.id) === val || p.name === val);
-                    if (found) {
-                      if (found.source === 'personal') {
-                        handlePopulateItemForEdit(found.rawItem);
-                      } else {
-                        handlePopulateOfficialPath(found.rawItem);
+                  {/* Dropdown Selector */}
+                  <select
+                    value={canonicalSelectedId || selectedPathId || (editingItem ? String(editingItem.id) : '')}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) {
+                        handleResetForm();
+                        setCreationType('paths_abilities');
+                        setPathStudioMode('path');
+                        setIsCreatingNewPath(false);
+                        setSelectedPathId('');
+                        return;
                       }
-                      setActivePathSelection({ type: 'path_root' });
-                    }
-                  }
-                }}
-                className={`bg-slate-950 border text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0 ${
-                  workshopMode === 'designer' ? 'border-slate-700 text-amber-300' : 'border-slate-700 text-blue-300'
-                }`}
-              >
-                <option value="">
-                  {canonicalSearchQuery
-                    ? `-- Filtered (${
-                        workshopMode === 'designer' ? filteredCanonicalPaths.length : myPathsList.length
-                      } matches) --`
-                    : `-- Choose Path (${
-                        workshopMode === 'designer' ? filteredCanonicalPaths.length : myPathsList.length
-                      } available) --`}
-                </option>
-                {workshopMode === 'designer'
-                  ? filteredCanonicalPaths.map((p) => (
-                      <option key={p.id || p.name} value={p.id || p.name}>
-                        {p.name.toLowerCase() === 'universal' ? '🌐 ' : '🧭 '}
-                        {p.name} ({p.category || 'General'})
-                      </option>
-                    ))
-                  : myPathsList.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        🧭 {p.name} ({p.category || 'Path'})
-                      </option>
-                    ))}
-              </select>
+                      setIsCreatingNewPath(false);
+                      setSelectedPathId(val);
+                      if (workshopMode === 'designer') {
+                        const p = (paths || []).find((item) => String(item.id) === val || item.name === val);
+                        if (p) {
+                          handlePopulateOfficialPath(p);
+                          setActivePathSelection({ type: 'path_root' });
+                        }
+                      } else {
+                        const found = myPathsList.find((p) => p.id === val || String(p.rawItem?.id) === val || p.name === val);
+                        if (found) {
+                          if (found.source === 'personal') {
+                            handlePopulateItemForEdit(found.rawItem);
+                          } else {
+                            handlePopulateOfficialPath(found.rawItem);
+                          }
+                          setActivePathSelection({ type: 'path_root' });
+                        }
+                      }
+                    }}
+                    className={`bg-slate-950 border text-xs font-bold px-3 py-2 rounded-xl outline-none cursor-pointer shrink-0 ${
+                      workshopMode === 'designer' ? 'border-slate-700 text-amber-300' : 'border-slate-700 text-blue-300'
+                    }`}
+                  >
+                    <option value="">
+                      {canonicalSearchQuery
+                        ? `-- Filtered (${
+                            workshopMode === 'designer' ? filteredCanonicalPaths.length : myPathsList.length
+                          } matches) --`
+                        : `-- Choose Path (${
+                            workshopMode === 'designer' ? filteredCanonicalPaths.length : myPathsList.length
+                          } available) --`}
+                    </option>
+                    {workshopMode === 'designer'
+                      ? filteredCanonicalPaths.map((p) => (
+                          <option key={p.id || p.name} value={p.id || p.name}>
+                            {p.name.toLowerCase() === 'universal' ? '🌐 ' : '🧭 '}
+                            {p.name} ({p.category || 'General'})
+                          </option>
+                        ))
+                      : myPathsList.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            🧭 {p.name} ({p.category || 'Path'})
+                          </option>
+                        ))}
+                  </select>
+                </>
+              )}
 
               {/* Active Draft Path Tree View (Always 100% Expanded, 0 Save Buttons) */}
               {isPathActive ? (
@@ -6338,7 +6512,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                         🧩 1 AP
                       </span>
                       {/* Delete Path trashcan if saved */}
-                      {((canonicalSelectedId && workshopMode === 'designer' && !isUniversalPath) ||
+                      {!isPathViewer && ((canonicalSelectedId && workshopMode === 'designer' && !isUniversalPath) ||
                         (workshopMode === 'player' && (editingItem || canonicalSelectedId))) && (
                         <button
                           type="button"
@@ -6374,52 +6548,54 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               <span>{cat.label}</span>
                             </span>
 
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPathAddSetSearch('');
-                                  setActivePathSelection({ type: 'path_add_set', category: cat.id });
-                                }}
-                                className="py-0.5 px-1.5 rounded-md border border-dashed border-slate-700 hover:border-blue-500/60 bg-slate-950/60 hover:bg-slate-900 text-[10px] font-bold text-slate-300 hover:text-blue-300 transition flex items-center gap-0.5 cursor-pointer select-none"
-                                title={`Add ${cat.label} Set`}
-                              >
-                                <Plus className="w-2.5 h-2.5" />
-                                <span>Set</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPathAddElementSearch('');
-                                  setIsAuthoringPathCustomAbility(false);
-                                  setActivePathSelection({ type: 'path_add_element', category: cat.id });
-                                }}
-                                className="py-0.5 px-1.5 rounded-md border border-dashed border-slate-700 hover:border-blue-500/60 bg-slate-950/60 hover:bg-slate-900 text-[10px] font-bold text-slate-300 hover:text-blue-300 transition flex items-center gap-0.5 cursor-pointer select-none"
-                                title={`Add ${cat.singular}`}
-                              >
-                                <Plus className="w-2.5 h-2.5" />
-                                <span>{cat.singular}</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setPathAddElementSearch('');
-                                  setPathAddSetSearch('');
-                                  setIsAuthoringPathCustomAbility(false);
-                                  resetElementFormForNew(cat.id);
-                                  setActivePathSelection({ type: 'path_new_element', category: cat.id });
-                                }}
-                                className={`py-0.5 px-1.5 rounded-md border transition flex items-center gap-0.5 cursor-pointer select-none text-[10px] font-bold ${
-                                  activePathSelection.type === 'path_new_element' && activePathSelection.category === cat.id
-                                    ? 'bg-blue-600 text-white border-blue-500 shadow-sm font-extrabold'
-                                    : 'border-dashed border-slate-700/80 hover:border-blue-500/60 bg-slate-950/40 hover:bg-slate-900 text-slate-400 hover:text-blue-300'
-                                }`}
-                                title={`Create New ${cat.singular} and link to path`}
-                              >
-                                <Plus className="w-2.5 h-2.5" />
-                                <span>New</span>
-                              </button>
-                            </div>
+                            {!isPathViewer && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPathAddSetSearch('');
+                                    setActivePathSelection({ type: 'path_add_set', category: cat.id });
+                                  }}
+                                  className="py-0.5 px-1.5 rounded-md border border-dashed border-slate-700 hover:border-blue-500/60 bg-slate-950/60 hover:bg-slate-900 text-[10px] font-bold text-slate-300 hover:text-blue-300 transition flex items-center gap-0.5 cursor-pointer select-none"
+                                  title={`Add ${cat.label} Set`}
+                                >
+                                  <Plus className="w-2.5 h-2.5" />
+                                  <span>Set</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPathAddElementSearch('');
+                                    setIsAuthoringPathCustomAbility(false);
+                                    setActivePathSelection({ type: 'path_add_element', category: cat.id });
+                                  }}
+                                  className="py-0.5 px-1.5 rounded-md border border-dashed border-slate-700 hover:border-blue-500/60 bg-slate-950/60 hover:bg-slate-900 text-[10px] font-bold text-slate-300 hover:text-blue-300 transition flex items-center gap-0.5 cursor-pointer select-none"
+                                  title={`Add ${cat.singular}`}
+                                >
+                                  <Plus className="w-2.5 h-2.5" />
+                                  <span>{cat.singular}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPathAddElementSearch('');
+                                    setPathAddSetSearch('');
+                                    setIsAuthoringPathCustomAbility(false);
+                                    resetElementFormForNew(cat.id);
+                                    setActivePathSelection({ type: 'path_new_element', category: cat.id });
+                                  }}
+                                  className={`py-0.5 px-1.5 rounded-md border transition flex items-center gap-0.5 cursor-pointer select-none text-[10px] font-bold ${
+                                    activePathSelection.type === 'path_new_element' && activePathSelection.category === cat.id
+                                      ? 'bg-blue-600 text-white border-blue-500 shadow-sm font-extrabold'
+                                      : 'border-dashed border-slate-700/80 hover:border-blue-500/60 bg-slate-950/40 hover:bg-slate-900 text-slate-400 hover:text-blue-300'
+                                  }`}
+                                  title={`Create New ${cat.singular} and link to path`}
+                                >
+                                  <Plus className="w-2.5 h-2.5" />
+                                  <span>New</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
 
                           {/* Indented Tier 3: Sets & Individuals (Collapsed if Empty) */}
@@ -6460,7 +6636,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
                                   <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                                     {/* KISS Pill Switch for All Free vs All 1 AP */}
-                                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-0.5 shadow-inner backdrop-blur-md">
+                                    <div className={`bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-0.5 shadow-inner backdrop-blur-md ${isPathViewer ? 'pointer-events-none opacity-90' : ''}`}>
                                       <button
                                         type="button"
                                         onClick={() => handleToggleLinkedTag(setItem.id, 'Free')}
@@ -6496,22 +6672,24 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                     </div>
 
                                     {/* Trashcan Icon */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        handleRemoveLinkedElement(setItem.id);
-                                        if (
-                                          activePathSelection.type === 'path_set' &&
-                                          String(activePathSelection.setItem?.id) === String(setItem.id)
-                                        ) {
-                                          setActivePathSelection({ type: 'path_root' });
-                                        }
-                                      }}
-                                      className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 transition cursor-pointer"
-                                      title={`Remove ${setItem.name} from path`}
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                                    {!isPathViewer && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleRemoveLinkedElement(setItem.id);
+                                          if (
+                                            activePathSelection.type === 'path_set' &&
+                                            String(activePathSelection.setItem?.id) === String(setItem.id)
+                                          ) {
+                                            setActivePathSelection({ type: 'path_root' });
+                                          }
+                                        }}
+                                        className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 transition cursor-pointer"
+                                        title={`Remove ${setItem.name} from path`}
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -6547,7 +6725,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
 
                                   <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                                     {/* KISS Pill Switch for Free vs 1 AP */}
-                                    <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-0.5 shadow-inner backdrop-blur-md">
+                                    <div className={`bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-lg flex items-center gap-0.5 shadow-inner backdrop-blur-md ${isPathViewer ? 'pointer-events-none opacity-90' : ''}`}>
                                       <button
                                         type="button"
                                         onClick={() => handleToggleLinkedTag(element.id, 'Free')}
@@ -6577,22 +6755,24 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                     </div>
 
                                     {/* Trashcan Icon */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        handleRemoveLinkedElement(element.id);
-                                        if (
-                                          activePathSelection.type === 'path_element' &&
-                                          String(activePathSelection.element?.id) === String(element.id)
-                                        ) {
-                                          setActivePathSelection({ type: 'path_root' });
-                                        }
-                                      }}
-                                      className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 transition cursor-pointer"
-                                      title={`Remove ${element.name} from path`}
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
+                                    {!isPathViewer && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          handleRemoveLinkedElement(element.id);
+                                          if (
+                                            activePathSelection.type === 'path_element' &&
+                                            String(activePathSelection.element?.id) === String(element.id)
+                                          ) {
+                                            setActivePathSelection({ type: 'path_root' });
+                                          }
+                                        }}
+                                        className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/50 transition cursor-pointer"
+                                        title={`Remove ${element.name} from path`}
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -8215,127 +8395,195 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </p>
                 </div>
               ) : activePathSelection.type === 'path_root' || activePathSelection.type === 'path' ? (
-                /* ROUTE 1: PATH METADATA EDITOR & PERSISTENCE */
-                <div
-                  key={`path_root_${selectedPathId || canonicalSelectedId || 'new'}`}
-                  className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1"
-                >
-                  {/* Header */}
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">🧭</span>
-                      <div>
-                        <h3 className="font-outfit font-extrabold text-sm text-slate-100">
-                          {selectedPathId || editingItem ? `Edit Path: ${name || 'Unnamed Path'}` : 'New Path Archetype'}
-                        </h3>
-                        <p className="text-[11px] text-slate-400">
-                          Configure path archetype metadata, category form, and lore.
-                        </p>
-                      </div>
-                    </div>
-                    {canonicalSelectedId && (
-                      <span className="px-2 py-0.5 rounded bg-blue-950 border border-blue-700/60 text-blue-300 font-mono text-[10px] font-bold">
-                        {workshopMode === 'designer' ? '👑 Path' : 'Archetype'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Row 1: Path Name & Collision Badge */}
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-300 text-xs">Path Name</span>
-                        <GuardrailBadge isValid={isNameValid} />
-                        <InfoTooltip text="Unique archetype name for this Path (e.g. Voidstalker, Iron Sentinel)." />
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
-                    </div>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      disabled={isUniversalPath && workshopMode !== 'designer'}
-                      placeholder="e.g. Voidstalker, Iron Sentinel, Starweaver..."
-                      className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner disabled:opacity-60 disabled:cursor-not-allowed"
-                      required
-                    />
-                    {topLevelCollision.isCollision && (
-                      <div className="flex items-center justify-between p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs">
-                        <div className="flex items-center gap-1.5 text-amber-300 min-w-0">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          <span className="truncate">
-                            '{topLevelCollision.existingItemName}' already exists in {workshopMode === 'designer' ? 'Master Canon' : 'My Creations'}.
-                          </span>
+                /* ROUTE 1: PATH METADATA EDITOR & PERSISTENCE (or READ-ONLY OVERVIEW) */
+                isPathViewer ? (
+                  <div
+                    key={`path_root_viewer_${name || 'path'}`}
+                    className="flex-1 flex flex-col min-h-0 gap-4 overflow-y-auto pr-1 animate-fadeIn"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xl">🧭</span>
+                        <div>
+                          <h3 className="font-outfit font-extrabold text-base text-slate-100">
+                            {name || 'Path Archetype'}
+                          </h3>
+                          <p className="text-xs text-slate-400">
+                            {finalPathCat} Archetype Overview
+                          </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setName(getAutoVersionedName(name, currentActiveCatalog))}
-                          className="px-2 py-0.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 border border-amber-500/60 text-amber-100 font-bold text-[10px] transition cursor-pointer shrink-0"
-                        >
-                          ⚡ Auto-Add (v2)
-                        </button>
                       </div>
-                    )}
-                  </div>
+                      <span className="px-2.5 py-1 rounded-lg bg-blue-950/80 border border-blue-500/50 text-blue-300 font-bold text-xs flex items-center gap-1.5 shadow-sm">
+                        <span>{finalPathCat.toLowerCase() === 'race' ? '🧬' : finalPathCat.toLowerCase() === 'class' ? '⚔️' : '🧭'}</span>
+                        <span>{finalPathCat} Path</span>
+                      </span>
+                    </div>
 
-                  {/* Row 2: Based-On Path Template & Category Confirmation Badge */}
-                  <div className="flex items-center justify-between gap-3 shrink-0">
-                    {/* Based-On Path Template */}
-                    <div className="flex-1 flex flex-col gap-1">
+                    {/* Description & Lore Card */}
+                    <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col gap-1.5 shadow-inner">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-1.5">
+                        <span>📜</span>
+                        <span>Archetype Lore & Training</span>
+                      </span>
+                      <p className="text-xs text-slate-200 leading-relaxed italic whitespace-pre-wrap">
+                        {pathDescription || 'No lore description recorded for this path.'}
+                      </p>
+                    </div>
+
+                    {/* Breakdown of elements in this Path */}
+                    <div className="flex flex-col gap-2">
+                      <span className="text-xs font-bold text-slate-300">
+                        Path Composition Summary
+                      </span>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {PATH_ABILITY_CATEGORIES.map((cat) => {
+                          const catData = pathCategoryMembers[cat.id];
+                          const total = (catData?.sets?.length || 0) + (catData?.elements?.length || 0);
+                          return (
+                            <div key={cat.id} className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between shadow-sm">
+                              <span className="flex items-center gap-1.5 text-xs text-slate-300 font-medium">
+                                <span>{cat.icon}</span>
+                                <span>{cat.label}</span>
+                              </span>
+                              <span className="px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 font-mono text-xs font-bold text-blue-300">
+                                {total}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-blue-950/30 border border-blue-500/30 text-xs text-blue-200 flex items-center gap-2 mt-auto">
+                      <span className="text-base shrink-0">💡</span>
+                      <span className="leading-snug">
+                        Click any <strong>Set</strong> or individual <strong>Ability</strong> in the left pane to inspect its complete rules, combat damage, armor rating, and requirements.
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    key={`path_root_${selectedPathId || canonicalSelectedId || 'new'}`}
+                    className="flex-1 flex flex-col min-h-0 gap-3 overflow-y-auto pr-1"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2 shrink-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">🧭</span>
+                        <div>
+                          <h3 className="font-outfit font-extrabold text-sm text-slate-100">
+                            {selectedPathId || editingItem ? `Edit Path: ${name || 'Unnamed Path'}` : 'New Path Archetype'}
+                          </h3>
+                          <p className="text-[11px] text-slate-400">
+                            Configure path archetype metadata, category form, and lore.
+                          </p>
+                        </div>
+                      </div>
+                      {canonicalSelectedId && (
+                        <span className="px-2 py-0.5 rounded bg-blue-950 border border-blue-700/60 text-blue-300 font-mono text-[10px] font-bold">
+                          {workshopMode === 'designer' ? '👑 Path' : 'Archetype'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Row 1: Path Name & Collision Badge */}
+                    <div className="flex flex-col gap-1 shrink-0">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-slate-300 text-xs">Based-On Template</span>
-                          <InfoTooltip text="Clone metadata and all linked elements from an existing Path." />
+                          <span className="font-bold text-slate-300 text-xs">Path Name</span>
+                          <GuardrailBadge isValid={isNameValid} />
+                          <InfoTooltip text="Unique archetype name for this Path (e.g. Voidstalker, Iron Sentinel)." />
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-mono">Required</span>
+                      </div>
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        disabled={isUniversalPath && workshopMode !== 'designer'}
+                        placeholder="e.g. Voidstalker, Iron Sentinel, Starweaver..."
+                        className="bg-slate-950 text-slate-100 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner disabled:opacity-60 disabled:cursor-not-allowed"
+                        required
+                      />
+                      {topLevelCollision.isCollision && (
+                        <div className="flex items-center justify-between p-2 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs">
+                          <div className="flex items-center gap-1.5 text-amber-300 min-w-0">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">
+                              '{topLevelCollision.existingItemName}' already exists in {workshopMode === 'designer' ? 'Master Canon' : 'My Creations'}.
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setName(getAutoVersionedName(name, currentActiveCatalog))}
+                            className="px-2 py-0.5 rounded-lg bg-amber-900/80 hover:bg-amber-800 border border-amber-500/60 text-amber-100 font-bold text-[10px] transition cursor-pointer shrink-0"
+                          >
+                            ⚡ Auto-Add (v2)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Row 2: Based-On Path Template & Category Confirmation Badge */}
+                    <div className="flex items-center justify-between gap-3 shrink-0">
+                      {/* Based-On Path Template */}
+                      <div className="flex-1 flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-slate-300 text-xs">Based-On Template</span>
+                            <InfoTooltip text="Clone metadata and all linked elements from an existing Path." />
+                          </div>
+                        </div>
+                        <select
+                          onChange={(e) => {
+                            const p = (paths || []).find((it) => String(it.id) === e.target.value || it.name === e.target.value);
+                            if (p) handleSelectBasedOnPath(p);
+                            e.target.value = '';
+                          }}
+                          defaultValue=""
+                          className="bg-slate-950 border border-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-xl outline-none focus:border-blue-400 font-medium cursor-pointer"
+                        >
+                          <option value="" disabled>-- Clone from Path... --</option>
+                          {(paths || []).map((p) => (
+                            <option key={p.id || p.name} value={p.id || p.name}>
+                              🧭 {p.name} ({p.category || 'General'})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Category Confirmation Badge */}
+                      <div className="flex flex-col gap-1 shrink-0">
+                        <span className="font-bold text-slate-400 text-xs">Category</span>
+                        <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-bold text-blue-300 flex items-center gap-1.5 shadow-inner">
+                          <span>{finalPathCat.toLowerCase() === 'race' ? '🧬' : finalPathCat.toLowerCase() === 'class' ? '⚔️' : '🧭'}</span>
+                          <span>{finalPathCat}</span>
                         </div>
                       </div>
-                      <select
-                        onChange={(e) => {
-                          const p = (paths || []).find((it) => String(it.id) === e.target.value || it.name === e.target.value);
-                          if (p) handleSelectBasedOnPath(p);
-                          e.target.value = '';
-                        }}
-                        defaultValue=""
-                        className="bg-slate-950 border border-slate-700 text-slate-300 text-xs px-2.5 py-1.5 rounded-xl outline-none focus:border-blue-400 font-medium cursor-pointer"
-                      >
-                        <option value="" disabled>-- Clone from Path... --</option>
-                        {(paths || []).map((p) => (
-                          <option key={p.id || p.name} value={p.id || p.name}>
-                            🧭 {p.name} ({p.category || 'General'})
-                          </option>
-                        ))}
-                      </select>
                     </div>
 
-                    {/* Category Confirmation Badge */}
+                    {/* Row 3: Description & Lore */}
                     <div className="flex flex-col gap-1 shrink-0">
-                      <span className="font-bold text-slate-400 text-xs">Category</span>
-                      <div className="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-bold text-blue-300 flex items-center gap-1.5 shadow-inner">
-                        <span>{finalPathCat.toLowerCase() === 'race' ? '🧬' : finalPathCat.toLowerCase() === 'class' ? '⚔️' : '🧭'}</span>
-                        <span>{finalPathCat}</span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-slate-300 text-xs">Description & Lore</span>
+                          <GuardrailBadge isValid={pathDescription.trim().length > 0} />
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-mono">Required</span>
                       </div>
+                      <textarea
+                        value={pathDescription}
+                        onChange={(e) => setPathDescription(e.target.value)}
+                        disabled={isUniversalPath && workshopMode !== 'designer'}
+                        rows={3}
+                        placeholder="Flavor text describing this path's training, role, and key abilities..."
+                        className="bg-slate-950 text-slate-100 text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner resize-y min-h-[60px] leading-relaxed disabled:opacity-60 disabled:cursor-not-allowed"
+                        required
+                      />
                     </div>
                   </div>
-
-                  {/* Row 3: Description & Lore */}
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-300 text-xs">Description & Lore</span>
-                        <GuardrailBadge isValid={pathDescription.trim().length > 0} />
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-mono">Required</span>
-                    </div>
-                    <textarea
-                      value={pathDescription}
-                      onChange={(e) => setPathDescription(e.target.value)}
-                      disabled={isUniversalPath && workshopMode !== 'designer'}
-                      rows={3}
-                      placeholder="Flavor text describing this path's training, role, and key abilities..."
-                      className="bg-slate-950 text-slate-100 text-xs p-2.5 rounded-xl border border-slate-700 outline-none focus:border-blue-400 shadow-inner resize-y min-h-[60px] leading-relaxed disabled:opacity-60 disabled:cursor-not-allowed"
-                      required
-                    />
-                  </div>
-                </div>
+                )
               ) : activePathSelection.type === 'path_set' ? (
                 /* ROUTE 2: LINKED SET INSPECTOR & REDIRECT NOTICE */
                 <div
@@ -8361,37 +8609,39 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
 
                   {/* Prominent Redirect Notice Banner (Blake's Mandate) */}
-                  <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-lg">ℹ️</span>
-                      <div>
-                        <h4 className="text-xs font-bold text-indigo-200">
-                          To edit a Set, use the Sets tab at the top of this screen.
-                        </h4>
-                        <p className="text-[10px] text-indigo-300/80">
-                          Sets are modular collections. You can manage the items within this set in the Sets Studio.
-                        </p>
+                  {!isPathViewer && (
+                    <div className="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-500/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-lg">ℹ️</span>
+                        <div>
+                          <h4 className="text-xs font-bold text-indigo-200">
+                            To edit a Set, use the Sets tab at the top of this screen.
+                          </h4>
+                          <p className="text-[10px] text-indigo-300/80">
+                            Sets are modular collections. You can manage the items within this set in the Sets Studio.
+                          </p>
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSwitchTab('set');
+                          const targetSet = (setsCatalog || []).find(
+                            (s) =>
+                              String(s.id) === String(activePathSelection.setItem?.id) ||
+                              s.name === activePathSelection.setItem?.name
+                          );
+                          if (targetSet) {
+                            handleSelectSet(targetSet);
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer shrink-0"
+                      >
+                        <span>🗂️</span>
+                        <span>Open in Sets Studio</span>
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleSwitchTab('set');
-                        const targetSet = (setsCatalog || []).find(
-                          (s) =>
-                            String(s.id) === String(activePathSelection.setItem?.id) ||
-                            s.name === activePathSelection.setItem?.name
-                        );
-                        if (targetSet) {
-                          handleSelectSet(targetSet);
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer shrink-0"
-                    >
-                      <span>🗂️</span>
-                      <span>Open in Sets Studio</span>
-                    </button>
-                  </div>
+                  )}
 
                   {/* Set Items Inspection - Read-Only Member List */}
                   <div className="flex-1 flex flex-col min-h-0 gap-2">
@@ -8456,8 +8706,167 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
                 </div>
               ) : activePathSelection.type === 'path_element' ? (
-                /* ROUTE 3: ABILITY INSPECTOR & PERMISSIONED EDIT */
-                renderAbilityElementEditor('path_edit', activePathElementCategory)
+                /* ROUTE 3: ABILITY INSPECTOR & PERMISSIONED EDIT (or READ-ONLY INSPECTOR IN PATH VIEWER) */
+                isPathViewer ? (
+                  (() => {
+                    const el = activePathSelection.element;
+                    const cat = activePathElementCategory || el?.type || 'power';
+                    const rawRecord: any = (allCatalogItemsPool || []).find(
+                      (item: any) => String(item.id) === String(el?.id) || item.name === el?.name
+                    ) || el?.item_data || el;
+
+                    const elementName = rawRecord?.name || el?.name || pathElementFormName || 'Ability';
+                    const actionVal = rawRecord?.action || el?.item_data?.action || pathElementFormAction;
+                    const usageVal = rawRecord?.usage || el?.item_data?.usage || pathElementFormUsage;
+                    const disciplineVal = rawRecord?.discipline || el?.item_data?.discipline || pathElementFormDiscipline;
+                    const attributeVal = rawRecord?.attribute || el?.item_data?.attribute || pathElementFormAttribute;
+                    const effectText = rawRecord?.effect || rawRecord?.item_data?.effect || el?.item_data?.effect || el?.effect || pathElementFormEffect;
+                    const notesText = rawRecord?.notes || rawRecord?.item_data?.notes || el?.item_data?.notes || el?.notes || pathElementFormNotes;
+                    const reqVal = rawRecord?.requirement || el?.item_data?.requirement;
+                    const damageVal = rawRecord?.damage || rawRecord?.dmg || el?.item_data?.damage;
+                    const arVal = rawRecord?.ar !== undefined ? rawRecord.ar : el?.item_data?.ar;
+                    const maxBlockVal = rawRecord?.max_block || el?.item_data?.max_block;
+                    const costVal = rawRecord?.cost || el?.item_data?.cost;
+                    const tagVal = el?.tag || (el?.isFree || el?.is_free ? 'Free' : '1 AP');
+
+                    return (
+                      <div
+                        key={`path_viewer_element_${el?.id || elementName}`}
+                        className="flex-1 flex flex-col min-h-0 gap-3.5 overflow-y-auto pr-1 animate-fadeIn"
+                      >
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 shrink-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="text-xl shrink-0">{getCategoryEmoji(cat)}</span>
+                            <div className="min-w-0">
+                              <h3 className="font-outfit font-extrabold text-base text-slate-100 truncate">
+                                {elementName}
+                              </h3>
+                              <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                <span className="px-2 py-0.5 rounded bg-blue-950/80 border border-blue-500/40 text-blue-300 font-mono text-[10px] font-bold capitalize">
+                                  {getCategorySingular(cat)}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono flex items-center gap-1 ${
+                                  tagVal === 'Free'
+                                    ? 'bg-emerald-950/80 border border-emerald-500/40 text-emerald-300'
+                                    : 'bg-amber-950/80 border border-amber-500/40 text-amber-300'
+                                }`}>
+                                  <span>{tagVal === 'Free' ? '🎁' : '🧩'}</span>
+                                  <span>{tagVal === 'Free' ? 'Free (0 AP)' : '1 AP to Unlock'}</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setActivePathSelection({ type: 'path_root' })}
+                            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 shadow-sm"
+                          >
+                            <span>←</span>
+                            <span>Path Overview</span>
+                          </button>
+                        </div>
+
+                        {/* Attribute & Combat Badges Ribbon */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {actionVal && (
+                            <span className="px-2.5 py-1 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>⚡</span>
+                              <span>{actionVal}</span>
+                            </span>
+                          )}
+                          {usageVal && (
+                            <span className="px-2.5 py-1 rounded-lg bg-amber-950/80 border border-amber-500/40 text-amber-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>⌛</span>
+                              <span>{usageVal}</span>
+                            </span>
+                          )}
+                          {reqVal && (
+                            <span className="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-slate-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>Req:</span>
+                              <span className="text-white">{reqVal}</span>
+                            </span>
+                          )}
+                          {damageVal && (
+                            <span className="px-2.5 py-1 rounded-lg bg-rose-950/80 border border-rose-500/40 text-rose-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>💥</span>
+                              <span>{damageVal}</span>
+                            </span>
+                          )}
+                          {arVal !== undefined && (
+                            <span className="px-2.5 py-1 rounded-lg bg-sky-950/80 border border-sky-500/40 text-sky-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>🛡️</span>
+                              <span>{arVal} AR</span>
+                            </span>
+                          )}
+                          {maxBlockVal && (
+                            <span className="px-2.5 py-1 rounded-lg bg-sky-950/80 border border-sky-500/40 text-sky-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>🛡️</span>
+                              <span>{maxBlockVal} Block</span>
+                            </span>
+                          )}
+                          {disciplineVal && disciplineVal !== 'General' && (
+                            <span className="px-2.5 py-1 rounded-lg bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>🔮</span>
+                              <span>{disciplineVal}</span>
+                            </span>
+                          )}
+                          {attributeVal && cat === 'skill' && (
+                            <span className="px-2.5 py-1 rounded-lg bg-purple-950/80 border border-purple-500/40 text-purple-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>{attributeVal}</span>
+                            </span>
+                          )}
+                          {costVal && costVal !== '0s' && (
+                            <span className="px-2.5 py-1 rounded-lg bg-yellow-950/80 border border-yellow-500/40 text-yellow-300 font-mono text-xs font-bold flex items-center gap-1 shadow-sm">
+                              <span>💰</span>
+                              <span>{costVal}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Rules Effect / Mechanics Box */}
+                        {effectText && (
+                          <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 shadow-inner">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-1.5">
+                              <span>📜</span>
+                              <span>Rules Effect & Mechanics</span>
+                            </span>
+                            <p className="text-xs text-slate-200 font-mono leading-relaxed whitespace-pre-wrap">
+                              {effectText}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Notes / Lore Box */}
+                        {notesText && (
+                          <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-1.5">
+                              <span>📖</span>
+                              <span>Lore & Tactical Notes</span>
+                            </span>
+                            <p className="text-xs text-slate-300 italic leading-relaxed whitespace-pre-wrap">
+                              {notesText}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Footer Path Affiliation Pill */}
+                        <div className="mt-auto pt-2 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800/80">
+                          <span className="flex items-center gap-1.5">
+                            <span>🧭</span>
+                            <span>Included in <strong>{name || 'Path'}</strong></span>
+                          </span>
+                          <span className="font-mono text-[10px] text-slate-500">
+                            Path Viewer • Read-Only
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  renderAbilityElementEditor('path_edit', activePathElementCategory)
+                )
               ) : activePathSelection.type === 'path_new_element' ? (
                 /* ROUTE 3b: CREATE NEW ELEMENT FOR PATH */
                 renderAbilityElementEditor('path_new', (activePathSelection.category as any) || 'power')
@@ -10133,7 +10542,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
           )}
 
           {/* Conditional Save Path button */}
-          {creationType === 'paths_abilities' && isPathActive && (
+          {creationType === 'paths_abilities' && isPathActive && !isPathViewer && (
             <button
               type="button"
               onClick={handleSubmit}

@@ -20,8 +20,15 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
     const handleOpen = (e: CustomEvent) => {
       if (e.detail === 'paths' || e.detail === 'kits') setShowPathsModal(true);
     };
+    const handlePathViewerClosed = () => {
+      setShowPathsModal(true);
+    };
     window.addEventListener('supaflex:open-manager' as any, handleOpen);
-    return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
+    window.addEventListener('supaflex:path-viewer-closed', handlePathViewerClosed);
+    return () => {
+      window.removeEventListener('supaflex:open-manager' as any, handleOpen);
+      window.removeEventListener('supaflex:path-viewer-closed', handlePathViewerClosed);
+    };
   }, []);
 
   const race = activeCharacter?.race || 'Human';

@@ -50,6 +50,32 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
   const [selectedExtraPathToBuy, setSelectedExtraPathToBuy] = useState<string>('');
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
+  const innateCanonicalName = useMemo(() => {
+    const found = resolvedPathsCatalog.find(
+      (p) => p.name.toLowerCase() === 'innate' || p.name.toLowerCase() === 'base'
+    );
+    return found?.name || 'Innate';
+  }, [resolvedPathsCatalog]);
+
+  const universalCanonicalName = useMemo(() => {
+    const found = resolvedPathsCatalog.find(
+      (p) => p.name.toLowerCase() === 'universal'
+    );
+    return found?.name || 'Universal';
+  }, [resolvedPathsCatalog]);
+
+  const handleInspectPath = (pathName: string, isOwned: boolean = true) => {
+    onClose();
+    window.dispatchEvent(
+      new CustomEvent('supaflex:open-path-viewer', {
+        detail: {
+          pathName,
+          isOwned,
+        },
+      })
+    );
+  };
+
   const resetAllPathsFilters = useCallback(() => {
     setSelectedPathCategory('All');
     setSelectedExtraPathToBuy('');
@@ -387,9 +413,20 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                       <span>🥋</span>
                       <span>Innate Path</span>
                     </span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700">
-                      Innate
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleInspectPath(innateCanonicalName, true)}
+                        className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                        title="Inspect Innate Path elements"
+                      >
+                        <span>🔍</span>
+                        <span>Inspect</span>
+                      </button>
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700">
+                        Innate
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between pt-0.5">
                     <span className="text-xs font-black inline-flex items-center align-baseline gap-1 text-slate-200">
@@ -414,9 +451,22 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                       <span>🧬</span>
                       <span>Race Path</span>
                     </span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-500/40">
-                      Race
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {activeRace && (
+                        <button
+                          type="button"
+                          onClick={() => handleInspectPath(activeRace, true)}
+                          className="px-2 py-0.5 rounded-lg bg-rose-950/70 hover:bg-rose-900/80 border border-rose-500/40 text-rose-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                          title={`Inspect ${activeRace} Path elements`}
+                        >
+                          <span>🔍</span>
+                          <span>Inspect</span>
+                        </button>
+                      )}
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-500/40">
+                        Race
+                      </span>
+                    </div>
                   </div>
                   {activeRole === 'gm' ? (
                     <select
@@ -452,9 +502,22 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                       <span>⚔️</span>
                       <span>Class Path</span>
                     </span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-200 border border-purple-500/50">
-                      Class
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {activeClass && (
+                        <button
+                          type="button"
+                          onClick={() => handleInspectPath(activeClass, true)}
+                          className="px-2 py-0.5 rounded-lg bg-purple-950/70 hover:bg-purple-900/80 border border-purple-500/40 text-purple-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                          title={`Inspect ${activeClass} Path elements`}
+                        >
+                          <span>🔍</span>
+                          <span>Inspect</span>
+                        </button>
+                      )}
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-950 text-purple-200 border border-purple-500/50">
+                        Class
+                      </span>
+                    </div>
                   </div>
                   {activeRole === 'gm' ? (
                     <select
@@ -490,9 +553,20 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                       <span>🌐</span>
                       <span>Universal Path</span>
                     </span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40">
-                      Universal
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleInspectPath(universalCanonicalName, true)}
+                        className="px-2 py-0.5 rounded-lg bg-cyan-950/70 hover:bg-cyan-900/80 border border-cyan-500/40 text-cyan-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                        title="Inspect Universal Path elements"
+                      >
+                        <span>🔍</span>
+                        <span>Inspect</span>
+                      </button>
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40">
+                        Universal
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between pt-0.5">
                     <span className="text-xs font-black inline-flex items-center align-baseline gap-1 text-cyan-100">
@@ -553,6 +627,15 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleInspectPath(pathName, true)}
+                              className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-slate-300 hover:text-white text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                              title={`Inspect ${pathName} Path elements`}
+                            >
+                              <span>🔍</span>
+                              <span>Inspect</span>
+                            </button>
                             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-indigo-300 border border-indigo-500/30 font-semibold">
                               Bonus
                             </span>
@@ -661,9 +744,20 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                         <span>{selectedExtraPathToBuy}</span>
                         <ItemNotesPopover notes={resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy)?.description || (resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy) as any)?.notes} itemName={selectedExtraPathToBuy} inline />
                       </span>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40">
-                        {resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy)?.category || 'Path'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleInspectPath(selectedExtraPathToBuy, false)}
+                          className="px-2 py-0.5 rounded-lg bg-purple-900/80 hover:bg-purple-800 border border-purple-500/40 text-purple-200 text-[10px] font-bold transition flex items-center gap-1 cursor-pointer shadow-sm"
+                          title={`Inspect ${selectedExtraPathToBuy} Path elements`}
+                        >
+                          <span>🔍</span>
+                          <span>Inspect</span>
+                        </button>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40">
+                          {resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy)?.category || 'Path'}
+                        </span>
+                      </div>
                     </div>
                     {(() => {
                       const pathData = resolvedPathsCatalog.find((p) => p.name === selectedExtraPathToBuy);
@@ -743,6 +837,17 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2.5 pt-2 border-t border-slate-800/80">
+                  {selectedExtraPathToBuy && (
+                    <button
+                      type="button"
+                      onClick={() => handleInspectPath(selectedExtraPathToBuy, false)}
+                      className="py-2.5 px-4 rounded-xl font-outfit font-bold text-xs flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white transition cursor-pointer shadow-md shrink-0"
+                      title={`Inspect all elements in ${selectedExtraPathToBuy}`}
+                    >
+                      <span>🔍</span>
+                      <span>Inspect Path</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={!selectedExtraPathToBuy || availableAp < 4}

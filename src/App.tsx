@@ -54,6 +54,20 @@ export default function App() {
   const [showVitalityManagerModal, setShowVitalityManagerModal] = useState(false);
   const [showFocusManagerModal, setShowFocusManagerModal] = useState(false);
   const [openedFromApManager, setOpenedFromApManager] = useState(false);
+  const [pathViewerTarget, setPathViewerTarget] = useState<{ pathName: string; isOwned?: boolean } | null>(null);
+
+  useEffect(() => {
+    const handleOpenPathViewer = (e: any) => {
+      if (e?.detail?.pathName) {
+        setPathViewerTarget(e.detail);
+        setShowPlayerWorkshopModal(true);
+      }
+    };
+    window.addEventListener('supaflex:open-path-viewer', handleOpenPathViewer);
+    return () => {
+      window.removeEventListener('supaflex:open-path-viewer', handleOpenPathViewer);
+    };
+  }, []);
 
   useEffect(() => {
     const handleOpen = (e: any) => {
@@ -914,21 +928,34 @@ export default function App() {
       </ErrorBoundary>
 
 
-      {/* ⚒️ Forge Modal */}
+      {/* ⚒️ Forge Modal / Path Viewer */}
       <ErrorBoundary fallbackTitle="Forge Error" onClose={() => {
+        const wasPathViewer = Boolean(pathViewerTarget);
         setShowPlayerWorkshopModal(false);
         setEditingWorkshopItem(null);
+        setPathViewerTarget(null);
+        if (wasPathViewer) {
+          window.dispatchEvent(new CustomEvent('supaflex:path-viewer-closed'));
+        }
       }}>
         <PlayerWorkshopModal
           isOpen={showPlayerWorkshopModal}
           initialItem={editingWorkshopItem}
+          isPathViewer={Boolean(pathViewerTarget)}
+          pathViewerTarget={pathViewerTarget}
           onClose={() => {
+            const wasPathViewer = Boolean(pathViewerTarget);
             setShowPlayerWorkshopModal(false);
             setEditingWorkshopItem(null);
+            setPathViewerTarget(null);
+            if (wasPathViewer) {
+              window.dispatchEvent(new CustomEvent('supaflex:path-viewer-closed'));
+            }
           }}
           onOpenWorkshop={() => {
             setShowPlayerWorkshopModal(false);
             setEditingWorkshopItem(null);
+            setPathViewerTarget(null);
             setShowCraftingMallModal(true);
           }}
         />
