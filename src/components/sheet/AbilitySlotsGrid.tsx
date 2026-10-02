@@ -2,7 +2,7 @@ import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallba
 import { createPortal } from 'react-dom';
 import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, Trash2, AlertCircle, Check, ArrowUpDown, Cpu } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
+import { matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar } from '../common/QuickDeckBar';
@@ -166,7 +166,7 @@ export const calculateTotalPowerUnits = (abilitySlots: AbilitySlot[]): number =>
 };
 
 export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type }) => {
-  const activeGenre = useGenreStore((state) => state.activeGenre);
+
   const {
     activeCharacter,
     powers,
@@ -1136,12 +1136,31 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     }
   };
 
-  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>('ALL');
   const [hardwareTierFilter, setHardwareTierFilter] = useState<'ALL' | 'Free' | 'Minor' | 'Lesser' | 'Greater' | 'Epic'>('ALL');
   const [powerDomainFilter, setPowerDomainFilter] = useState<string>('ALL');
   const [powerDisciplineFilter, setPowerDisciplineFilter] = useState<string>('ALL');
   const [vaultFilter, setVaultFilter] = useState<'ALL' | 'STARRED'>('ALL');
   const [activePowerApCategory, setActivePowerApCategory] = useState<ApCostCategory>('all');
+
+  const resetAllPowersFilters = useCallback(() => {
+    setLocalGenreFilter('ALL');
+    setHardwareTierFilter('ALL');
+    setPowerDomainFilter('ALL');
+    setPowerDisciplineFilter('ALL');
+    setVaultFilter('ALL');
+    setActivePowerApCategory('all');
+    setActiveTableName('ALL');
+    setLeftSearchQuery('');
+    setRightSearchQuery('');
+  }, []);
+
+  // Reset all filters whenever Powers / Magic Items Manager freshly opens to eliminate filter traps
+  useEffect(() => {
+    if (showManageModal) {
+      resetAllPowersFilters();
+    }
+  }, [showManageModal, resetAllPowersFilters]);
 
   // Incremental DOM Chunk Batching for Powers & Magic Items catalogs (drops initial DOM mount from ~9,300 to ~600 nodes)
   const [visibleCatalogCount, setVisibleCatalogCount] = useState<number>(40);
@@ -1206,12 +1225,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [fullCatalog]);
 
-  // Keep local genre synced to active campaign setting when modal opens
-  useEffect(() => {
-    if (showManageModal && activeGenre) {
-      setLocalGenreFilter(activeGenre);
-    }
-  }, [showManageModal, activeGenre]);
+
 
   // Filter catalog items by Category & Deduplication & Genre Scope
   const categoryFilteredCatalog = useMemo(() => {
@@ -2814,13 +2828,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 </span>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setLocalGenreFilter(activeGenre || 'SciFi');
-                                    setPowerDomainFilter('ALL');
-                                    setPowerDisciplineFilter('ALL');
-                                    setActivePowerApCategory('all');
-                                    setRightSearchQuery('');
-                                  }}
+                                  onClick={resetAllPowersFilters}
                                   className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
                                 >
                                   Reset All Filters
@@ -3083,12 +3091,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                 </span>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setLocalGenreFilter(activeGenre || 'SciFi');
-                                    setHardwareTierFilter('ALL');
-                                    setActiveTableName('ALL');
-                                    setRightSearchQuery('');
-                                  }}
+                                  onClick={resetAllPowersFilters}
                                   className="px-3 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
                                 >
                                   Reset All Filters

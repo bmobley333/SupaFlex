@@ -588,6 +588,22 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
 
   const targetItem = initialTargetItem || exoticGearManagerTargetItem;
 
+  const resetAllExoticsFilters = useCallback(() => {
+    setSearchQuery('');
+    setActiveCategoryFilter('all');
+  }, []);
+
+  // Reset filters whenever Exotics Manager freshly opens to eliminate filter traps
+  useEffect(() => {
+    if (isOpen) {
+      if (!targetItem) {
+        resetAllExoticsFilters();
+      } else {
+        setSearchQuery('');
+      }
+    }
+  }, [isOpen, targetItem, resetAllExoticsFilters]);
+
   // Auto-expand and scroll to target item when modal opens, auto-switching category if needed
   useEffect(() => {
     if (!isOpen || !targetItem) return;
@@ -1162,13 +1178,13 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
                     ? `No owned or learned ${activeCategoryFilter} with tactical exotic powers or compatible mods were found.`
                     : 'No owned or learned weapons, armor, or gear items with tactical exotic powers or compatible mods were found matching your filter.'}
                 </p>
-                {activeCategoryFilter !== 'all' && (
+                {(activeCategoryFilter !== 'all' || searchQuery) && (
                   <button
                     type="button"
-                    onClick={() => setActiveCategoryFilter('all')}
+                    onClick={resetAllExoticsFilters}
                     className="mt-3 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all shadow-sm cursor-pointer"
                   >
-                    🌐 Show All Exotic Gear
+                    🌐 Reset All Filters
                   </button>
                 )}
               </div>

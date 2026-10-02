@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Check, Search, X, Scroll, GraduationCap, Star, Trash2, ArrowDown, ArrowUp, AlertCircle, Sparkles } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
+import { matchesGenre } from '../../store/useGenreStore';
 import { AttributeKey, CustomSkillsetDefinition, Skillset, calculateAvailableAp } from '../../types/game';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
@@ -104,7 +104,7 @@ const normalizeSkillsetName = (name?: string): string => {
 };
 
 export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition, isAtBottom }) => {
-  const activeGenre = useGenreStore((state) => state.activeGenre);
+
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const {
     activeCharacter,
@@ -770,16 +770,25 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
     saveActiveCharacter();
   };
 
-  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>('ALL');
   const [localDisciplineFilter, setLocalDisciplineFilter] = useState<string>('ALL');
   const [localAttributeFilter, setLocalAttributeFilter] = useState<string>('ALL');
 
-  // Keep local genre synced to active campaign setting when modal opens
+  const resetAllSkillsFilters = useCallback(() => {
+    setLocalGenreFilter('ALL');
+    setLocalDisciplineFilter('ALL');
+    setLocalAttributeFilter('ALL');
+    setSkillsCategoryFilter('all');
+    setLeftSearchQuery('');
+    setRightSearchQuery('');
+  }, []);
+
+  // Reset all filters whenever Skills Manager freshly opens to eliminate filter traps
   useEffect(() => {
-    if (showManageModal && activeGenre) {
-      setLocalGenreFilter(activeGenre);
+    if (showManageModal) {
+      resetAllSkillsFilters();
     }
-  }, [showManageModal, activeGenre]);
+  }, [showManageModal, resetAllSkillsFilters]);
 
   const availableDisciplines = useMemo(() => {
     const set = new Set<string>();
@@ -1347,13 +1356,7 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                         </span>
                         <button
                           type="button"
-                          onClick={() => {
-                            setLocalGenreFilter(activeGenre || 'SciFi');
-                            setLocalDisciplineFilter('ALL');
-                            setLocalAttributeFilter('ALL');
-                            setSkillsCategoryFilter('all');
-                            setRightSearchQuery('');
-                          }}
+                          onClick={resetAllSkillsFilters}
                           className="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
                         >
                           Reset All Filters

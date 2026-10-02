@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { X, Check, Swords, Loader2, Search, Star, Trash2, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
+import { matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import {
   WeaponSlot,
@@ -97,7 +97,7 @@ const calculateWeaponDmg = (name: string, mhsCategory: string, attributeDice: Re
 };
 
 export const WeaponsCard: React.FC = () => {
-  const activeGenre = useGenreStore((state) => state.activeGenre);
+
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const {
     activeCharacter,
@@ -550,17 +550,26 @@ export const WeaponsCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>('ALL');
   const [weaponDisciplineFilter, setWeaponDisciplineFilter] = useState<string>('ALL');
   const [weaponTypeFilter, setWeaponTypeFilter] = useState<string>('ALL');
   const [activeApCategory, setActiveApCategory] = useState<ApCostCategory>('all');
 
-  // Keep local genre synced to active campaign setting when modal opens
+  const resetAllWeaponsFilters = useCallback(() => {
+    setLocalGenreFilter('ALL');
+    setWeaponDisciplineFilter('ALL');
+    setWeaponTypeFilter('ALL');
+    setActiveApCategory('all');
+    setLeftSearchQuery('');
+    setRightSearchQuery('');
+  }, []);
+
+  // Reset all filters whenever Weapons Manager freshly opens to eliminate filter traps
   useEffect(() => {
-    if (showManageModal && activeGenre) {
-      setLocalGenreFilter(activeGenre);
+    if (showManageModal) {
+      resetAllWeaponsFilters();
     }
-  }, [showManageModal, activeGenre]);
+  }, [showManageModal, resetAllWeaponsFilters]);
 
   const availableDisciplines = useMemo(() => {
     const set = new Set<string>();
@@ -1104,13 +1113,7 @@ export const WeaponsCard: React.FC = () => {
                           </span>
                           <button
                             type="button"
-                            onClick={() => {
-                              setLocalGenreFilter(activeGenre || 'SciFi');
-                              setWeaponDisciplineFilter('ALL');
-                              setWeaponTypeFilter('ALL');
-                              setActiveApCategory('all');
-                              setRightSearchQuery('');
-                            }}
+                            onClick={resetAllWeaponsFilters}
                             className="px-3 py-1 bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
                           >
                             Reset All Filters

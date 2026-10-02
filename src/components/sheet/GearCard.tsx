@@ -13,7 +13,7 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
+import { matchesGenre } from '../../store/useGenreStore';
 import {
   SimpleGearItem,
   SupabaseGear,
@@ -90,7 +90,7 @@ interface GearCardProps {
 }
 
 export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
-  const activeGenre = useGenreStore((state) => state.activeGenre);
+
   const {
     activeCharacter,
     updateActiveSheetData,
@@ -143,10 +143,25 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   const [gearTierFilter, setGearTierFilter] = useState<GearTierFilter>('ALL');
   const [gearDomainFilter, setGearDomainFilter] = useState<GearDomainFilter>('ALL');
   const [gearViewFilter, setGearViewFilter] = useState<GearViewFilter>('ALL');
-  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>('ALL');
   const [gearCatalogFeedback, setGearCatalogFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   const [expandedCatalogModId, setExpandedCatalogModId] = useState<string | null>(null);
   const [expandedCatalogFunctionId, setExpandedCatalogFunctionId] = useState<string | null>(null);
+
+  const resetAllGearFilters = useCallback(() => {
+    // Left column ("My Gear")
+    setInventoryCategoryTab('all');
+    setInventoryTierFilter('ALL');
+    setInventoryDomainFilter('ALL');
+    setGearInventorySearchQuery('');
+    // Right column ("Buy Gear")
+    setActiveCategoryTab('all');
+    setGearTierFilter('ALL');
+    setGearDomainFilter('ALL');
+    setGearViewFilter('ALL');
+    setLocalGenreFilter('ALL');
+    setGearCatalogSearchQuery('');
+  }, []);
 
   // Character Currency & Wallet Funds
   const gold = sheet?.gold ?? 0;
@@ -170,12 +185,13 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   // Calculate total inventory value (gold & silver, 100s = 1g)
   const inventoryValue = useMemo(() => calculateInventoryValue(gearList, modsCatalog), [gearList, modsCatalog]);
 
-  // Keep local genre synced to active campaign setting when modal opens
+
+  // Reset all filters whenever Gear Manager freshly opens to eliminate filter traps
   useEffect(() => {
-    if (isGearManagerModalOpen && activeGenre) {
-      setLocalGenreFilter(activeGenre);
+    if (isGearManagerModalOpen) {
+      resetAllGearFilters();
     }
-  }, [isGearManagerModalOpen, activeGenre]);
+  }, [isGearManagerModalOpen, resetAllGearFilters]);
 
   // Reconcile Function Vault with physically owned simple_gear when Gear Manager opens
   useEffect(() => {
@@ -1307,12 +1323,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                     </span>
                     <button
                       type="button"
-                      onClick={() => {
-                        setInventoryCategoryTab('all');
-                        setInventoryTierFilter('ALL');
-                        setInventoryDomainFilter('ALL');
-                        setGearInventorySearchQuery('');
-                      }}
+                      onClick={resetAllGearFilters}
                       className="px-3 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
                     >
                       Reset All Filters
@@ -1626,14 +1637,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                     </span>
                     <button
                       type="button"
-                      onClick={() => {
-                        setActiveCategoryTab('all');
-                        setGearTierFilter('ALL');
-                        setLocalGenreFilter(activeGenre || 'SciFi');
-                        setGearDomainFilter('ALL');
-                        setGearViewFilter('ALL');
-                        setGearCatalogSearchQuery('');
-                      }}
+                      onClick={resetAllGearFilters}
                       className="px-3 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/40 hover:bg-teal-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
                     >
                       Reset All Filters

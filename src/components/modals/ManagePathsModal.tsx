@@ -1,5 +1,5 @@
 // src/components/modals/ManagePathsModal.tsx
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -49,6 +49,19 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
   const [selectedPathCategory, setSelectedPathCategory] = useState<string>('All');
   const [selectedExtraPathToBuy, setSelectedExtraPathToBuy] = useState<string>('');
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+
+  const resetAllPathsFilters = useCallback(() => {
+    setSelectedPathCategory('All');
+    setSelectedExtraPathToBuy('');
+    setFeedbackMsg(null);
+  }, []);
+
+  // Reset all filters whenever Paths Manager freshly opens to eliminate filter traps
+  useEffect(() => {
+    if (isOpen) {
+      resetAllPathsFilters();
+    }
+  }, [isOpen, resetAllPathsFilters]);
 
   useEffect(() => {
     const handleUnlock = () => setIsGsUnlocked(true);

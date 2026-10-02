@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { X, Check, Search, ShieldAlert, Loader2, Star, Trash2, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
+import { matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
@@ -34,7 +34,7 @@ import {
 import { PathBadge } from '../common/PathBadge';
 
 export const ShieldCard: React.FC = () => {
-  const activeGenre = useGenreStore((state) => state.activeGenre);
+
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const {
     activeCharacter,
@@ -490,17 +490,26 @@ export const ShieldCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>('ALL');
   const [shieldDomainFilter, setShieldDomainFilter] = useState<string>('ALL');
   const [shieldFilter, setShieldFilter] = useState<string>('ALL');
   const [activeApCategory, setActiveApCategory] = useState<ApCostCategory>('all');
 
-  // Keep local genre synced to active campaign setting when modal opens
+  const resetAllShieldsFilters = useCallback(() => {
+    setLocalGenreFilter('ALL');
+    setShieldDomainFilter('ALL');
+    setShieldFilter('ALL');
+    setActiveApCategory('all');
+    setLeftSearchQuery('');
+    setRightSearchQuery('');
+  }, []);
+
+  // Reset all filters whenever Shields Manager freshly opens to eliminate filter traps
   useEffect(() => {
-    if (showManageModal && activeGenre) {
-      setLocalGenreFilter(activeGenre);
+    if (showManageModal) {
+      resetAllShieldsFilters();
     }
-  }, [showManageModal, activeGenre]);
+  }, [showManageModal, resetAllShieldsFilters]);
 
   const uniqueShieldDomains = useMemo(() => {
     const set = new Set<string>();
@@ -967,13 +976,7 @@ export const ShieldCard: React.FC = () => {
                         </span>
                         <button
                           type="button"
-                          onClick={() => {
-                            setLocalGenreFilter(activeGenre || 'SciFi');
-                            setShieldDomainFilter('ALL');
-                            setShieldFilter('ALL');
-                            setActiveApCategory('all');
-                            setRightSearchQuery('');
-                          }}
+                          onClick={resetAllShieldsFilters}
                           className="px-3 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:bg-cyan-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
                         >
                           Reset All Filters

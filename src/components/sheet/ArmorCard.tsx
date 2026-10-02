@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { X, Check, Shirt, Search, Loader2, Star, Trash2, AlertCircle } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
+import { matchesGenre } from '../../store/useGenreStore';
 import { gameApi } from '../../services/api';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
@@ -41,7 +41,7 @@ const getDieNum = (dieRating?: string): number => {
 };
 
 export const ArmorCard: React.FC = () => {
-  const activeGenre = useGenreStore((state) => state.activeGenre);
+
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const {
     activeCharacter,
@@ -496,17 +496,26 @@ export const ArmorCard: React.FC = () => {
     saveActiveCharacter();
   };
 
-  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>('ALL');
   const [armorDomainFilter, setArmorDomainFilter] = useState<string>('ALL');
   const [armorFilter, setArmorFilter] = useState<string>('ALL');
   const [activeApCategory, setActiveApCategory] = useState<ApCostCategory>('all');
 
-  // Keep local genre synced to active campaign setting when modal opens
+  const resetAllArmorFilters = useCallback(() => {
+    setLocalGenreFilter('ALL');
+    setArmorDomainFilter('ALL');
+    setArmorFilter('ALL');
+    setActiveApCategory('all');
+    setLeftSearchQuery('');
+    setRightSearchQuery('');
+  }, []);
+
+  // Reset all filters whenever Armor Manager freshly opens to eliminate filter traps
   useEffect(() => {
-    if (showManageModal && activeGenre) {
-      setLocalGenreFilter(activeGenre);
+    if (showManageModal) {
+      resetAllArmorFilters();
     }
-  }, [showManageModal, activeGenre]);
+  }, [showManageModal, resetAllArmorFilters]);
 
   const availableDisciplines = useMemo(() => {
     const set = new Set<string>();
@@ -910,13 +919,7 @@ export const ArmorCard: React.FC = () => {
                           </span>
                           <button
                             type="button"
-                            onClick={() => {
-                              setLocalGenreFilter(activeGenre || 'SciFi');
-                              setArmorDomainFilter('ALL');
-                              setArmorFilter('ALL');
-                              setActiveApCategory('all');
-                              setRightSearchQuery('');
-                            }}
+                            onClick={resetAllArmorFilters}
                             className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
                           >
                             Reset All Filters

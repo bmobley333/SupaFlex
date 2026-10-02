@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { TraitNameWithNotes } from '../common/TraitNameWithNotes';
-import { useGenreStore, matchesGenre } from '../../store/useGenreStore';
+import { matchesGenre } from '../../store/useGenreStore';
 import {
   SupabaseTrait,
   TraitItem,
@@ -72,7 +72,7 @@ const HEROIC_CAPSTONES: HeroicCapstone[] = [
 ];
 
 export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, onClose }) => {
-  const activeGenre = useGenreStore((state) => state.activeGenre);
+
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const {
     activeCharacter,
@@ -95,11 +95,20 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
   const [leftSearchQuery, setLeftSearchQuery] = useState<string>('');
 
   // Right Pane Catalog Filter States
-  const [localGenreFilter, setLocalGenreFilter] = useState<string>(activeGenre || 'SciFi');
+  const [localGenreFilter, setLocalGenreFilter] = useState<string>('ALL');
   const [localDomainFilter, setLocalDomainFilter] = useState<string>('ALL');
   const [traitTypeFilter, setTraitTypeFilter] = useState<'ALL' | 'STARRED'>('ALL');
   const [traitCategoryFilter, setTraitCategoryFilter] = useState<'all' | 'in_path' | 'universal' | 'out_of_path' | 'capstones'>('all');
   const [catalogSearchQuery, setCatalogSearchQuery] = useState<string>('');
+
+  const resetAllTraitsFilters = useCallback(() => {
+    setLocalGenreFilter('ALL');
+    setLocalDomainFilter('ALL');
+    setTraitTypeFilter('ALL');
+    setTraitCategoryFilter('all');
+    setLeftSearchQuery('');
+    setCatalogSearchQuery('');
+  }, []);
 
   // Incremental DOM Chunk Batching for Traits catalog (drops initial DOM mount from ~5,200 to ~550 nodes)
   const [visibleCatalogCount, setVisibleCatalogCount] = useState<number>(40);
@@ -118,12 +127,12 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
     }
   };
 
-  // Sync genre filter when modal opens
+  // Reset all filters whenever Traits Manager freshly opens to eliminate filter traps
   useEffect(() => {
-    if (isOpen && activeGenre) {
-      setLocalGenreFilter(activeGenre);
+    if (isOpen) {
+      resetAllTraitsFilters();
     }
-  }, [isOpen, activeGenre]);
+  }, [isOpen, resetAllTraitsFilters]);
 
   // Auto-reconcile, prune ghost traits, and equip {Free} traits matching character's known paths on open
   useEffect(() => {
@@ -753,13 +762,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      setLocalGenreFilter(activeGenre || 'SciFi');
-                      setLocalDomainFilter('ALL');
-                      setTraitTypeFilter('ALL');
-                      setTraitCategoryFilter('all');
-                      setCatalogSearchQuery('');
-                    }}
+                    onClick={resetAllTraitsFilters}
                     className="px-3 py-1 bg-purple-500/20 text-purple-300 border border-purple-500/40 hover:bg-purple-500/30 rounded-lg font-bold text-[11px] transition-all cursor-pointer"
                   >
                     Reset All Filters
