@@ -3889,11 +3889,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             </div>
           )}
 
-          {/* BRANCH 1: Inherent Chassis Powers (No Mod) */}
+          {/* BRANCH 1: Inherent Chassis Powers */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 py-0.5">
               <span className="text-xs font-bold text-amber-300 font-mono tracking-wide">
-                Inherent (No Mod)
+                Inherent
               </span>
               <span className="px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-500/50 font-mono font-bold text-[10px] shadow-sm select-none">
                 Installed

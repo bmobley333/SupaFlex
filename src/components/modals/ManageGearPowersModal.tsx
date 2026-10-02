@@ -1067,13 +1067,13 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
                     {/* Dropdown Contents: Vertical Guide Line from Gear Item down across all Mods */}
                     {isExpanded && (
                       <div className="ml-8 sm:ml-9 pl-4 sm:pl-5 border-l-2 border-cyan-500/40 flex flex-col gap-3.5 pt-1.5 pb-1">
-                        {/* LEVEL 1: Inherent Chassis Powers (No Mod) */}
+                        {/* LEVEL 1: Inherent Chassis Powers */}
                         {directFns.length > 0 && (
                           <div className="flex flex-col gap-2">
-                            {/* Mod Header: Inherent (No Mod) in Warm Amber + Inline Installed Badge */}
+                            {/* Mod Header: Inherent in Warm Amber + Inline Installed Badge */}
                             <div className="flex items-center gap-2.5 py-0.5">
                               <span className="text-xs font-bold text-amber-300 font-mono tracking-wide">
-                                Inherent (No Mod)
+                                Inherent
                               </span>
                               <span className="px-2 py-0.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-500/50 font-mono font-bold text-[10px] shadow-sm select-none">
                                 Installed

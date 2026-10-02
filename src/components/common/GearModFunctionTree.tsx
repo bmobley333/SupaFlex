@@ -270,12 +270,12 @@ export const GearModFunctionTree: React.FC<GearModFunctionTreeProps> = ({
       {/* 2-Level Tree Expanded Container */}
       {isOpen && (
         <div className="flex flex-col gap-1.5 bg-slate-950/70 p-2 rounded-lg border border-slate-800/60 max-h-96 overflow-y-auto">
-          {/* LEVEL 1: Inherent Chassis Powers (No Mod) Node */}
+          {/* LEVEL 1: Inherent Chassis Powers Node */}
           {visibleDirectFunctions.length > 0 && (
             <div className="flex flex-col py-0.5 border-b border-slate-800/40 last:border-none">
               <div className="flex items-center justify-between py-0.5 text-[10px] text-emerald-400">
                 <span className="inline-flex items-center align-baseline gap-1 font-mono font-bold truncate">
-                  <span>📦 Inherent (No Mod)</span>
+                  <span>📦 Inherent</span>
                   {hostItem.notes && (
                     <ItemNotesPopover notes={hostItem.notes} itemName={hostName} inline />
                   )}

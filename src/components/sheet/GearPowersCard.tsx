@@ -128,7 +128,7 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
       const hasAnyPowers = hasDirectLearned || hasModLearned;
 
       if (exoticFilter === 'MODS_WITH_POWERS') {
-        // Inherent (No Mod) is treated as a mod; show if inherent has powers OR installed mods have powers
+        // Inherent is treated as a mod; show if inherent has powers OR installed mods have powers
         return hasAnyPowers;
       }
 
@@ -480,12 +480,12 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
                       ) : (
                         /* ALL or MODS_WITH_POWERS: Subheaders for Inherent and Mods */
                         <>
-                          {/* LEVEL 1: Inherent Chassis Powers (No Mod) */}
+                          {/* LEVEL 1: Inherent Chassis Powers */}
                           {directLearnedPowers.length > 0 && (
                             <div className="flex flex-col gap-2">
-                              {/* Mod Header: Inherent (No Mod) in Warm Amber without emoji */}
+                              {/* Mod Header: Inherent in Warm Amber without emoji */}
                               <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300 font-mono tracking-wide py-0.5">
-                                <span>Inherent (No Mod)</span>
+                                <span>Inherent</span>
                               </div>
 
                               {/* Indented Power Cards (left border under 'h' in Inherent) */}
