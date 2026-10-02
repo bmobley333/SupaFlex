@@ -77,8 +77,8 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
               onClick={() => setShowPathsModal(true)}
               className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 shadow-sm ${
                 isRaceMso
-                  ? 'bg-purple-950/80 hover:bg-purple-900 border border-purple-500/60 text-purple-300 font-extrabold'
-                  : 'bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/35 hover:border-purple-400 text-purple-300'
+                  ? 'bg-rose-950/90 hover:bg-rose-900 border border-rose-500/60 text-rose-300 font-extrabold'
+                  : 'bg-rose-950 hover:bg-rose-900/80 border border-rose-500/40 text-rose-300'
               }`}
               title="Species / Heritage Path"
             >
@@ -92,8 +92,8 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
               onClick={() => setShowPathsModal(true)}
               className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 shadow-sm ${
                 isClassMso
-                  ? 'bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500/60 text-indigo-300 font-extrabold'
-                  : 'bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/35 hover:border-indigo-400 text-indigo-300'
+                  ? 'bg-purple-950/90 hover:bg-purple-900 border border-purple-500/60 text-purple-200 font-extrabold'
+                  : 'bg-purple-950 hover:bg-purple-900/80 border border-purple-500/50 text-purple-200'
               }`}
               title="Class Path"
             >
@@ -128,8 +128,8 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
                   onClick={() => setShowPathsModal(true)}
                   className={`px-2.5 py-1 rounded-full text-xs font-bold cursor-pointer transition-all flex items-center gap-1.5 shadow-sm ${
                     isExtraMso
-                      ? 'bg-purple-950/80 hover:bg-purple-900 border border-purple-500/60 text-purple-300 font-extrabold'
-                      : 'bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300'
+                      ? 'bg-indigo-950/90 hover:bg-indigo-900 border border-indigo-500/60 text-indigo-200 font-extrabold'
+                      : 'bg-slate-900 hover:bg-slate-800 border border-indigo-500/30 text-indigo-300 font-semibold'
                   }`}
                   title={`Learned Path: ${extra}`}
                 >

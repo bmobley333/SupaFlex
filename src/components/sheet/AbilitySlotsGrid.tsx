@@ -2898,7 +2898,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                             <span>{isGsUnlocked && isMsoEntry(baseName) ? `🌌 ${baseName}` : baseName}</span>
                                             <ItemNotesPopover notes={(item as any).notes} itemName={baseName} inline />
                                           </span>
-                                          {(item as Power).discipline && (
+                                          {Boolean((item as Power).discipline && (item as Power).discipline!.toLowerCase() !== 'universal') && (
                                             <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900 text-amber-300 border border-slate-750">
                                               {(item as Power).discipline}
                                             </span>

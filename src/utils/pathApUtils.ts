@@ -222,7 +222,7 @@ export const isPathStringMatch = (
 
 /**
  * Evaluates whether an item is within the character's known Paths or known Sets.
- * Items with NO path specified and NO sets specified (None, empty, General, Universal) are considered universally In-Path.
+ * Items MUST match an explicit known Path (Innate, Class, Race, Bonus) or a known Set to be considered In-Path.
  */
 export const isItemInPath = (
   rawPath: string | string[] | null | undefined,
@@ -231,16 +231,6 @@ export const isItemInPath = (
   knownSets?: Set<string>
 ): boolean => {
   const paths = parseItemPaths(rawPath);
-
-  // If item has no path constraints and no set constraints, it is available In-Path for all
-  if (paths.length === 0 && (!itemSets || itemSets.length === 0)) {
-    return true;
-  }
-
-  // Check if any path is General (universal basic adventuring)
-  if (paths.some((p) => p.toLowerCase() === 'general')) {
-    return true;
-  }
 
   // Check direct whole-string match against character known paths
   if (knownPaths.size > 0 && paths.length > 0) {
