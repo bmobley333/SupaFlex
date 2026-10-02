@@ -2454,7 +2454,8 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     setSelectedSetCategory(s.category || 'Weapons');
     setSetDescription(s.description || '');
     setSelectedGenres(Array.isArray(s.genres) && s.genres.length > 0 ? s.genres : ['Medieval']);
-    setSetPathsIncluded(Array.isArray(s.paths) ? s.paths : []);
+    const sPaths = (s.path || s.paths || []) as string[];
+    setSetPathsIncluded(Array.isArray(sPaths) ? sPaths : []);
     setIsCreatingNewSet(false);
     setSelectedBaseSetName('');
     setBaseSetMembers([]);
@@ -4530,6 +4531,24 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     ];
   }, [weaponsCatalog, armorCatalog, shieldsCatalog, powers, skills, traits, functionsCatalog]);
 
+  const setMemberCountsMap = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const item of allCatalogItemsPool as any[]) {
+      const setsArr = Array.isArray(item?.sets)
+        ? item.sets
+        : typeof item?.sets === 'string'
+        ? [item.sets]
+        : [];
+      for (const s of setsArr) {
+        const key = (s || '').trim().toLowerCase();
+        if (key) {
+          counts[key] = (counts[key] || 0) + 1;
+        }
+      }
+    }
+    return counts;
+  }, [allCatalogItemsPool]);
+
   const activePathSetItems = useMemo(() => {
     if (activePathSelection.type !== 'path_set' || !activePathSelection.setItem) return [];
     const setItem = activePathSelection.setItem as any;
@@ -4537,8 +4556,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     const targetName = (setItem.name || '').trim().toLowerCase();
     if (!targetName) return [];
     return allCatalogItemsPool.filter((item: any) => {
-      if (!Array.isArray(item?.sets)) return false;
-      return item.sets.some((s: string) => (s || '').trim().toLowerCase() === targetName);
+      const setsArr = Array.isArray(item?.sets)
+        ? item.sets
+        : typeof item?.sets === 'string'
+        ? [item.sets]
+        : [];
+      return setsArr.some((s: string) => (s || '').trim().toLowerCase() === targetName);
     });
   }, [activePathSelection, allCatalogItemsPool]);
 
@@ -6618,6 +6641,12 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                               const setRec = (setsCatalog || []).find(
                                 (s) => String(s.id) === String(setItem.id) || s.name === setItem.name
                               );
+                              const cleanSetName = (setItem.name || '').trim().toLowerCase();
+                              const memberCount =
+                                setMemberCountsMap[cleanSetName] ||
+                                (Array.isArray((setItem as any).items) ? (setItem as any).items.length : 0) ||
+                                setRec?.items_count ||
+                                0;
                               return (
                                 <div
                                   key={String(setItem.id)}
@@ -6641,6 +6670,11 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                                     <span className="font-bold text-slate-200 text-xs leading-snug break-words flex-1">
                                       {setItem.name}
                                     </span>
+                                    {memberCount > 0 && (
+                                      <span className="text-[10px] font-mono text-amber-300/80 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30 shrink-0 font-bold">
+                                        {memberCount} items
+                                      </span>
+                                    )}
                                   </div>
 
                                   <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -8448,15 +8482,39 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {PATH_ABILITY_CATEGORIES.map((cat) => {
                           const catData = pathCategoryMembers[cat.id];
-                          const total = (catData?.sets?.length || 0) + (catData?.elements?.length || 0);
+                          const setCount = catData?.sets?.length || 0;
+                          const indivCount = catData?.elements?.length || 0;
+
+                          let totalSetItems = 0;
+                          if (setCount > 0) {
+                            for (const s of catData.sets) {
+                              const sNameKey = (s.name || '').trim().toLowerCase();
+                              const count =
+                                setMemberCountsMap[sNameKey] ||
+                                (Array.isArray((s as any).items) ? (s as any).items.length : 0) ||
+                                (setsCatalog || []).find((catSet) => catSet.name.trim().toLowerCase() === sNameKey)?.items_count ||
+                                0;
+                              totalSetItems += count;
+                            }
+                          }
+
+                          let displayCount: string;
+                          if (setCount > 0 && indivCount > 0) {
+                            displayCount = `${setCount} Set${setCount > 1 ? 's' : ''} (${totalSetItems}) + ${indivCount}`;
+                          } else if (setCount > 0) {
+                            displayCount = `${setCount} Set${setCount > 1 ? 's' : ''} (${totalSetItems})`;
+                          } else {
+                            displayCount = `${indivCount}`;
+                          }
+
                           return (
-                            <div key={cat.id} className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between shadow-sm">
-                              <span className="flex items-center gap-1.5 text-xs text-slate-300 font-medium">
+                            <div key={cat.id} className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between shadow-sm gap-2">
+                              <span className="flex items-center gap-1.5 text-xs text-slate-300 font-medium shrink-0">
                                 <span>{cat.icon}</span>
                                 <span>{cat.label}</span>
                               </span>
-                              <span className="px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 font-mono text-xs font-bold text-blue-300">
-                                {total}
+                              <span className="px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 font-mono text-xs font-bold text-blue-300 shrink-0">
+                                {displayCount}
                               </span>
                             </div>
                           );

@@ -810,8 +810,9 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
 
                       // From setsCatalog
                       setsCatalog.forEach((s) => {
-                        if (s.paths && Array.isArray(s.paths)) {
-                          for (const p of s.paths) {
+                        const pathList = (s.path || s.paths || []) as string[];
+                        if (Array.isArray(pathList)) {
+                          for (const p of pathList) {
                             if (cleanPathName(p).toLowerCase().trim() === cleanSelected) {
                               const isFree = p.toLowerCase().includes('{free}') || p.toLowerCase().includes('{free1}') || p.toLowerCase().includes('{trait}');
                               linkedSets.push({ name: s.name, isFree });
