@@ -29,9 +29,11 @@ import {
   getCharacterFreeElementNames,
   evaluateItemAp,
   matchesApCategoryFilter,
+  resolveItemPathForCharacter,
   ApCostCategory,
   ApEvaluationResult,
 } from '../../utils/pathApUtils';
+import { PathBadge } from '../common/PathBadge';
 
 const DIE_SCALE = [4, 6, 8, 10, 12];
 
@@ -788,6 +790,11 @@ export const WeaponsCard: React.FC = () => {
                             )
                           );
 
+                          const catalogWeapon = supabaseWeapons.find(
+                            (w) => w.name.toLowerCase() === group.baseName.toLowerCase()
+                          ) || { name: group.baseName, path: group.slots[0]?.path, sets: (group.slots[0] as any)?.sets };
+                          const pathInfo = resolveItemPathForCharacter(catalogWeapon, activeCharacter, setsCatalog);
+
                           return (
                             <div
                               key={group.baseName}
@@ -812,6 +819,9 @@ export const WeaponsCard: React.FC = () => {
                                       </span>
                                     );
                                   })}
+                                  {pathInfo && (
+                                    <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
+                                  )}
                                 </div>
 
                                 <div className="flex items-center gap-2 shrink-0">
@@ -1162,6 +1172,12 @@ export const WeaponsCard: React.FC = () => {
                                         🗂️ {evalResult.matchedSetName}
                                       </span>
                                     )}
+                                    {(activeApCategory === 'all' || activeApCategory === '1AP' || activeApCategory === '2AP') && (() => {
+                                      const pathInfo = resolveItemPathForCharacter(weapon, activeCharacter, setsCatalog);
+                                      return pathInfo && pathInfo.category !== 'Universal' ? (
+                                        <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
+                                      ) : null;
+                                    })()}
                                     {isWeaponExotic(weapon) && (
                                       <span
                                         className="text-[10px] font-mono px-1.5 py-0.2 rounded border font-bold bg-cyan-950/80 text-cyan-300 border-cyan-500/50 flex items-center gap-1 shadow-sm select-none"

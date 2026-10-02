@@ -28,9 +28,11 @@ import {
   getCharacterFreeElementNames,
   evaluateItemAp,
   matchesApCategoryFilter,
+  resolveItemPathForCharacter,
   ApCostCategory,
   ApEvaluationResult,
 } from '../../utils/pathApUtils';
+import { PathBadge } from '../common/PathBadge';
 
 const getDieNum = (dieRating?: string): number => {
   if (!dieRating) return 4;
@@ -651,15 +653,20 @@ export const ArmorCard: React.FC = () => {
                         const isActive = armor.name.toLowerCase() === item.name.toLowerCase();
                         const isSkilled = isArmorSkilled(item);
                         const apCost = item.ap_cost || 1;
+                        const catalogItem = armorCatalog.find((a) => a.name.toLowerCase() === item.name.toLowerCase()) || item;
+                        const pathInfo = resolveItemPathForCharacter(catalogItem, activeCharacter, setsCatalog);
                         return (
                           <div key={item.id} className={`p-3 rounded-xl border flex flex-col gap-2 ${isActive ? 'bg-amber-950/40 border-amber-500/60' : 'bg-slate-900/90 border-slate-800'}`}>
                             <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <button type="button" onClick={() => handleSelectActiveArmor(item)} className={`px-2 py-0.5 text-xs font-bold rounded-lg border ${isActive ? 'bg-emerald-600/30 text-emerald-200 border-emerald-500/50' : 'bg-slate-950 text-slate-400 border-slate-800'}`}>{isActive ? '● Active' : '○ Wear'}</button>
                                 <span className={`font-outfit font-bold text-sm inline-flex items-center align-baseline ${isGsUnlocked && isMsoEntry(item.name) ? 'text-purple-300 font-bold' : 'text-slate-100'}`}>
                                   <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
                                   <ItemNotesPopover notes={item.notes || armorCatalog.find((a) => a.name.toLowerCase() === item.name.toLowerCase())?.notes} itemName={item.name} inline />
                                 </span>
+                                {pathInfo && (
+                                  <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
+                                )}
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 {/* Option A: KISS Micro Multi-Option Pill Switch SK [✓ | ✗] */}
@@ -955,6 +962,12 @@ export const ArmorCard: React.FC = () => {
                                         🗂️ {evalResult.matchedSetName}
                                       </span>
                                     )}
+                                    {(activeApCategory === 'all' || activeApCategory === '1AP' || activeApCategory === '2AP') && (() => {
+                                      const pathInfo = resolveItemPathForCharacter(item, activeCharacter, setsCatalog);
+                                      return pathInfo && pathInfo.category !== 'Universal' ? (
+                                        <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
+                                      ) : null;
+                                    })()}
                                     {isArmorExotic(item) && (
                                       <span
                                         className="text-[10px] font-mono px-1.5 py-0.2 rounded border font-bold bg-cyan-950/80 text-cyan-300 border-cyan-500/50 flex items-center gap-1 shadow-sm select-none"

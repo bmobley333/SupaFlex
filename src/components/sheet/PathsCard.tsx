@@ -39,7 +39,7 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
     const fromSheet: string[] = activeCharacter?.sheet_data?.favorite_trait_kits || [];
     return fromSheet.filter((k) => {
       const lower = (k || '').toLowerCase().trim();
-      return lower !== 'base' && lower !== 'universal' && k !== race && k !== charClass && k !== shipOfficerPath;
+      return lower !== 'base' && lower !== 'innate' && lower !== 'universal' && k !== race && k !== charClass && k !== shipOfficerPath;
     });
   }, [race, charClass, shipOfficerPath, activeCharacter?.sheet_data?.favorite_trait_kits]);
 

@@ -26,10 +26,11 @@ import {
   getCharacterFreeElementNames,
   isItemInPath,
   parseItemPaths,
-  getCharacterMatchingPath,
   isPathStringMatch,
+  resolveItemPathForCharacter,
 } from '../../utils/pathApUtils';
 import { reconcileCharacterFreeTraits } from '../../utils/pathReconciliationUtils';
+import { PathBadge } from '../common/PathBadge';
 
 interface ManageTraitsModalProps {
   isOpen: boolean;
@@ -450,10 +451,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                   const costBadge = typeof rule.ap_cost === 'number'
                     ? (rule.ap_cost === 0 ? '0 AP (Free)' : `${rule.ap_cost} AP`)
                     : (inherent ? '0 AP (Free)' : '1 AP');
-                  const matchingPath = getCharacterMatchingPath(
-                    rule.path || rule.kit || rule.table_group || rule.source,
-                    activeCharacter
-                  );
 
                   return (
                     <div
@@ -541,12 +538,13 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                           </span>
                         )}
 
-                        {/* Clean Character Matching Path Pill (no 🧬 icon, no uppercase) */}
-                        {matchingPath && matchingPath !== 'General' && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-purple-900/60 text-purple-300 border border-purple-500/40">
-                            {matchingPath}
-                          </span>
-                        )}
+                        {/* Character Matching Path Badge */}
+                        {(() => {
+                          const pathInfo = resolveItemPathForCharacter(rule, activeCharacter, setsCatalog);
+                          return pathInfo ? (
+                            <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
+                          ) : null;
+                        })()}
 
                         {/* Stat Hook Badge */}
                         {rule.stat_hook && (
@@ -827,7 +825,6 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                   const starred = isRuleStarred(rule.id || rule.name);
                   const isMso = isGsUnlocked && isMsoEntry(rule.name);
                   const inPath = isTraitInPath(rule);
-                  const isUni = isTraitUniversal(rule);
                   const inherent = isTraitInherent(rule);
                   const apCost = getTraitApCost(rule);
 
@@ -864,12 +861,19 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
                             className={isMso ? 'text-purple-300 font-black' : 'text-slate-100 font-black'}
                           />
 
-                          {/* Classification Pill: Only show for In-Path traits; hide for Universal and Out-of-Path */}
-                          {inPath && !isUni && (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-purple-900/60 text-purple-300 border border-purple-500/40">
-                              {getCharacterMatchingPath(rule.path || rule.kit || rule.table_group, activeCharacter)}
-                            </span>
-                          )}
+                          {/* Classification Pill: based on traitCategoryFilter */}
+                          {(() => {
+                            if (traitCategoryFilter === 'universal') {
+                              return <PathBadge pathName="Universal" category="Universal" />;
+                            }
+                            if (traitCategoryFilter === 'all' || traitCategoryFilter === 'in_path') {
+                              const pathInfo = resolveItemPathForCharacter(rule, activeCharacter, setsCatalog);
+                              return pathInfo ? (
+                                <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
+                              ) : null;
+                            }
+                            return null;
+                          })()}
 
                           {(() => {
                             let matchedSet: string | undefined;

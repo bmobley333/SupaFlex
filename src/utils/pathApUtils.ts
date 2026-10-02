@@ -27,7 +27,8 @@ export const getCharacterKnownPaths = (character: Character | null | undefined):
   const set = new Set<string>();
   if (!character) return set;
 
-  // 0. Base Path (Innate for all characters)
+  // 0. Innate Path (Inherent for all characters - formerly Base)
+  set.add('innate');
   set.add('base');
 
   // 1. Race Path
@@ -522,6 +523,116 @@ export const getCharacterMatchingPath = (
 
   // Fallback to first entry
   return cleanEntryStr(entries[0]);
+};
+
+export interface ResolvedItemPath {
+  pathName: string;
+  category: 'Class' | 'Race' | 'Bonus' | 'Innate' | 'Universal';
+}
+
+/**
+ * Resolves which path granted an ability to a character, adhering to strict precedence:
+ * 1. Class Path
+ * 2. Race Path
+ * 3. Character-owned Bonus / Extra Learned Paths (from favorite_trait_kits)
+ * 4. Innate Path (formerly Base)
+ * 5. Universal Path
+ */
+export const resolveItemPathForCharacter = (
+  item: { name?: string; path?: string | string[] | null; kit?: string; table_group?: string; sets?: string[] | null },
+  character: Character | null | undefined,
+  setsCatalog: SupabaseSet[] = []
+): ResolvedItemPath | null => {
+  if (!character) return null;
+
+  const rawPath = item.path || (item as any).kit || (item as any).table_group;
+  const itemPaths = parseItemPaths(rawPath);
+  const itemSets = (item.sets || []) as string[];
+
+  // Helper: check if a target path name matches item.path or any of item's sets in setsCatalog
+  const isProvidedByPath = (targetPath: string): boolean => {
+    const cleanTarget = cleanPathName(targetPath).toLowerCase().trim();
+    if (!cleanTarget) return false;
+
+    // 1. Direct match on item.path
+    for (const p of itemPaths) {
+      if (isPathStringMatch(p, cleanTarget)) {
+        return true;
+      }
+    }
+
+    // 2. Match via item.sets
+    if (itemSets.length > 0 && setsCatalog.length > 0) {
+      for (const sName of itemSets) {
+        const cleanSName = cleanPathName(sName).toLowerCase().trim();
+        const setObj = setsCatalog.find(
+          (s) => cleanPathName(s.name).toLowerCase().trim() === cleanSName
+        );
+        if (setObj) {
+          const setPaths = parseItemPaths(setObj.path || (setObj as any).paths);
+          for (const sp of setPaths) {
+            if (isPathStringMatch(sp, cleanTarget)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+
+    return false;
+  };
+
+  // 1. Class Path (highest precedence per Blake's specification)
+  if (character.class && isProvidedByPath(character.class)) {
+    return {
+      pathName: cleanPathName(character.class),
+      category: 'Class',
+    };
+  }
+
+  // 2. Race Path (second precedence)
+  if (character.race && isProvidedByPath(character.race)) {
+    return {
+      pathName: cleanPathName(character.race),
+      category: 'Race',
+    };
+  }
+
+  // 3. Character-owned Bonus / Learned Extra Paths (from favorite_trait_kits)
+  const fromSheet: string[] = character.sheet_data?.favorite_trait_kits || [];
+  for (const extraPath of fromSheet) {
+    if (!extraPath || typeof extraPath !== 'string') continue;
+    const cleanExtra = cleanPathName(extraPath).trim();
+    const lower = cleanExtra.toLowerCase();
+    if (lower === 'base' || lower === 'innate' || lower === 'universal') continue;
+    if (character.race && isPathStringMatch(cleanExtra, character.race)) continue;
+    if (character.class && isPathStringMatch(cleanExtra, character.class)) continue;
+
+    if (isProvidedByPath(cleanExtra)) {
+      return {
+        pathName: cleanExtra,
+        category: 'Bonus',
+      };
+    }
+  }
+
+  // 4. Innate Path (formerly Base)
+  if (isProvidedByPath('Innate') || isProvidedByPath('Base')) {
+    return {
+      pathName: 'Innate',
+      category: 'Innate',
+    };
+  }
+
+  // 5. Universal Path
+  if (itemPaths.some((p) => p.toLowerCase() === 'universal')) {
+    return {
+      pathName: 'Universal',
+      category: 'Universal',
+    };
+  }
+
+  return null;
 };
 
 /**

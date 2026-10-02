@@ -79,7 +79,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     const cats = new Set<string>();
     resolvedPathsCatalog.forEach((k) => {
       const lower = (k.name || '').toLowerCase().trim();
-      if (lower === 'base' || lower === 'universal') return;
+      if (lower === 'base' || lower === 'innate' || lower === 'universal') return;
       if (k.category && (k.category as string) !== '?') cats.add(k.category);
     });
     return ['All', ...Array.from(cats).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))];
@@ -113,10 +113,10 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
   const activeRace = activeCharacter?.race || 'Human';
   const activeClass = activeCharacter?.class || classPaths[0] || 'Warrior';
 
-  // Learned Paths list (Starting Base + Race + Class + any learned extra paths)
+  // Learned Paths list (Starting Innate + Race + Class + any learned extra paths)
   const learnedPaths: string[] = useMemo(() => {
     const fromSheet: string[] = activeCharacter?.sheet_data?.favorite_trait_kits || [];
-    const base = ['Base', activeRace, activeClass];
+    const base = ['Innate', 'Base', activeRace, activeClass];
     const combined = Array.from(new Set([...base, ...fromSheet])).filter(Boolean);
     return combined;
   }, [activeRace, activeClass, activeCharacter?.sheet_data?.favorite_trait_kits]);
@@ -139,12 +139,12 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     return Array.from(pathSet);
   }, [resolvedPathsCatalog, stockPathsCatalog, stockPowersCatalog, stockSkillsCatalog, stockRulesCatalog]);
 
-  // Extra learned paths (excluding active starting base, universal, race, and class)
+  // Extra learned paths (excluding active starting innate, universal, race, and class)
   const extraLearnedPaths: string[] = useMemo(() => {
     const fromSheet: string[] = activeCharacter?.sheet_data?.favorite_trait_kits || [];
     return fromSheet.filter((k) => {
       const lower = (k || '').toLowerCase().trim();
-      return lower !== 'base' && lower !== 'universal' && k !== activeRace && k !== activeClass;
+      return lower !== 'base' && lower !== 'innate' && lower !== 'universal' && k !== activeRace && k !== activeClass;
     });
   }, [activeRace, activeClass, activeCharacter?.sheet_data?.favorite_trait_kits]);
 
@@ -152,12 +152,12 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     return [...extraLearnedPaths].sort((a, b) => compareMsoOptions(a, b, isGsUnlocked));
   }, [extraLearnedPaths, isGsUnlocked]);
 
-  // Filtered paths available to buy / learn based on category selection (Universal & Base are excluded from purchase)
+  // Filtered paths available to buy / learn based on category selection (Universal & Innate are excluded from purchase)
   const filteredPathsToBuy = useMemo(() => {
     return allDiscoveredPaths
       .filter((k) => {
         const lower = (k || '').toLowerCase().trim();
-        return lower !== 'base' && lower !== 'universal' && !learnedPaths.includes(k);
+        return lower !== 'base' && lower !== 'innate' && lower !== 'universal' && !learnedPaths.includes(k);
       })
       .filter((k) => {
         if (selectedPathCategory === 'All') return true;
@@ -367,12 +367,12 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                   Foundational Hero Paths
                 </span>
 
-                {/* Base Foundation */}
+                {/* Innate Foundation */}
                 <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-700/70 shadow-inner space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                       <span>🥋</span>
-                      <span>Base Path</span>
+                      <span>Innate Path</span>
                     </span>
                     <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700">
                       Innate
@@ -380,13 +380,13 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
                   </div>
                   <div className="flex items-center justify-between pt-0.5">
                     <span className="text-xs font-black inline-flex items-center align-baseline gap-1 text-slate-200">
-                      <span>Base</span>
+                      <span>Innate</span>
                       <ItemNotesPopover
                         notes={
-                          resolvedPathsCatalog.find((p) => p.name.toLowerCase() === 'base')?.description ||
+                          resolvedPathsCatalog.find((p) => p.name.toLowerCase() === 'innate' || p.name.toLowerCase() === 'base')?.description ||
                           'Baseline universal physical capabilities and natural weapon/unarmored proficiencies common to all characters.'
                         }
-                        itemName="Base Path"
+                        itemName="Innate Path"
                         inline
                       />
                     </span>

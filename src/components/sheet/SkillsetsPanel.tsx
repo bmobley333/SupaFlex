@@ -13,9 +13,10 @@ import {
   getCharacterKnownSets,
   getCharacterFreeSets,
   getCharacterFreeElementNames,
-  getCharacterMatchingPath,
+  resolveItemPathForCharacter,
 } from '../../utils/pathApUtils';
 import { reconcileSkillsOnSkillsetAdded } from '../../utils/pathReconciliationUtils';
+import { PathBadge } from '../common/PathBadge';
 
 export interface SkillsetsPanelProps {
   onTogglePosition?: () => void;
@@ -249,86 +250,6 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
     if (isSkillInPath(skillName, parentSets)) return 1;
     return 3;
   }, [isSkillFree, isSkillInPath]);
-
-  const resolveSkillsetPath = useCallback((setName: string): string | null => {
-    const clean = cleanPathName(normalizeSkillsetName(setName)).toLowerCase().trim();
-    if (!clean) return null;
-
-    // Out-of-path skillsets have no path badge
-    if (!isSkillsetInPath(setName)) return null;
-
-    // Check custom skillsets on character
-    const isCustom = (activeCharacter?.sheet_data?.custom_skillsets || []).some(
-      (cs) => cleanPathName(normalizeSkillsetName(cs.name)).toLowerCase().trim() === clean
-    );
-    if (isCustom) return 'Custom';
-
-    // Look up in setsCatalog
-    const setInCatalog = setsCatalog.find(
-      (s) => cleanPathName(normalizeSkillsetName(s.name)).toLowerCase().trim() === clean
-    );
-    if (setInCatalog) {
-      const rawPath = (setInCatalog as any)?.path || (setInCatalog as any)?.paths;
-      if (rawPath) {
-        const matched = getCharacterMatchingPath(rawPath, activeCharacter);
-        const cleanMatched = cleanPathName(matched);
-        if (cleanMatched && cleanMatched.toLowerCase() !== 'general' && cleanMatched.toLowerCase() !== 'none' && cleanMatched.toLowerCase() !== 'universal') {
-          return cleanMatched;
-        }
-        // Fallback: check if universal / general
-        const pathsList = parseItemPaths(rawPath);
-        for (const p of pathsList) {
-          const cleanP = cleanPathName(p).toLowerCase().trim();
-          if (cleanP === 'universal' || cleanP === 'general') {
-            return 'Universal';
-          }
-        }
-      }
-    }
-
-    return null;
-  }, [isSkillsetInPath, activeCharacter, setsCatalog]);
-
-  const resolveSkillPath = useCallback((skillName: string, parentSets?: string[], directPath?: string[] | string): string | null => {
-    const cleanName = skillName.toLowerCase().trim();
-
-    // 1. Direct path on skill matching character known paths
-    const rawPath = directPath || skills.find((sk) => sk.name.toLowerCase().trim() === cleanName)?.path;
-    if (rawPath) {
-      const matched = getCharacterMatchingPath(rawPath, activeCharacter);
-      const cleanMatched = cleanPathName(matched);
-      if (cleanMatched && cleanMatched.toLowerCase() !== 'general' && cleanMatched.toLowerCase() !== 'none' && cleanMatched.toLowerCase() !== 'universal') {
-        if (knownPaths.has(cleanMatched.toLowerCase())) {
-          return cleanMatched;
-        }
-      }
-    }
-
-    // 2. Check parent skillsets for matching character path
-    const catalogSkill = skills.find((sk) => sk.name.toLowerCase().trim() === cleanName);
-    const candidateSets = parentSets && Array.isArray(parentSets) && parentSets.length > 0
-      ? parentSets
-      : (catalogSkill?.sets || catalogSkill?.skillset || []);
-
-    if (candidateSets && Array.isArray(candidateSets)) {
-      for (const s of candidateSets) {
-        if (isSkillsetInPath(s)) {
-          const pPath = resolveSkillsetPath(s);
-          if (pPath && pPath !== 'Universal') {
-            return pPath;
-          }
-        }
-      }
-    }
-
-    // 3. If it is a Universal skill, return 'Universal'
-    if (isSkillUniversal(skillName, parentSets, directPath)) {
-      return 'Universal';
-    }
-
-    // 4. Out-of-path skills have no path badge
-    return null;
-  }, [skills, activeCharacter, knownPaths, isSkillsetInPath, resolveSkillsetPath, isSkillUniversal]);
 
   // Dynamically derive all SkillSets from atomic skills table + character custom skillsets
   const effectiveSkillsets = useMemo(() => {
@@ -1158,12 +1079,19 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                       </span>
                                     )}
                                     {(() => {
-                                      const pathName = resolveSkillsetPath(ksName);
-                                      return pathName ? (
-                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-900/60 text-purple-300 border border-purple-500/40 shrink-0 flex items-center gap-1">
-                                          <span>🧭</span>
-                                          <span>{pathName}</span>
-                                        </span>
+                                      const catalogSet = setsCatalog.find(
+                                        (s) => cleanPathName(s.name).toLowerCase() === cleanPathName(ksName).toLowerCase()
+                                      );
+                                      const pathInfo = resolveItemPathForCharacter(
+                                        {
+                                          name: ksName,
+                                          path: (ksObj as any)?.path || catalogSet?.path || (catalogSet as any)?.paths,
+                                        },
+                                        activeCharacter,
+                                        setsCatalog
+                                      );
+                                      return pathInfo ? (
+                                        <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
                                       ) : null;
                                     })()}
                                   </span>
@@ -1216,15 +1144,18 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                         </span>
                                       )}
                                       {(() => {
-                                        const pathName = resolveSkillPath(
-                                          parsed.cleanName,
-                                          allCatalogSkillsMap.get(parsed.cleanName.toLowerCase())?.parentSkillsets
+                                        const catalogSkill = allCatalogSkillsMap.get(parsed.cleanName.toLowerCase());
+                                        const pathInfo = resolveItemPathForCharacter(
+                                          {
+                                            name: parsed.cleanName,
+                                            path: catalogSkill?.path,
+                                            sets: catalogSkill?.parentSkillsets,
+                                          },
+                                          activeCharacter,
+                                          setsCatalog
                                         );
-                                        return pathName ? (
-                                          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-900/60 text-purple-300 border border-purple-500/40 shrink-0 flex items-center gap-1">
-                                            <span>🧭</span>
-                                            <span>{pathName}</span>
-                                          </span>
+                                        return pathInfo ? (
+                                          <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
                                         ) : null;
                                       })()}
                                       <span className="text-[11px] font-bold text-indigo-300 flex items-center gap-0.5 ml-1 shrink-0">
@@ -1487,13 +1418,23 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                     >
                                       {isFree ? '0 AP {Free}' : inPath ? '2 AP' : '4 AP • 👑 GM'}
                                     </span>
-                                    {inPath && (() => {
-                                      const pathName = resolveSkillsetPath(ks.name);
-                                      return pathName ? (
-                                        <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-900/60 text-purple-300 border border-purple-500/40 shrink-0 flex items-center gap-1">
-                                          <span>🧭</span>
-                                          <span>{pathName}</span>
-                                        </span>
+                                    {(() => {
+                                      if (skillsCategoryFilter !== 'all' && skillsCategoryFilter !== 'skillsets_in_path') {
+                                        return null;
+                                      }
+                                      const catalogSet = setsCatalog.find(
+                                        (s) => cleanPathName(s.name).toLowerCase() === cleanPathName(ks.name).toLowerCase()
+                                      );
+                                      const pathInfo = resolveItemPathForCharacter(
+                                        {
+                                          name: ks.name,
+                                          path: (ks as any)?.path || catalogSet?.path || (catalogSet as any)?.paths,
+                                        },
+                                        activeCharacter,
+                                        setsCatalog
+                                      );
+                                      return pathInfo ? (
+                                        <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
                                       ) : null;
                                     })()}
                                     {isCustom && (
@@ -1619,13 +1560,24 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                                         </span>
                                       )}
                                       {(() => {
-                                        const pathName = resolveSkillPath(sk.name, sk.parentSkillsets, sk.path);
-                                        return pathName ? (
-                                          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-purple-900/60 text-purple-300 border border-purple-500/40 shrink-0 flex items-center gap-1">
-                                            <span>🧭</span>
-                                            <span>{pathName}</span>
-                                          </span>
-                                        ) : null;
+                                        if (skillsCategoryFilter === 'skills_universal') {
+                                          return <PathBadge pathName="Universal" category="Universal" />;
+                                        }
+                                        if (skillsCategoryFilter === 'all' || skillsCategoryFilter === 'skills_in_path') {
+                                          const pathInfo = resolveItemPathForCharacter(
+                                            {
+                                              name: sk.name,
+                                              path: sk.path,
+                                              sets: sk.parentSkillsets,
+                                            },
+                                            activeCharacter,
+                                            setsCatalog
+                                          );
+                                          return pathInfo ? (
+                                            <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
+                                          ) : null;
+                                        }
+                                        return null;
                                       })()}
                                     </div>
                                     {sk.parentSkillsets.length > 0 && (

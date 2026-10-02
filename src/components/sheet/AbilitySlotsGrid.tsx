@@ -23,9 +23,11 @@ import {
   getCharacterFreeElementNames,
   evaluateItemAp,
   matchesApCategoryFilter,
+  resolveItemPathForCharacter,
   ApCostCategory,
   ApEvaluationResult,
 } from '../../utils/pathApUtils';
+import { PathBadge } from '../common/PathBadge';
 import {
   formatCompositeFunctionName,
   matchFunctionSourceSearch,
@@ -1831,6 +1833,15 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                         v{version}
                                       </span>
                                     )}
+                                    {(() => {
+                                      const catalogPower = fullCatalog.find(
+                                        (c) => c.name.toLowerCase() === baseName.toLowerCase() || c.name.toLowerCase() === cleanName(item.name).toLowerCase()
+                                      ) || item;
+                                      const pathInfo = resolveItemPathForCharacter(catalogPower, activeCharacter, setsCatalog);
+                                      return pathInfo ? (
+                                        <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
+                                      ) : null;
+                                    })()}
                                   </div>
                                 </div>
 
@@ -2911,6 +2922,18 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                                               🗂️ {evalResult.matchedSetName}
                                             </span>
                                           )}
+                                          {(() => {
+                                            if (activePowerApCategory === '3AP_Universal') {
+                                              return <PathBadge pathName="Universal" category="Universal" />;
+                                            }
+                                            if (activePowerApCategory === 'all' || activePowerApCategory === '1AP') {
+                                              const pathInfo = resolveItemPathForCharacter(item, activeCharacter, setsCatalog);
+                                              return pathInfo ? (
+                                                <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
+                                              ) : null;
+                                            }
+                                            return null;
+                                          })()}
                                           {version > 1 && (
                                             <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40">
                                               v{version}

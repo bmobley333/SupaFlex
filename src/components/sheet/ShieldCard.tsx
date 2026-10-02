@@ -27,9 +27,11 @@ import {
   getCharacterFreeElementNames,
   evaluateItemAp,
   matchesApCategoryFilter,
+  resolveItemPathForCharacter,
   ApCostCategory,
   ApEvaluationResult,
 } from '../../utils/pathApUtils';
+import { PathBadge } from '../common/PathBadge';
 
 export const ShieldCard: React.FC = () => {
   const activeGenre = useGenreStore((state) => state.activeGenre);
@@ -684,6 +686,8 @@ export const ShieldCard: React.FC = () => {
                     ) : (
                       filteredArmory.map((item) => {
                         const isActive = shield.equipped && shield.name.toLowerCase() === item.name.toLowerCase();
+                        const catalogItem = shieldCatalog.find((s) => s.name.toLowerCase() === item.name.toLowerCase()) || item;
+                        const pathInfo = resolveItemPathForCharacter(catalogItem, activeCharacter, setsCatalog);
 
                         return (
                           <div
@@ -712,6 +716,9 @@ export const ShieldCard: React.FC = () => {
                                   <span>{isGsUnlocked && isMsoEntry(item.name) ? `🌌 ${item.name}` : item.name}</span>
                                   <ItemNotesPopover notes={item.notes || shieldCatalog.find((s) => s.name.toLowerCase() === item.name.toLowerCase())?.notes} itemName={item.name} inline />
                                 </span>
+                                {pathInfo && (
+                                  <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
+                                )}
                               </div>
 
                               <div className="flex items-center gap-2 shrink-0">
@@ -1013,6 +1020,12 @@ export const ShieldCard: React.FC = () => {
                                       🗂️ {evalResult.matchedSetName}
                                     </span>
                                   )}
+                                  {(activeApCategory === 'all' || activeApCategory === '1AP' || activeApCategory === '2AP') && (() => {
+                                    const pathInfo = resolveItemPathForCharacter(item, activeCharacter, setsCatalog);
+                                    return pathInfo && pathInfo.category !== 'Universal' ? (
+                                      <PathBadge pathName={pathInfo.pathName} category={pathInfo.category} />
+                                    ) : null;
+                                  })()}
                                   {isShieldExotic(item) && (
                                     <span
                                       className="text-[10px] font-mono px-1.5 py-0.2 rounded border font-bold bg-cyan-950/80 text-cyan-300 border-cyan-500/50 flex items-center gap-1 shadow-sm select-none"
