@@ -6,7 +6,7 @@
 //   🔄 Syncing (Active network drain in progress)
 // In full mode, renders the 3-option side-by-side diagnostic bar.
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 
 export interface SyncStatusPillSwitchProps {
@@ -23,15 +23,28 @@ export const SyncStatusPillSwitch: React.FC<SyncStatusPillSwitchProps> = ({
   const isSyncingOutbox = useCharacterStore((state) => state.isSyncingOutbox);
   const flushPendingOutbox = useCharacterStore((state) => state.flushPendingOutbox);
   const fetchInitialData = useCharacterStore((state) => state.fetchInitialData);
+  const refreshCatalogs = useCharacterStore((state) => state.refreshCatalogs);
 
-  const isOnlineAndSynced = dbConnected && pendingOutboxCount === 0 && !isSyncingOutbox;
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [justRefreshed, setJustRefreshed] = useState(false);
+
+  const isOnlineAndSynced = dbConnected && pendingOutboxCount === 0 && !isSyncingOutbox && !isRefreshing;
   const isQueuedOrOffline = !dbConnected || pendingOutboxCount > 0;
 
   const handleLiveClick = async () => {
+    if (isRefreshing || isSyncingOutbox) return;
+    setIsRefreshing(true);
     try {
-      await fetchInitialData({ silent: true });
+      if (pendingOutboxCount > 0) {
+        await flushPendingOutbox();
+      }
+      await refreshCatalogs();
+      setJustRefreshed(true);
+      setTimeout(() => setJustRefreshed(false), 2500);
     } catch (e) {
-      console.warn('[SyncStatusPillSwitch] Connection check failed:', e);
+      console.warn('[SyncStatusPillSwitch] Refresh catalogs failed:', e);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -49,16 +62,29 @@ export const SyncStatusPillSwitch: React.FC<SyncStatusPillSwitchProps> = ({
 
   // 🌟 Compact Reactive Pill (Default for CS & GM Mode)
   if (variant === 'compact') {
-    if (isSyncingOutbox) {
+    if (isSyncingOutbox || isRefreshing) {
       return (
         <button
           type="button"
           disabled
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-600/30 border border-indigo-400/60 text-indigo-200 text-xs font-bold shadow-sm shadow-indigo-950/40 animate-pulse cursor-wait shrink-0 transition-all ${className}`}
-          title="Synchronizing pending changes with Supabase cloud..."
+          title="Synchronizing pending changes and refreshing catalogs with Supabase cloud..."
         >
           <span className="text-xs animate-spin">🔄</span>
           <span>Syncing</span>
+        </button>
+      );
+    }
+
+    if (justRefreshed) {
+      return (
+        <button
+          type="button"
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-950/60 border border-emerald-400 text-emerald-200 text-xs font-extrabold shadow-sm shadow-emerald-900/40 cursor-default shrink-0 transition-all animate-fadeIn ${className}`}
+          title="All catalogs and changes successfully synchronized with Supabase."
+        >
+          <span className="text-xs text-emerald-400 font-bold">✓</span>
+          <span>Synced</span>
         </button>
       );
     }
@@ -89,7 +115,7 @@ export const SyncStatusPillSwitch: React.FC<SyncStatusPillSwitchProps> = ({
         type="button"
         onClick={handleLiveClick}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 hover:border-emerald-400/60 text-emerald-300 text-xs font-bold shadow-sm shadow-emerald-950/30 cursor-pointer shrink-0 transition-all ${className}`}
-        title="Connected to Supabase (0 pending changes). All character sheet edits are saved to the cloud. Click to verify connection."
+        title="Connected to Supabase (0 pending changes). Catalogs cached locally. Click to force fresh catalog & cloud sync."
       >
         <span className="text-xs">🟢</span>
         <span>Synced</span>
@@ -112,10 +138,10 @@ export const SyncStatusPillSwitch: React.FC<SyncStatusPillSwitchProps> = ({
             ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
             : 'text-slate-400 hover:text-slate-200 border border-transparent'
         }`}
-        title="Connected to cloud database (0 pending changes)"
+        title="Connected to Supabase (0 pending changes). Click to force fresh catalog & cloud sync."
       >
-        <span>🟢</span>
-        <span>Synced</span>
+        <span>{isRefreshing ? '🔄' : justRefreshed ? '✓' : '🟢'}</span>
+        <span>{isRefreshing ? 'Syncing...' : justRefreshed ? 'Updated!' : 'Synced'}</span>
       </button>
 
       {/* 🟡 Queued / Offline Option */}

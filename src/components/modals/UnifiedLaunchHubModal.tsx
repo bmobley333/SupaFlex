@@ -5,7 +5,6 @@ import { gameApi } from '../../services/api';
 import { Character } from '../../types/game';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { RoleToggleSwitch } from '../common/RoleToggleSwitch';
-import { GenrePillSwitch } from '../common/GenrePillSwitch';
 import { InfoTooltip } from '../common/InfoTooltip';
 import { isGuildSpaceUnlocked, unlockGuildSpace, lockGuildSpace } from '../../utils/guildspaceAuth';
 import { isMsoEntry, compareMsoOptions } from '../../utils/kitUtils';
@@ -57,8 +56,8 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const [collapsedPlayers, setCollapsedPlayers] = useState<Record<string, boolean>>({});
   const [selectedInspectChar, setSelectedInspectChar] = useState<Character | null>(null);
 
-  const [rightSubTab, setRightSubTab] = useState<'account' | 'genre' | 'inspect'>(
-    initialTab === 'party' as any || initialTab === 'master_roster' ? 'account' : initialTab
+  const [rightSubTab, setRightSubTab] = useState<'account' | 'inspect'>(
+    initialTab === 'inspect' ? 'inspect' : 'account'
   );
 
   // Create Hero State
@@ -67,16 +66,12 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   const [newHeroClass, setNewHeroClass] = useState('Warrior');
   const [newHeroRace, setNewHeroRace] = useState('Human');
 
-  // Static Catalogs Refresh State
-  const [isRefreshingCatalogs, setIsRefreshingCatalogs] = useState(false);
-  const [catalogRefreshSuccess, setCatalogRefreshSuccess] = useState(false);
-
   useEffect(() => {
     if (isOpen && initialTab) {
       if (initialTab === 'master_roster' && isMasterAccount) {
         setRosterMode('master_roster');
       } else {
-        setRightSubTab(currentEmail ? (initialTab === 'party' as any ? 'account' : (initialTab as any)) : 'account');
+        setRightSubTab(currentEmail && initialTab === 'inspect' ? 'inspect' : 'account');
       }
     }
   }, [isOpen, initialTab, currentEmail, isMasterAccount]);
@@ -534,12 +529,12 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
         <div className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-6 py-4 flex items-start justify-between shrink-0 gap-4">
           <div className="min-w-0 flex-1 pr-2">
             <h2 className="text-xl font-extrabold text-amber-400 flex items-center gap-2 font-outfit tracking-wide">
-              <span>🌌</span> Character & Genre Vault
+              <span>🌌</span> Character Vault
             </h2>
             <p className="text-xs text-slate-400 mt-1 leading-relaxed">
               {currentEmail
-                ? 'Manage your character vault, select game genres, and clone characters.'
-                : '🔒 Please sign in or create an account to access your character sheet.'}
+                ? 'Manage your character vault, clone characters, and account settings.'
+                : '🔒 Please sign in with your Google account to access your character sheet.'}
             </p>
           </div>
 
@@ -574,9 +569,25 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                 </button>
               </>
             ) : (
-              <span className="text-amber-400 font-bold text-xs bg-amber-950/80 border border-amber-800/60 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
-                <span>🔒</span> Login Required
-              </span>
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={authLoading}
+                className="px-3 py-1.5 bg-amber-950/80 hover:bg-amber-900 active:bg-amber-950 border border-amber-700/60 hover:border-amber-500/80 text-amber-200 font-bold text-xs rounded-lg transition cursor-pointer flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                title="Sign in with Google"
+              >
+                {authLoading ? (
+                  <>
+                    <span className="animate-spin text-xs">🔄</span>
+                    <span>Redirecting to Google...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔒</span>
+                    <span>Sign In with Google</span>
+                  </>
+                )}
+              </button>
             )}
           </div>
         </div>
@@ -1109,23 +1120,7 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                       : 'border-transparent text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  👤 Account
-                </button>
-                <button
-                  onClick={() => {
-                    if (currentEmail) setRightSubTab('genre');
-                  }}
-                  disabled={!currentEmail}
-                  title={!currentEmail ? 'Sign in required to configure genre filter' : 'Configure Genre Filter'}
-                  className={`flex-1 py-2 text-xs font-bold border-b-2 transition ${
-                    !currentEmail
-                      ? 'opacity-40 cursor-not-allowed border-transparent text-slate-500'
-                      : rightSubTab === 'genre'
-                      ? 'border-cyan-400 text-cyan-400 cursor-pointer'
-                      : 'border-transparent text-slate-400 hover:text-slate-200 cursor-pointer'
-                  }`}
-                >
-                  🌐 Genre
+                  👤 Account & Settings
                 </button>
                 {activeRole !== 'gm' && (
                   <button
@@ -1405,41 +1400,73 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                         </div>
                       )}
 
-                      {/* ⚡ Static Data & Egress Defense Card (Master Developer Only) */}
-                      {isMasterAccount && (
-                        <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-2 shadow-md">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-amber-400 text-sm">⚡</span>
-                              <label className="text-xs font-bold text-slate-200 uppercase tracking-wider font-outfit">
-                                Static Data & Egress Defense
-                              </label>
-                              <InfoTooltip text="Catalogs (Powers, Items, Skills, Traits, Paths) are cached in LocalStorage to eliminate repetitive database downloads and maintain zero bandwidth costs. Click to pull fresh copies from Supabase anytime." />
+                      {/* 🔒 Secret Setting Passkey & Authorization Fence */}
+                      {isGsUnlocked ? (
+                        <div className="bg-gradient-to-r from-purple-950/60 to-indigo-950/60 p-4 rounded-xl border border-purple-500/40 flex items-center justify-between gap-3 shadow-md animate-fadeIn">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-xl bg-purple-950 border border-purple-500/50 text-purple-300 text-lg shadow-sm">
+                              🌌
                             </div>
-                            <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                              LocalStorage (24h TTL)
-                            </span>
+                            <div>
+                              <h4 className="text-xs font-extrabold text-purple-200 font-outfit uppercase tracking-wider">
+                                Private Setting: Unlocked
+                              </h4>
+                              <p className="text-[11px] text-purple-300/80 font-sans">
+                                Full authentic MSO catalogs and expansion suites are active for this session.
+                              </p>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between pt-1">
-                            <p className="text-[11px] text-slate-400">
-                              10 game catalogs cached locally (0 bytes egress on app load).
-                            </p>
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                setIsRefreshingCatalogs(true);
-                                await useCharacterStore.getState().refreshCatalogs();
-                                setIsRefreshingCatalogs(false);
-                                setCatalogRefreshSuccess(true);
-                                setTimeout(() => setCatalogRefreshSuccess(false), 3000);
+                          <button
+                            type="button"
+                            onClick={() => {
+                              lockGuildSpace();
+                              setGuildSpacePasskey('');
+                              setPasskeyFeedback(null);
+                              useCharacterStore.getState().fetchInitialData({ silent: true });
+                            }}
+                            className="px-3 py-1.5 bg-slate-900 hover:bg-red-950 text-slate-300 hover:text-red-200 border border-slate-700 hover:border-red-500/50 rounded-lg text-xs font-bold transition cursor-pointer shrink-0"
+                          >
+                            🔒 Relock Setting
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-3 shadow-md">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 font-outfit uppercase tracking-wider">
+                              <span>🔒</span> Private Setting Passkey
+                            </label>
+                            <span className="text-[10px] text-slate-500 font-mono">Protected IP Gate</span>
+                          </div>
+                          <form onSubmit={handleUnlockGuildSpace} className="flex gap-2">
+                            <input
+                              type="password"
+                              value={guildSpacePasskey}
+                              onChange={(e) => {
+                                setGuildSpacePasskey(e.target.value);
+                                setPasskeyFeedback(null);
                               }}
-                              disabled={isRefreshingCatalogs}
-                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 border border-slate-600/80 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
+                              className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-purple-500"
+                              placeholder="Enter passkey..."
+                            />
+                            <button
+                              type="submit"
+                              disabled={!guildSpacePasskey.trim()}
+                              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 text-white font-bold text-xs rounded-lg transition shadow-md cursor-pointer shrink-0 flex items-center gap-1"
                             >
-                              <span className={isRefreshingCatalogs ? 'animate-spin' : ''}>🔄</span>
-                              <span>{isRefreshingCatalogs ? 'Refreshing...' : catalogRefreshSuccess ? '✓ Updated!' : 'Refresh Catalogs'}</span>
+                              <span>🔓</span> Unlock
                             </button>
-                          </div>
+                          </form>
+                          {passkeyFeedback && (
+                            <div
+                              className={`text-[11px] font-bold p-2.5 rounded-lg border ${
+                                passkeyFeedback.type === 'error'
+                                  ? 'bg-rose-950/60 border-rose-500/40 text-rose-300'
+                                  : 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
+                              }`}
+                            >
+                              {passkeyFeedback.message}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1478,131 +1505,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
                           🔒 Secured by Supabase Auth & Google Cloud OAuth 2.0
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* SUB-TAB: GENRE FILTERING */}
-              {rightSubTab === 'genre' && (
-                <div className="space-y-4 font-outfit">
-                  <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-3 shadow-md">
-                    <div className="flex items-center gap-1.5">
-                      <label className="text-xs font-bold text-slate-200 block uppercase tracking-wider font-outfit">
-                        🌐 Campaign & Catalog Filter
-                      </label>
-                      <InfoTooltip text="Filters all stock item catalogs (Weapons, Armor, Shields, Gear, Powers, Relics & Hardware, Skillsets, Bestiary) across the gaming suite." />
-                    </div>
-
-                    <div className="pt-1">
-                      <GenrePillSwitch size="md" />
-                    </div>
-                  </div>
-
-                  {/* ⚡ Static Data & Egress Defense Card (Master Developer Only) */}
-                  {isMasterAccount && (
-                    <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-2 shadow-md">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-amber-400 text-sm">⚡</span>
-                          <label className="text-xs font-bold text-slate-200 uppercase tracking-wider font-outfit">
-                            Static Data & Egress Defense
-                          </label>
-                          <InfoTooltip text="Catalogs (Powers, Items, Skills, Traits, Paths) are cached in LocalStorage to eliminate repetitive database downloads and maintain zero bandwidth costs. Click to pull fresh copies from Supabase anytime." />
-                        </div>
-                        <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                          LocalStorage Active (24h TTL)
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between pt-1">
-                        <p className="text-[11px] text-slate-400">
-                          10 game catalogs cached locally (0 bytes egress on app load).
-                        </p>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            setIsRefreshingCatalogs(true);
-                            await useCharacterStore.getState().refreshCatalogs();
-                            setIsRefreshingCatalogs(false);
-                            setCatalogRefreshSuccess(true);
-                            setTimeout(() => setCatalogRefreshSuccess(false), 3000);
-                          }}
-                          disabled={isRefreshingCatalogs}
-                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 border border-slate-600/80 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50"
-                        >
-                          <span className={isRefreshingCatalogs ? 'animate-spin' : ''}>🔄</span>
-                          <span>{isRefreshingCatalogs ? 'Refreshing...' : catalogRefreshSuccess ? '✓ Updated!' : 'Refresh Catalogs'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 🔒 Secret Setting Passkey & Authorization Fence */}
-                  {isGsUnlocked ? (
-                    <div className="bg-gradient-to-r from-purple-950/60 to-indigo-950/60 p-4 rounded-xl border border-purple-500/40 flex items-center justify-between gap-3 shadow-md animate-fadeIn">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-purple-950 border border-purple-500/50 text-purple-300 text-lg shadow-sm">
-                          🌌
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-extrabold text-purple-200 font-outfit uppercase tracking-wider">
-                            Private Setting: Unlocked
-                          </h4>
-                          <p className="text-[11px] text-purple-300/80 font-sans">
-                            Full authentic MSO catalogs and expansion suites are active for this session.
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          lockGuildSpace();
-                          setGuildSpacePasskey('');
-                          setPasskeyFeedback(null);
-                          useCharacterStore.getState().fetchInitialData({ silent: true });
-                        }}
-                        className="px-3 py-1.5 bg-slate-900 hover:bg-red-950 text-slate-300 hover:text-red-200 border border-slate-700 hover:border-red-500/50 rounded-lg text-xs font-bold transition cursor-pointer shrink-0"
-                      >
-                        🔒 Relock Setting
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 space-y-3 shadow-md">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 font-outfit uppercase tracking-wider">
-                          <span>🔒</span> Private Setting Passkey
-                        </label>
-                        <span className="text-[10px] text-slate-500 font-mono">Protected IP Gate</span>
-                      </div>
-                      <form onSubmit={handleUnlockGuildSpace} className="flex gap-2">
-                        <input
-                          type="password"
-                          value={guildSpacePasskey}
-                          onChange={(e) => {
-                            setGuildSpacePasskey(e.target.value);
-                            setPasskeyFeedback(null);
-                          }}
-                          className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-purple-500"
-                        />
-                        <button
-                          type="submit"
-                          disabled={!guildSpacePasskey.trim()}
-                          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 text-white font-bold text-xs rounded-lg transition shadow-md cursor-pointer shrink-0 flex items-center gap-1"
-                        >
-                          <span>🔓</span> Unlock
-                        </button>
-                      </form>
-                      {passkeyFeedback && (
-                        <div
-                          className={`text-[11px] font-bold p-2.5 rounded-lg border ${
-                            passkeyFeedback.type === 'error'
-                              ? 'bg-rose-950/60 border-rose-500/40 text-rose-300'
-                              : 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
-                          }`}
-                        >
-                          {passkeyFeedback.message}
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
