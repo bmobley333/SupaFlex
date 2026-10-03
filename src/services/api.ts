@@ -48,10 +48,10 @@ export interface CatalogScope {
 
 export function applyOwnerScope(query: any, scope?: CatalogScope): any {
   if (!scope || (!scope.userEmail && (!scope.subscribedEmails || scope.subscribedEmails.length === 0))) {
-    return query.eq('owner', 'Designer');
+    return query.in('owner', ['Designer', 'system']);
   }
 
-  const allowedOwners = ['Designer'];
+  const allowedOwners = ['Designer', 'system'];
   if (scope.userEmail && scope.userEmail.trim()) {
     allowedOwners.push(scope.userEmail.trim().toLowerCase());
   }
