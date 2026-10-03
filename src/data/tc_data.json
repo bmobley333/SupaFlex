@@ -1,0 +1,5402 @@
+[
+  {
+    "id": 1,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 1,
+    "name": "Quick Step",
+    "effect": "Gain +1 to MR👣 for this round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 2,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 2,
+    "name": "Sharp Eyes",
+    "effect": "One Free Awareness roll this round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 3,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 3,
+    "name": "Steady Grip",
+    "effect": "Auto-succeed next simple task",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 4,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 4,
+    "name": "Lucky Break",
+    "effect": "Cancel 1 Minor🍺 penalty this round (–1, Affliction Save✨, etc.).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 5,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 5,
+    "name": "Flair Move",
+    "effect": "Add a flourish; gain Advantage on \"personality\" based 👁️",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 6,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 6,
+    "name": "Catch Breath",
+    "effect": "Regain 1 Vit❤️ immediately.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 7,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 7,
+    "name": "Loose Stone",
+    "effect": "On hit; Auto-disarm or unshield d2sq",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 8,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 8,
+    "name": "Smooth Draw",
+    "effect": "Equip or switch weapon/shield without using P action.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 9,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 9,
+    "name": "Quick Call",
+    "effect": "You have Advantage vs next trap for encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 10,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 10,
+    "name": "Easy Dodge",
+    "effect": "Your next Dodge roll has Advantage.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 11,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 11,
+    "name": "Nimble Feet",
+    "effect": "Step d4 squares without using MR👣.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 12,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 12,
+    "name": "Quick Hand",
+    "effect": "Free Luck🍀 of 1 skill (not Wpn or Armor) this encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 13,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 13,
+    "name": "Guard Shift",
+    "effect": "Gain +1 Def for 1 rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 14,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 14,
+    "name": "Extra Glance",
+    "effect": "Auto-spot 1 hidden or unseen detail in the area.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 15,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 15,
+    "name": "Rally Breath",
+    "effect": "An ally of choice gets +3 Nish🚩 next round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 16,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 16,
+    "name": "Keep Pace",
+    "effect": "Match Nish🚩 of any ally this round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 17,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 17,
+    "name": "Lucky Timing",
+    "effect": "Your Nish🚩 is minimum of +1 more than best monster for encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 18,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 18,
+    "name": "Swift Stand",
+    "effect": "Stand from prone without P action for encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 19,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 19,
+    "name": "Quick Step Back",
+    "effect": "Immediately step 1 sq away when targeted for 1 rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 20,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 20,
+    "name": "Duck Low",
+    "effect": "Avoid next ranged Atk",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 21,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 21,
+    "name": "Push Forward",
+    "effect": "Gain Nish🚩 Advantage next round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 22,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 22,
+    "name": "Quick Swap",
+    "effect": "Change held gear(weapon/shield/item) instantly once this encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 23,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 23,
+    "name": "Cover Dash",
+    "effect": "Gain +2 AR🧥",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 24,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 24,
+    "name": "Double Time",
+    "effect": "Move full MR👣 plus +d4 extra this round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 25,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 25,
+    "name": "Haste Pulse",
+    "effect": "All allies within 3 sq gain +1 Nish🚩 next round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 26,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 26,
+    "name": "Inspire Action",
+    "effect": "One ally gains an extra P action this round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 27,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 27,
+    "name": "Speed Echo",
+    "effect": "You gain and extra P action this round",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 28,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 28,
+    "name": "Deflect",
+    "effect": "If attacked; weapon/shield glints; Block🧱 with Advantage for 1 rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 29,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 29,
+    "name": "Dash First",
+    "effect": "Move before enemy group regardless of Nish🚩 order.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 30,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 30,
+    "name": "Strike True",
+    "effect": "Add +1d to your next Atk roll this rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 31,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 31,
+    "name": "Step In Sync",
+    "effect": "Choose 1 ally of lower Nish🚩; both act simultaneously this round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 32,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 32,
+    "name": "Call Shot",
+    "effect": "Add +2 Dmg💥 to your first successful Atk this rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 33,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 33,
+    "name": "Rally Cry",
+    "effect": "All allies within earshot gain +1 to first roll this rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 34,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 34,
+    "name": "Slip Free",
+    "effect": "Escape 1 grapple, hold, or slow effect for encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 35,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 35,
+    "name": "Quick Cast",
+    "effect": "If casting a spell, reduce action to P instead of A this rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 36,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 36,
+    "name": "Swap Order",
+    "effect": "Your Nish🚩 matches ally of choice this round",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 37,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 37,
+    "name": "Strike Again",
+    "effect": "After a successful Atk, Opportunity Atk at –2.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 38,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 38,
+    "name": "Blur Dash",
+    "effect": "Gain Dodge Advantage for all Dodges until next turn.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 39,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 39,
+    "name": "Flow Motion",
+    "effect": "Perform A-M-A (Attack, Move, Attack) sequence this rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 40,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 40,
+    "name": "Pinpoint",
+    "effect": "Your Atk ignores AR🧥 on first strike this rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 41,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 41,
+    "name": "Nimble Surge",
+    "effect": "Gain extra M Actionthis rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 42,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 42,
+    "name": "Flash Counter",
+    "effect": "If struck in melee, gain one Opportunity atk back",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 43,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 43,
+    "name": "Fast Hands",
+    "effect": "One P Action is Free this rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 44,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 44,
+    "name": "Nish Lock",
+    "effect": "Your Nish🚩 stays the same next round (no roll).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 45,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 45,
+    "name": "Momentum",
+    "effect": "Bonus of +5 to your next Atk roll.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 46,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 46,
+    "name": "Surge Order",
+    "effect": "All allies act before monsters this round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 47,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 47,
+    "name": "Push the Line",
+    "effect": "Foes adjacent to you suffer –1 Def this rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 48,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 48,
+    "name": "Masters Surge",
+    "effect": "Gain extra A Actionthis rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 49,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 49,
+    "name": "Heroic Dash",
+    "effect": "Up to MR👣 ; May M-A-M this rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 50,
+    "category": "Nish",
+    "type": "tremendous",
+    "roll_value": 50,
+    "name": "Lead the Charge",
+    "effect": "All allies add +2 MR👣 this round if they move toward you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 51,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 1,
+    "name": "Squirrel!!!",
+    "effect": "Your Nish🚩 = 1 this round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 52,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 2,
+    "name": "Stumbler",
+    "effect": "You slip and fall prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 53,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 3,
+    "name": "Doh… So Close",
+    "effect": "Your Nish🚩 is 1 less than the slowest opponent.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 54,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 4,
+    "name": "Quick Fumble",
+    "effect": "Drop 1 held item (weapon/shield/etc.) in reach of foes.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 55,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 5,
+    "name": "Clumsy Hands",
+    "effect": "Random gearitem is lost",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 56,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 6,
+    "name": "Random Act",
+    "effect": "Roll a random Skill🎓; must be your next action (besides move).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 57,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 7,
+    "name": "Friendly Fire",
+    "effect": "Your planned Atk hits nearest ally. If no plan, use most common Atk.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 58,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 8,
+    "name": "This is Not the Weapon I Was Looking For",
+    "effect": "Next Atk uses random weapon from Weapons Table (appears in hand)",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 59,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 9,
+    "name": "I NEED POWER!",
+    "effect": "You may ONLY move (i.e. relocate) this round",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 60,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 10,
+    "name": "So Thirsty!",
+    "effect": "You may not drink anything (potions, etc.) this encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 61,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 11,
+    "name": "Flat Footed",
+    "effect": "Loose your M Action this round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 62,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 12,
+    "name": "Frozen",
+    "effect": "You may only Attack, Move, or Defend this rnd. Pick one.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 63,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 13,
+    "name": "Passive",
+    "effect": "You may not Atk or cause harm this rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 64,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 14,
+    "name": "Random Thought",
+    "effect": "Lose your P action this rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 65,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 15,
+    "name": "No Sudden Movements!",
+    "effect": "Your next Resist✨ance roll auto-fails, for encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 66,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 16,
+    "name": "Save Me!",
+    "effect": "All Resist✨ance rolls Disadvantaged for encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 67,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 17,
+    "name": "Rumblin Stumblin Bumblin",
+    "effect": "Def and all 🏃 rolls Disadvantaged for 1 rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 68,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 18,
+    "name": "Bumbling Fool",
+    "effect": "Halve your Nish🚩 and closest ally’s Nish🚩 this round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 69,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 19,
+    "name": "Lack of Focus",
+    "effect": "All rolls at -4 this round",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 70,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 20,
+    "name": "Wait What?",
+    "effect": "Cannot use Skills🎓 for this encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 71,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 21,
+    "name": "Hear/See/Speak No Evil",
+    "effect": "No Awareness rolls for encounter; No speech for 1 rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 72,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 22,
+    "name": "Slacker",
+    "effect": "No Luck🍀 use for encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 73,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 23,
+    "name": "Excedrin Won’t Fix This",
+    "effect": "Lose 1 Luck🍀 chit",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 74,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 24,
+    "name": "Oh So Drained",
+    "effect": "Lose d4 Vit❤️",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 75,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 25,
+    "name": "Half Power",
+    "effect": "Take d(half of Max Vit❤️) as Wounds",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 76,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 26,
+    "name": "No Power!",
+    "effect": "Loose all Luck🍀 Chits",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 77,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 27,
+    "name": "Glass Weapon",
+    "effect": "Next failed Atk breaks that weapon until repaired.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 78,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 28,
+    "name": "Glass Armor",
+    "effect": "Next hit you take reduces armor to AR🧥 1 until repaired",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 79,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 29,
+    "name": "Glass Jaw",
+    "effect": "If you take Dmg💥 this rnd, you fall unconscious until awake ✨ Dif 20",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 80,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 30,
+    "name": "Glass Jaw 2",
+    "effect": "All Wnds🩸 taken are doubled this encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 81,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 31,
+    "name": "Comes in Like a Wreckingball",
+    "effect": "You fall into nearest ally; 🏃Dif 15 or they fall prone",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 82,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 32,
+    "name": "Hey Stupid!",
+    "effect": "You shout and become most likely monster target.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 83,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 33,
+    "name": "Half a Man",
+    "effect": "All your rolls Disadvantaged this round.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 84,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 34,
+    "name": "Crit Be Gone",
+    "effect": "You got Lucky - no effect.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 85,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 35,
+    "name": "You Left It in Your Other Pants…",
+    "effect": "You only have a P Action this rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 86,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 36,
+    "name": "No Power",
+    "effect": "Cannot use exotic powers this encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 87,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 37,
+    "name": "It’s a Trap!",
+    "effect": "You stumble into the nearest logical trap (if any).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 88,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 38,
+    "name": "Clang & Bang",
+    "effect": "Stealth rolls Disadvantaged this encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 89,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 39,
+    "name": "Spell Addict",
+    "effect": "A Action may ONLY be for a spell like power this round",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 90,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 40,
+    "name": "Ranged Addict",
+    "effect": "A Action may ONLY be for a Ranged weapon Atk this round",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 91,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 41,
+    "name": "Melee Addict",
+    "effect": "A Action may ONLY be for a mleee weapon Atk this round",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 92,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 42,
+    "name": "I’m a Bit Punchy",
+    "effect": "You may only deal Dmg💥 via Brawl this round",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 93,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 43,
+    "name": "This Weapon Sucks!",
+    "effect": "You will not use current weapon for encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 94,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 44,
+    "name": "I Should Have Opened With That",
+    "effect": "Your next Atk must be your strongest possible combo you can legally do",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 95,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 45,
+    "name": "Stuck Reload",
+    "effect": "Your current main weapon is useless until A Action is used to free it",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 96,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 46,
+    "name": "Weapon Slip",
+    "effect": "Disarm self; weapon skitters 2H4 squares away",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 97,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 47,
+    "name": "Armor Pinch",
+    "effect": "MR👣 reduced by half until rnd ends.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 98,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 48,
+    "name": "Overextend",
+    "effect": "Your next Def is at Disadvantage",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 99,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 49,
+    "name": "Sudden Fatigue",
+    "effect": "Lose 1 Act this rnd (choose M or A).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 100,
+    "category": "Nish",
+    "type": "critical",
+    "roll_value": 50,
+    "name": "Head Rush",
+    "effect": "Lose 1 Act each rnd (choose M, A, or P each rnd) for encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 101,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 1,
+    "name": "Cleaving Arc",
+    "effect": "Also hit adjacent target; full Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 102,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 2,
+    "name": "Crimson Furrow",
+    "effect": "Affliction: Target Bleeds d💪/rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 103,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 3,
+    "name": "Embarrassing Slip",
+    "effect": "Opponent trips over own footing and is Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 104,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 4,
+    "name": "Skull Ringer",
+    "effect": "Affliction: Target Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 105,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 5,
+    "name": "Executioner's Verdict",
+    "effect": "Vorpalize (instant kill) if non-boss minion.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 106,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 6,
+    "name": "Bone Shatter",
+    "effect": "Double Wounding Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 107,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 7,
+    "name": "Brittle Steel",
+    "effect": "Opponent's weapon shatters; opponent uses brawl Dmg until re-armed. Act(A) to draw backup weapon.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 108,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 8,
+    "name": "Whirlwind Reaping",
+    "effect": "Make an additional Atk on all targets in 1r.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 109,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 9,
+    "name": "Hammerfall",
+    "effect": "Dmg is +10.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 110,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 10,
+    "name": "Over-Extended",
+    "effect": "Opponent is over-extended: all Atks vs them have Advantage for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 111,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 11,
+    "name": "Keen Edge",
+    "effect": "Dmg is +5.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 112,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 12,
+    "name": "Ceiling Breaker",
+    "effect": "Part of the ceiling collapses doing d12 Dmg to target; 🏃^🏃 or target also Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 113,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 13,
+    "name": "Hamstring Hook",
+    "effect": "Target Immobilized.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 114,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 14,
+    "name": "Butterfingers",
+    "effect": "Opponent drops held weapon/shield; it lands 1sq away. Opponent must Act(M) to retrieve.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 115,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 15,
+    "name": "Twin Fang Riposte",
+    "effect": "Make 1 additional Atk vs same target with off-hand or natural weapon.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 116,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 16,
+    "name": "Eye-Gouge Feint",
+    "effect": "Target Blinded.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 117,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 17,
+    "name": "Shield Cleave",
+    "effect": "Opponent's shield buckles and splits; opponent loses shield Def bonus. Act(AM) to repair.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 118,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 18,
+    "name": "Tendon Sever",
+    "effect": "Target Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 119,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 19,
+    "name": "Momentum Drive",
+    "effect": "Push target 2r; if it strikes wall/obstacle, +d12 Dmg and target Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 120,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 20,
+    "name": "Polearm Vault",
+    "effect": "PC moves up to 👣 sq free; no Opportunity Atks vs PC during move.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 121,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 21,
+    "name": "Wild Rebound",
+    "effect": "Opponent's next Atk rebounds off own armor; opponent takes own weapon Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 122,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 22,
+    "name": "Sundering Blow",
+    "effect": "Target armor Def -2 until repaired. Act(AM) to repair.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 123,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 23,
+    "name": "Gutting Hook",
+    "effect": "Double Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 124,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 24,
+    "name": "Tangled Feet",
+    "effect": "Opponent snarls in own cloak/gear and is Immobilized. Act(A) to free it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 125,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 25,
+    "name": "Chrome Claw Rend",
+    "effect": "Target Bleeds d💪/rnd; target Def -1 until healed.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 126,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 26,
+    "name": "Haft Sweep",
+    "effect": "🏃^🏃 or target Prone; also hit adjacent target for half Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 127,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 27,
+    "name": "Rallying Strike",
+    "effect": "All allies within 3r gain Advantage on next Atk.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 128,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 28,
+    "name": "Lost Nerve",
+    "effect": "Opponent flinches and turns away: next Atk vs opponent has Advantage; opponent makes no Opportunity Atks for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 129,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 29,
+    "name": "Bloodlust Surge",
+    "effect": "PC regains d❤️ Vitality.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 130,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 30,
+    "name": "Pommel Crack",
+    "effect": "💪^💪 or target Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 131,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 31,
+    "name": "Self-Inflicted Gash",
+    "effect": "Opponent's next Atk gashes itself: opponent Bleeds d6/rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 132,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 32,
+    "name": "Iron Grapple Lock",
+    "effect": "Target also grappled and Immobilized",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 133,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 33,
+    "name": "Thunderclap Smash",
+    "effect": "Target and all in 1r: 💪^💪 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 134,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 34,
+    "name": "Precision Thrust",
+    "effect": "Dmg ignores armor.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 135,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 35,
+    "name": "Gear Snap",
+    "effect": "Opponent's armor straps snap; armor Def is 0. Act(AM) to refit.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 136,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 36,
+    "name": "Disemboweling Draw",
+    "effect": "Double Wounding Dmg; & target Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 137,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 37,
+    "name": "Second Wind Flourish",
+    "effect": "PC gains another Act(A) this Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 138,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 38,
+    "name": "Disarmed",
+    "effect": "Opponent is disarmed; 🏃^🏃 and PC catches the weapon to wield or stow.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 139,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 39,
+    "name": "Spinning Backhand",
+    "effect": "Dmg is +5; push target 1sq.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 140,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 40,
+    "name": "Earthquake Stomp",
+    "effect": "All enemies in 2r: 🏃^🏃 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 141,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 41,
+    "name": "Blade Dance",
+    "effect": "PC gains Advantage on all melee Atks for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 142,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 42,
+    "name": "Overbalanced Lunge",
+    "effect": "Opponent stumbles past PC and is Prone; PC repositions 1sq free.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 143,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 43,
+    "name": "Rib Cracker",
+    "effect": "Dmg is +10; & target Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 144,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 44,
+    "name": "Chain Reaction",
+    "effect": "If target is killed, make an additional Atk vs another target in 1r.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 145,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 45,
+    "name": "Shattered Composure",
+    "effect": "Opponent fumbles stance and exposes back: opponent Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 146,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 46,
+    "name": "Iron Wall Parry",
+    "effect": "PC gains +3 Def until start of PC's next turn.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 147,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 47,
+    "name": "Brutal Uppercut",
+    "effect": "Target launched 1sq and Prone; 💪^💪 or also Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 148,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 48,
+    "name": "Steel Hurricane",
+    "effect": "Make an additional Atk on all targets in 1r; Dmg is +5.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 149,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 49,
+    "name": "Friendly Fire",
+    "effect": "Opponent's next Atk is a wild swing striking its nearest ally for opponent's weapon Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 150,
+    "category": "Melee",
+    "type": "tremendous",
+    "roll_value": 50,
+    "name": "Legendary Deathblow",
+    "effect": "Vorpalize for Dmg x3",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 151,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 1,
+    "name": "Shattered Blade",
+    "effect": "Weapon breaks. Unusable until repaired out-of-Nish 🚩.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 152,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 2,
+    "name": "Armor Bite",
+    "effect": "Weapon stuck in target's armor. 💪^20 as Act(A) to free it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 153,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 3,
+    "name": "Momentum Theft",
+    "effect": "Opponent redirects your momentum and slides you 2sq in a direction of their choice.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 154,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 4,
+    "name": "Clumsy Butterfingers",
+    "effect": "Weapon flies d6 sq away in a random direction.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 155,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 5,
+    "name": "Ceiling Shudder",
+    "effect": "Part of the ceiling collapses: d12 Dmg to you. 🏃^15 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 156,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 6,
+    "name": "Glancing Edge",
+    "effect": "Dmg is halved.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 157,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 7,
+    "name": "Riposte Window",
+    "effect": "Opponent gains a free opportunity Atk vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 158,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 8,
+    "name": "Shallow Cut",
+    "effect": "Max Wnds is 1.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 159,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 9,
+    "name": "Flat of the Blade",
+    "effect": "Dmg cannot explode, Focus, or Luck.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 160,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 10,
+    "name": "Read Like a Book",
+    "effect": "Opponent gains Advantage (Disadvantage to PC) on their next roll.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 161,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 11,
+    "name": "Dulled Edge",
+    "effect": "Weapon dull: all Atks at Disadvantage until sharpened Act(AM).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 162,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 12,
+    "name": "Embarrassing Tumble",
+    "effect": "You are Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 163,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 13,
+    "name": "Haft Splinter",
+    "effect": "Weapon haft/grip cracks: -2 Dmg until repaired Act(AM).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 164,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 14,
+    "name": "Disarming Twist",
+    "effect": "Opponent disarms you; weapon lands in their sq.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 165,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 15,
+    "name": "Dangerously Over-Extended",
+    "effect": "-2 Def until start of your next turn.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 166,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 16,
+    "name": "Wrenched Shoulder",
+    "effect": "You are Weakened. Act(AM) to reset the joint and remove.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 167,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 17,
+    "name": "Jarring Impact",
+    "effect": "Hands go numb: 💪^18 or drop weapon in your sq.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 168,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 18,
+    "name": "Focused Counter",
+    "effect": "You loose 1 Focus die type.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 169,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 19,
+    "name": "Dangerous Rebound",
+    "effect": "Your weapon rebounds into you: take half the Dmg rolled, ignoring armor.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 170,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 20,
+    "name": "Tangled Footwork",
+    "effect": "You are Immobilized. Act(M) to untangle.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 171,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 21,
+    "name": "Shield Lock",
+    "effect": "Opponent traps your weapon on shield/bracer and shoves: you are Prone; opponent shifts 1sq free.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 172,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 22,
+    "name": "Blood in the Eyes",
+    "effect": "Spray blinds you: you are Blinded. Act(A) to wipe clear.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 173,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 23,
+    "name": "Grip Cramp",
+    "effect": "Your grip cramps, Disadvantage on next Atk.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 174,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 24,
+    "name": "Bludgeon Recoil",
+    "effect": "Weapon rings through your arms: 🫀^15 or Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 175,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 25,
+    "name": "Turned Against You",
+    "effect": "Opponent tries to sieze your weapon: 💪^💪 or opponent makes a free Atk vs you using your weapon.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 176,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 26,
+    "name": "Axe Beard Snag",
+    "effect": "Weapon hooks target's gear: you and target are tethered, neither can move apart. 💪^18 as Act(A) to free it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 177,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 27,
+    "name": "Broken Knuckles",
+    "effect": "Take d6 Wnds & Brawl Dmg halved until you receive healing.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 178,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 28,
+    "name": "Loose Pommel",
+    "effect": "Pommel rattles loose: next Critical of any kind also breaks weapon unless tightened Act(A).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 179,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 29,
+    "name": "Exposed Flank",
+    "effect": "Opponent and their allies gain Advantage on Atks (You have Disadvantage) vs you until your next turn.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 180,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 30,
+    "name": "Sweat-Slick Grip",
+    "effect": "Disadvantage on next Atk unless Act(A) to re-grip.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 181,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 31,
+    "name": "Bruised Pride",
+    "effect": "Lose 1 Luck 🍀.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 182,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 32,
+    "name": "Overcommitted Lunge",
+    "effect": "Stumble 1sq past target. 🏃^15 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 183,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 33,
+    "name": "Bait and Switch",
+    "effect": "Opponent swaps positions with you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 184,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 34,
+    "name": "Bent Steel",
+    "effect": "Weapon bent: -1 Atk & Dmg until repaired out-of-Nish 🚩.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 185,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 35,
+    "name": "Backswing Mishap",
+    "effect": "Backswing strikes nearest adjacent ally for d6 Dmg; if none, d6 Dmg to you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 186,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 36,
+    "name": "Wind Knocked Out",
+    "effect": "Lose next Act(A).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 187,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 37,
+    "name": "Predator's Opening",
+    "effect": "Opponent gains Advantage on their next Atk vs you and +6 Dmg on it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 188,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 38,
+    "name": "Strap Snap",
+    "effect": "Shield/armor strap snaps: lose useless until Act(AM) to refasten.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 189,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 39,
+    "name": "Ringing Skull",
+    "effect": "Headbutt backlash: you are Stunned. 🫀^15",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 190,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 40,
+    "name": "Hilt Slip",
+    "effect": "Weapon slips: Disadvantage on Atks until Act(M) to re-grip.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 191,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 41,
+    "name": "Disdainful Taunt",
+    "effect": "Opponent mocks you: 🫀^🫀 or loose 1 Focus that opponent gets for next Dmg",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 192,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 42,
+    "name": "Hyperextended Knee",
+    "effect": "MR 👣 halved until pop back in Act(AM) or healing.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 193,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 43,
+    "name": "Cratered Floor",
+    "effect": "Impact cracks floor: 1r becomes difficult terrain. 👣 cost 2 per sq",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 194,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 44,
+    "name": "Feedback Strike",
+    "effect": "Take d6 Dmg ignoring armor; 👁️^15 or Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 195,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 45,
+    "name": "Hip Throw Reversal",
+    "effect": "Opponent throws you 2sq. 💪^💪 or Prone on landing.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 196,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 46,
+    "name": "Dulled Edge",
+    "effect": "Dmg halved until repaired Act(AM)",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 197,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 47,
+    "name": "Pulled Muscle",
+    "effect": "🫀^15 or Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 198,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 48,
+    "name": "Fumbled Stance",
+    "effect": "Next Def roll at Disadvantage.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 199,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 49,
+    "name": "Weapon Pinned",
+    "effect": "Opponent pins your weapon underfoot: you are Immobilized while holding it; 💪^💪 as Act(A) to free it, or choose to drop it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 200,
+    "category": "Melee",
+    "type": "critical",
+    "roll_value": 50,
+    "name": "Catastrophic Shear",
+    "effect": "Non-Artifact: Weapon shatters into shrapnel: d6 Dmg to you and each adjacent ally. Weapon destroyed beyond repair.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 201,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 1,
+    "name": "Ricochet Strike",
+    "effect": "Hits 1 additional target within 3 sq of original target; same Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 202,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 2,
+    "name": "Twin Caroms",
+    "effect": "Hits 2 additional targets within 4 sq of original target; half Dmg each.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 203,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 3,
+    "name": "Flinch Fumble",
+    "effect": "Opponent flinches and drops held weapon; it lands d4 sq away in random direction.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 204,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 4,
+    "name": "Bone Shatter",
+    "effect": "Double Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 205,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 5,
+    "name": "Battering Impact",
+    "effect": "Target Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 206,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 6,
+    "name": "Bowling Blow",
+    "effect": "Target knocked d4 sq directly away from PC; Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 207,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 7,
+    "name": "Embarrassing Slip",
+    "effect": "Opponent trips over own footing; Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 208,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 8,
+    "name": "Pinned to the Wall",
+    "effect": "Target pinned to nearest structure (wall, pillar, floor): 💪^💪 or Immobilized.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 209,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 9,
+    "name": "Homing Return",
+    "effect": "Weapon magically returns to PC's hand immediately",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 210,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 10,
+    "name": "Shield Cleave",
+    "effect": "Opponent's shield splits; loses all shield Def bonus.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 211,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 11,
+    "name": "Follow-Through Volley",
+    "effect": "Immediately make a hurled opportunity Atk vs same target or any target within 2 sq of it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 212,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 12,
+    "name": "Eye of the Storm",
+    "effect": "PC's next hurled Atk this encounter has Advantage.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 213,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 13,
+    "name": "Hamstring Toss",
+    "effect": "Target 👣 halved for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 214,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 14,
+    "name": "Over-Extended",
+    "effect": "Opponent overcommits to evade; all Atks vs them have Advantage for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 215,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 15,
+    "name": "Skull Ringer",
+    "effect": "👁️^👁️ or target Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 216,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 16,
+    "name": "Grit Burst",
+    "effect": "Impact sprays grit and splinters: 🏃^🏃 or target Blinded.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 217,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 17,
+    "name": "Armor Piercer",
+    "effect": "Dmg ignores all target armor.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 218,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 18,
+    "name": "Weapon Shatter",
+    "effect": "Opponent's held weapon shatters",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 219,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 19,
+    "name": "Gut Buster",
+    "effect": "💪^💪 or target Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 220,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 20,
+    "name": "Quick-Draw Flourish",
+    "effect": "Draw and ready 1 additional throwing weapon free at Atk+2",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 221,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 21,
+    "name": "Panic Recoil",
+    "effect": "Opponent stumbles 2 sq away from PC; each PC ally it passes adjacent to may make a free opportunity Atk.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 222,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 22,
+    "name": "Skewer",
+    "effect": "Weapon punches through; hits 1 additional target in straight line behind original target; same Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 223,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 23,
+    "name": "Tendon Cutter",
+    "effect": "🏃^🏃 or target Immobilized.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 224,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 24,
+    "name": "Debris Avalanche",
+    "effect": "Impact dislodges overhead debris; all creatures in 1r of target take d12 Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 225,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 25,
+    "name": "Tangled Limbs",
+    "effect": "Opponent's cloak and gear snag on own footing; Immobilized; Act(A) to tear free.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 226,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 26,
+    "name": "Lucky Bounce",
+    "effect": "Weapon caroms back to PC's sq; PC reclaims it; Also optional🍀for +15 Dmg on that throw.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 227,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 27,
+    "name": "Dread Precision",
+    "effect": "🫀^🫀 or target Atks vs PC have Disadvantage (PC has Advantage) for Encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 228,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 28,
+    "name": "Rallying Throw",
+    "effect": "All allies within 6 sq gain +2 to their next Atk.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 229,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 29,
+    "name": "Lost Grip",
+    "effect": "Opponent's weapon flies from sweaty hands; lands adjacent to PC. PC may claim it free.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 230,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 30,
+    "name": "Gauntlet Nail",
+    "effect": "Weapon hand nailed to its own haft or shield: 💪^💪 or Party's Def at Advantage",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 231,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 31,
+    "name": "Strap Sunder",
+    "effect": "Armor strap severed; target -2 Def until Act(AM) to refasten.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 232,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 32,
+    "name": "Momentum Shift",
+    "effect": "PC 👣+2  for 1-Rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 233,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 33,
+    "name": "Self-Inflicted Wound",
+    "effect": "Opponent parries clumsily into own body; takes own weapon Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 234,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 34,
+    "name": "Spinning Fury",
+    "effect": "Weapon whirls with brutal torque; +8 Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 235,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 35,
+    "name": "Hunter's Mark",
+    "effect": "Target marked; all allied hurled Atks vs target have Advantage for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 236,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 36,
+    "name": "Lung Puncture",
+    "effect": "💪^🫀 or target Incapacitated.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 237,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 37,
+    "name": "Footing Collapse",
+    "effect": "Opponent backpedals onto loose rubble; Prone and slides d4 sq in random direction.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 238,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 38,
+    "name": "Ricochet Storm",
+    "effect": "Hits up to 3 additional targets within 3 sq of original target; d4 Dmg each.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 239,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 39,
+    "name": "Thunder Toss",
+    "effect": "Shockwave erupts from impact; each enemy adjacent to target: 💪^💪 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 240,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 40,
+    "name": "Human Projectile",
+    "effect": "Target hurled into nearest adjacent enemy; both take d6 Dmg; 💪^💪 or both Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 241,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 41,
+    "name": "Friendly Fire",
+    "effect": "Opponent's wild flailing strikes their nearest adjacent ally; that ally takes opponent's weapon Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 242,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 42,
+    "name": "Rebound Catch",
+    "effect": "Weapon bounces back; PC snatches it midair. Weapon in hand; +3 Def this Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 243,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 43,
+    "name": "Veil of Steel",
+    "effect": "PC Def+2 1-Rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 244,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 44,
+    "name": "Predator's Read",
+    "effect": "PC learns target's weakness; +1 to all Atk & Dmg vs target this encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 245,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 45,
+    "name": "Frozen in Shock",
+    "effect": "Opponent locks up in sheer terror; Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 246,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 46,
+    "name": "Second Wind Release",
+    "effect": "Perfect form invigorates PC; regain d6 ❤️.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 247,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 47,
+    "name": "Spearhead Charge",
+    "effect": "PC may move up to 👣 toward target free and make a melee opportunity Atk vs it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 248,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 48,
+    "name": "Crushing Weight",
+    "effect": "Ceiling collapse: 💪^💪 or Immobilized under debris",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 249,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 49,
+    "name": "Butterfingers",
+    "effect": "Opponent fumbles while dodging; drops all held items in own sq and is Prone",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 250,
+    "category": "Hurled",
+    "type": "tremendous",
+    "roll_value": 50,
+    "name": "Legendary Cast",
+    "effect": "Double Dmg; hits 1 additional target within 4 sq for normal Dmg; weapon magically returns to PC's hand immediately.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 251,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 1,
+    "name": "Shattered Haft",
+    "effect": "Thrown weapon shatters; destroyed if non-artifact.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 252,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 2,
+    "name": "Skittering Loss",
+    "effect": "Weapon slides extra d10 sq away in random direction.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 253,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 3,
+    "name": "Snatched From the Air",
+    "effect": "Opponent claims your thrown weapon and now holds it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 254,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 4,
+    "name": "Lost in the Fray",
+    "effect": "Weapon lost: 👁️^20 to find as Act(M).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 255,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 5,
+    "name": "Wild Rebound",
+    "effect": "Weapon bounces erratically; nearest ally takes half Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 256,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 6,
+    "name": "Deep Embed",
+    "effect": "Weapon embeds deep into terrain: 💪^20 as Act(A) to dislodge.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 257,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 7,
+    "name": "Open Guard",
+    "effect": "Opponent gains free 👣 and opportunity Atk vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 258,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 8,
+    "name": "Torn Shoulder",
+    "effect": "Release tears muscle: 💪^18 or Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 259,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 9,
+    "name": "Embarrassing Tumble",
+    "effect": "Follow-through drags you down; you are Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 260,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 10,
+    "name": "Telegraphed Wind-Up",
+    "effect": "Opponent gains Advantage on their next roll.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 261,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 11,
+    "name": "Strap Snarl",
+    "effect": "Bandolier tangles; drawing next thrown weapon requires Act(A).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 262,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 12,
+    "name": "Sun-Blind Arc",
+    "effect": "Tracking the throw into glare: 👁️^16 or Blinded.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 263,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 13,
+    "name": "Dangerously Over-Extended",
+    "effect": "Lurch 2sq toward target; 🏃^16 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 264,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 14,
+    "name": "Momentum Redirect",
+    "effect": "Opponent redirects your momentum and slides you 2sq in direction of their choice.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 265,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 15,
+    "name": "Hammer on the Foot",
+    "effect": "Weapon drops on your foot: take d6 Dmg; 👣 halved until Act(M) to shake it off.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 266,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 16,
+    "name": "Cracked Edge",
+    "effect": "Weapon damaged: -2 Dmg with it until Act(AM) to repair.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 267,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 17,
+    "name": "Studied Flaw",
+    "effect": "Opponent reads your throwing pattern all of your hurled Atks vs it are Disadvantaged",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 268,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 18,
+    "name": "Whiplash Spin",
+    "effect": "Spinning release wrenches spine: 💪^16 or Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 269,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 19,
+    "name": "Splinter Spray",
+    "effect": "Non-Artifact only: Weapon splinters on use; you and adjacent allies take d4 Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 270,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 20,
+    "name": "Spilled Arsenal",
+    "effect": "d3 carried throwing weapons spill to adjacent sq",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 271,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 21,
+    "name": "Disarming Counter",
+    "effect": "Opponent hurles/shoots back and disarms you; held weapon lands d4 sq away.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 272,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 22,
+    "name": "Hooked Cloak",
+    "effect": "Weapon snags your gear on release; No dmg & you are Immobilized; Act(A) to free yourself",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 273,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 23,
+    "name": "Pinned Comrade",
+    "effect": "Stray weapon pins nearest ally's gear to ground; ally Immobilized; Act(A) to free themselves",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 274,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 24,
+    "name": "Exploited Overreach",
+    "effect": "Opponent gains free opportunity Atk with Advantage vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 275,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 25,
+    "name": "Shrapnel Backlash",
+    "effect": "Non-Artifact: Hurled weapon bursts; fragments strike you for half Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 276,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 26,
+    "name": "Concussive Backswing",
+    "effect": "Wind-up clips your own skull: 🫀^16 or Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 277,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 27,
+    "name": "Gravel Skid",
+    "effect": "Footing gives way: 🏃^18 or Prone and slide 1sq.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 278,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 28,
+    "name": "Turned Steel",
+    "effect": "Opponent hurls your weapon back: free opportunity Atk vs you using your weapon's Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 279,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 29,
+    "name": "Rattled Nerve",
+    "effect": "Shaken by the botch: 🫀^16 or Disadvantage on your next roll.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 280,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 30,
+    "name": "Friendly Fletching",
+    "effect": "Weapon lodges in nearest ally's shield; shield rolls disadvataged until 💪^22 to remove it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 281,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 31,
+    "name": "Seized Opening",
+    "effect": "Opponent shifts 2sq free and gains Advantage on next Atk vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 282,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 32,
+    "name": "Blood-Slick Palm",
+    "effect": "Grip fouled: Disadvantage on Atks until Act(M) to wipe hands.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 283,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 33,
+    "name": "Popped Socket",
+    "effect": "Throwing arm dislocates: ❤️^18 or Weakened; Act(AM) to reset joint.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 284,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 34,
+    "name": "Toppled Junk",
+    "effect": "Hurled object topples nearby junk; nearest ally 🏃^16 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 285,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 35,
+    "name": "Mocking Sidestep",
+    "effect": "Opponent's taunt lands: you have Disadvantage on next roll.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 286,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 36,
+    "name": "Lost Bearings",
+    "effect": "Spin disorients: 👁️^16 or facing reversed and Disadvantage on next Defense.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 287,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 37,
+    "name": "Warped Balance",
+    "effect": "Weapon bends on impact: -1 to Atk & Dmg with it until Act(AM) to repair.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 288,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 38,
+    "name": "Counter-Flank",
+    "effect": "Opponent signals; nearest enemy to you gains free opportunity Atk vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 289,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 39,
+    "name": "Jarred Knee",
+    "effect": "Hard plant jars knee: 👣 halved until Act(AM) to brace it or healing.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 290,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 40,
+    "name": "Rolling Weapon",
+    "effect": "Weapon rolls d6 sq toward nearest hazard; if hazard reached, non-artifact weapon lost.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 291,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 41,
+    "name": "Twisted Ankle",
+    "effect": "🏃^18 or Prone; Act(A) to stand.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 292,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 42,
+    "name": "Kicked Away",
+    "effect": "Opponent kicks your thrown weapon d10 sq away and gains Advantage on next roll.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 293,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 43,
+    "name": "Butterfingers Cascade",
+    "effect": "Off-hand item drops to adjacent sq;",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 294,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 44,
+    "name": "Dust Plume",
+    "effect": "Hurled debris kicks up grit; you are Blinded; Act(M) to clear eyes.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 295,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 45,
+    "name": "Pressed Advantage",
+    "effect": "Opponent surges to you, slides you 1sq, and you are Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 296,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 46,
+    "name": "Luckless Flight",
+    "effect": "🍀 or weapon shatters; destroyed if non-artifact.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 297,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 47,
+    "name": "Severed Enchantment",
+    "effect": "✨^22 or weapon's exotics are all suppressed for Encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 298,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 48,
+    "name": "Wrenched Wrist",
+    "effect": "💪^16 or drop all held items to adjacent sq.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 299,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 49,
+    "name": "Bait Taken",
+    "effect": "All 1r opponent gains free opportunity Atk vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 300,
+    "category": "Hurled",
+    "type": "critical",
+    "roll_value": 50,
+    "name": "Cascade Collapse",
+    "effect": "Hurled debris dislodges overhead rubble; you and adjacent allies 🏃^18 or take d8 Dmg and Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 301,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 1,
+    "name": "Piercing Lance",
+    "effect": "Make Atk rolls on all in 1x4 line away from you beyond target.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 302,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 2,
+    "name": "Double Tap",
+    "effect": "Double Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 303,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 3,
+    "name": "Panicked Fumble",
+    "effect": "Opponent drops held weapon in own square. Act(A) to retrieve it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 304,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 4,
+    "name": "Painted Target",
+    "effect": "All of your Atks on this target at Advantage for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 305,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 5,
+    "name": "Hollow Point Brand",
+    "effect": "All of your Atks vs this target get +5 Dmg for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 306,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 6,
+    "name": "Locked Sightline",
+    "effect": "You auto-hits this target with this weapon for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 307,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 7,
+    "name": "Tangled Footing",
+    "effect": "Opponent trips over own footing and is Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 308,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 8,
+    "name": "Shrapnel Bloom",
+    "effect": "Make Atk & Dmg rolls on all in AoE 1r of target.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 309,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 9,
+    "name": "Wild Rebound",
+    "effect": "Auto hit 1 adjacent or in-line target for weapon Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 310,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 10,
+    "name": "Overheated Core",
+    "effect": "Opponent's firearm/energy weapon jams; unusable. Act(AM) to repair. Non-tech weapon shatters instead.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 311,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 11,
+    "name": "Kneecap Shot",
+    "effect": "👁️^🏃 or target Immobilized.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 312,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 12,
+    "name": "Muzzle Flare",
+    "effect": "👁️^👁️ or target Blinded.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 313,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 13,
+    "name": "Railgun Punch",
+    "effect": "Target pushed 3 sq away from you. 💪^💪 or target Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 314,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 14,
+    "name": "Over-Extended",
+    "effect": "Opponent is over-extended: all Atks vs them have Advantage for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 315,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 15,
+    "name": "Quickdraw Surge",
+    "effect": "Free bonus Atk with this weapon vs any target in range",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 316,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 16,
+    "name": "Nerve Strike",
+    "effect": "🫀^🫀 or target Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 317,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 17,
+    "name": "Armor Failure",
+    "effect": "Target Armor -3 for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 318,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 18,
+    "name": "Shield Cleave",
+    "effect": "Opponent's shield shatters",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 319,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 19,
+    "name": "Pinned to the Wall",
+    "effect": "💪^💪 or target Immobilized.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 320,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 20,
+    "name": "Executioner's Angle",
+    "effect": "Triple Dmg if target flanked or unaware; else Double Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 321,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 21,
+    "name": "Cowering Retreat",
+    "effect": "Opponent flees 2 sq directly away from you and loses next M.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 322,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 22,
+    "name": "Bleeding Channel",
+    "effect": "Affliction: 3 Wnds/rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 323,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 23,
+    "name": "Spotter's Call",
+    "effect": "All allies +3 Atk vs this target for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 324,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 24,
+    "name": "Chain Arc",
+    "effect": "Make Atk rolls on up to 3 targets within 2r of target.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 325,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 25,
+    "name": "Spilled Magazine",
+    "effect": "Opponent spills ammo/power cells; no shot Atks until Act(A) to reload.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 326,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 26,
+    "name": "Crippling Arm Shot",
+    "effect": "👁️^💪 or target Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 327,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 27,
+    "name": "Phantom Reposition",
+    "effect": "Move up to 👣 sq; provokes no opportunity Atks.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 328,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 28,
+    "name": "Eagle Eye",
+    "effect": "Your next Atk ignores cover and range penalties.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 329,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 29,
+    "name": "Flinch-Shot Fiasco",
+    "effect": "Opponent flinch-fires into its nearest ally; that ally takes Opponent's weapon Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 330,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 30,
+    "name": "Overpenetration",
+    "effect": "Creature directly behind target in line takes half Dmg dealt.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 331,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 31,
+    "name": "Trick Shot Disarm",
+    "effect": "👁️^🏃 or target's held weapon flung 1d4 sq away.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 332,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 32,
+    "name": "Splash Dmg",
+    "effect": "Target and all adjacent creatures take 5 splash Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 333,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 33,
+    "name": "Embarrassing Slip",
+    "effect": "Nearest opponent slips on your spent casings (or debris); Prone and drops held items.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 334,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 34,
+    "name": "Legend Shot",
+    "effect": "👁️^👁️ vs target and all its allies within 3r or lose next M.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 335,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 35,
+    "name": "Lucky Ricochet",
+    "effect": "🍀to paralize target at 👁️+5^🫀 to break",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 336,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 36,
+    "name": "Shattered Helm",
+    "effect": "Opponent's optics/visor/helm cracks; Opponent Blinded. Act(A) to clear it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 337,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 37,
+    "name": "Adrenal Volley",
+    "effect": "Regain ❤️ equal to half Dmg dealt.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 338,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 38,
+    "name": "Cover Shredder",
+    "effect": "Target's cover destroyed; all within 1r of cover take d6 Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 339,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 39,
+    "name": "Hot Shot",
+    "effect": "Target ignites: 5 Dmg/Rnd. Act(A) to extinguish it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 340,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 40,
+    "name": "Catastrophic Backfire",
+    "effect": "Opponent's weapon backfires or clumbsy hit; Opponent takes own weapon Dmg; weapon shatters.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 341,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 41,
+    "name": "Mystic Tracer",
+    "effect": "👁️^✨ or target marked: no invisibility/teleport; Atks vs target ignore concealment for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 342,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 42,
+    "name": "Concussive Blast",
+    "effect": "Make Atk rolls on all in AoE 2r of target; each hit pushed 1 sq and d6 Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 343,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 43,
+    "name": "Frozen in Terror",
+    "effect": "Opponent freezes in panic; loses next A and M.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 344,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 44,
+    "name": "Deadeye Focus",
+    "effect": "Atk+2 on all your shot Atks for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 345,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 45,
+    "name": "Rapid Reload",
+    "effect": "Weapon instantly reloaded/recharged; free 2nd shot",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 346,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 46,
+    "name": "Read the Tell",
+    "effect": "👁️^👁️ or you gain Advantage on Defense checks vs target for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 347,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 47,
+    "name": "Disarmed Mid-Aim",
+    "effect": "Opponent is disarmed; weapon lands at your feet.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 348,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 48,
+    "name": "Heart Shot",
+    "effect": "Dmg die count as max (no exploding), then Double Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 349,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 49,
+    "name": "Bone Shatter",
+    "effect": "👁️^🫀 or target Prone and Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 350,
+    "category": "Shot",
+    "type": "tremendous",
+    "roll_value": 50,
+    "name": "Total Humiliation",
+    "effect": "Opponent drops weapon and shield and is Prone; all Atks vs them have Advantage for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 351,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 1,
+    "name": "Firing Pin Seizure",
+    "effect": "Weapon jams; needs repair 👁️^20 Act(A) to fix.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 352,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 2,
+    "name": "Bone-Dry Magazine",
+    "effect": "Out of ammo until end of Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 353,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 3,
+    "name": "Wild Ricochet",
+    "effect": "Shot ricochets: Atk(20) Dmg(d12) AoE 1r centered on you, incl. you, allies & foes.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 354,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 4,
+    "name": "Telegraphed Aim",
+    "effect": "Opponent reads your sightline; Opponent gains Advantage on their next roll.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 355,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 5,
+    "name": "Skewed Optics",
+    "effect": "Optics misaligned; all shot Atks have Disadvantage until recalibrated Act(M).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 356,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 6,
+    "name": "Chamber Cook-Off",
+    "effect": "Ammunition cook-off; weapon deals d8 Dmg to you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 357,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 7,
+    "name": "Mule-Kick Recoil",
+    "effect": "💪^20 or you are Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 358,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 8,
+    "name": "Point-Blank Punish",
+    "effect": "Opponent closes the gap; Opponent gains free 👣 and opportunity Atk vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 359,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 9,
+    "name": "Snapped Bowstring",
+    "effect": "Bow/crossbow string snaps; weapon unusable until 👁️^18 Act(AM) to restring. Non-string weapons: weapon jams, 👁️^20 Act(A) to fix.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 360,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 10,
+    "name": "Muzzle Flash Glare",
+    "effect": "Afliction: 🫀^18 or you are Blinded",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 361,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 11,
+    "name": "Barrel Slap",
+    "effect": "An opponent swats your barrel aside; weapon lands 2sq away in direction of Opponent's choice.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 362,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 12,
+    "name": "Thermal Runaway",
+    "effect": "Weapon overheats (or splinters); d6 Dmg to you; cannot fire until Act(A) to vent (repair).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 363,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 13,
+    "name": "Scattered Quiver",
+    "effect": "Ammo spills AoE 1r; shot Atks have Disadvantage until Act(A) to gather.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 364,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 14,
+    "name": "Capacitor Arc",
+    "effect": "Energy discharge arcs: Atk(18) Dmg(d10) AoE 1r centered on you, incl. you, allies & foes. ✨^18 to ground it and exclude yourself.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 365,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 15,
+    "name": "Momentum Hijack",
+    "effect": "Opponent redirects your recoil; Opponent slides you 2sq in direction of their choice.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 366,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 16,
+    "name": "Snagged Sling",
+    "effect": "Weapon strap snags on gear; 🏃^18 or you are Immobilized; Act(A) to free it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 367,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 17,
+    "name": "Barrel Bulge",
+    "effect": "Barrel deforms; shot Atk Dmg halved until 👁️^20 Act(AM) to repair.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 368,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 18,
+    "name": "Misfed Round",
+    "effect": "Next shot Atk costs 1 🍀 unless Act(M) to clear feed first.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 369,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 19,
+    "name": "Exposed Reload",
+    "effect": "Opponent gains Atk+5 with Advantage on their next Atk vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 370,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 20,
+    "name": "Backlash",
+    "effect": "d8 Dmg to you; 💪^20 or you are Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 371,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 21,
+    "name": "Butterfingers",
+    "effect": "🍀 or weapon dropped in your sq and stuck; Act(AM) to retrieve.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 372,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 22,
+    "name": "Cover Dash",
+    "effect": "Opponent moves up to 2sq free and gains +2 Def vs your shot Atks for 1-Rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 373,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 23,
+    "name": "Shell Casing Skid",
+    "effect": "Spent casings (debris) underfoot; 🏃^16 or you are Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 374,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 24,
+    "name": "Splashback",
+    "effect": "d10 Dmg to you; 🫀^18 or you are Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 375,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 25,
+    "name": "Spiderweb Lens/String",
+    "effect": "Shot Atks beyond 5sq have Disadvantage until end of Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 376,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 26,
+    "name": "Baited Sightline",
+    "effect": "Opponent lures your aim off-line; Opponent gains Advantage on all Atks vs you for 1-Rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 377,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 27,
+    "name": "Dead Power Cell",
+    "effect": "Cell drained; energy weapon unusable until Act(A) to swap cell; no cell = out of ammo until end of Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 378,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 28,
+    "name": "Fletching/Ammo Shear",
+    "effect": "Rrounds deformed; all shot Atks deal -2 Dmg until end of Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 379,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 29,
+    "name": "Deafening Report",
+    "effect": "Point-blank blast; 🫀^18 or you are Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 380,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 30,
+    "name": "Barrel Wrench",
+    "effect": "Opponent seizes your weapon; 💪^💪 or Opponent disarms you and takes the weapon.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 381,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 31,
+    "name": "Hot Brass Collar",
+    "effect": "Ejected casing down your collar; d4 Dmg to you; and your next Atk has Disadvantage.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 382,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 32,
+    "name": "Sight Drift",
+    "effect": "Sights knocked loose; -2 to all shot Atks until Act(M) to re-zero.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 383,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 33,
+    "name": "Wide-Open Stance",
+    "effect": "Opponent exploits your overextension; Opponent gains free opportunity Atk vs you with Advantage.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 384,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 34,
+    "name": "Hair Trigger",
+    "effect": "Weapon discharges into ground at your feet; d6 Dmg to you; 🏃^16 or you are Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 385,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 35,
+    "name": "Coolant Rupture",
+    "effect": "Coolant sprays AoE 1r centered on you; all incl. you take d6 Dmg; area becomes difficult terrain ( 👣 cost 2) until end of Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 386,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 36,
+    "name": "Latch Failure",
+    "effect": "Reload latch breaks; each reload costs Act(M) until 👁️^20 Act(AM) to repair.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 387,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 37,
+    "name": "Counter-Snipe",
+    "effect": "Opponent traces your muzzle flash; Opponent gains free shot Atk vs you; you lose cover benefits until you move.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 388,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 38,
+    "name": "Overdrawn Limb",
+    "effect": "Weapon frame/bow limb cracks; 💪^20 or weapon breaks, unusable until end of Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 389,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 39,
+    "name": "Shoulder Wrench",
+    "effect": "You are Weakened; 🫀^16 Act(A) to shake it off.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 390,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 40,
+    "name": "Potent Fumes",
+    "effect": "🫀^18 or you are Incapacitated; adjacent ally Act(A) to rouse you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 391,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 41,
+    "name": "Psych Out",
+    "effect": "Opponent mocks your shot; You have Disadvantage on your next roll.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 392,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 42,
+    "name": "Off-Balance Fire",
+    "effect": "You slide 1sq backward; 🏃^14 or you are Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 393,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 43,
+    "name": "Calibration Bleed",
+    "effect": "Each shot costs 🍀 until Act(M) to recalibrate.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 394,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 44,
+    "name": "Fouled Mag Well",
+    "effect": "Cannot reload; current load is your last until 👁️^18 Act(AM) to clear.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 395,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 45,
+    "name": "Trigger-Finger Read",
+    "effect": "Opponent learns your rhythm; Opponent gains +2 Def vs your shot Atks until end of Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 396,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 46,
+    "name": "Tumbling Rounds",
+    "effect": "Unstable projectiles; shot Atk Dmg dice step down one size (-1d) until end of Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 397,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 47,
+    "name": "Stray Spray",
+    "effect": "Stray fire strikes nearest ally within 3sq for d6 Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 398,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 48,
+    "name": "Scope Bite",
+    "effect": "Scope recoils into brow; d4 Dmg to you; Affliction 🫀^14 or you are Blinded",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 399,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 49,
+    "name": "Disarming Riposte",
+    "effect": "An opponent knocks weapon from your grip; Opponent disarms you; weapon lands in Opponent's sq.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 400,
+    "category": "Shot",
+    "type": "critical",
+    "roll_value": 50,
+    "name": "Catastrophic Detonation",
+    "effect": "Non-Artifact Weapon explodes/shatters: d12 Dmg to you and Atk(20) Dmg(d8) AoE 1r centered on you, incl. allies & foes; weapon destroyed.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 401,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 1,
+    "name": "Ghoststep",
+    "effect": "May move up to 3 sq immediately without provoking opportunity Atk.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 402,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 2,
+    "name": "Matador's Lesson",
+    "effect": "Gain Advantage on Defense vs this attacker's Atks for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 403,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 3,
+    "name": "Over-Extended",
+    "effect": "Opponent is over-extended: all Atks vs them have Advantage for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 404,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 4,
+    "name": "Guardian Pull",
+    "effect": "Pull ally within 2 sq to a sq adjacent to you; ally gains Advantage on Defense for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 405,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 5,
+    "name": "Shove to Safety",
+    "effect": "Push ally within 2 sq; ally is immune to Atks on this same 🚩.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 406,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 6,
+    "name": "Mirror Slip",
+    "effect": "May redirect triggering Atk to any valid opponent within 2 sq of you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 407,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 7,
+    "name": "Embarrassing Slip",
+    "effect": "Opponent trips over own footing: 🏃^🏃 or Opponent Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 408,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 8,
+    "name": "Coiled Spring",
+    "effect": "Your Atks vs this attacker have Advantage for 1-Rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 409,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 9,
+    "name": "Shadow Fade",
+    "effect": "If cover or obscurement is within 3 sq, move into it without provoking opportunity Atk; attacker loses line of sight to you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 410,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 10,
+    "name": "Shattered Edge",
+    "effect": "Opponent's weapon fails and is useless until repaired; Act(AM) to repair.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 411,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 11,
+    "name": "Kip-Up Rally",
+    "effect": "If Prone, stand immediately; 👣+2  1-Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 412,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 12,
+    "name": "Wind Reader",
+    "effect": "Gain Advantage on Defense vs all ranged Atks for 1-Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 413,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 13,
+    "name": "Spell-Slipper",
+    "effect": "Gain Advantage on Defense vs ✨ Atks for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 414,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 14,
+    "name": "Disarming Twist",
+    "effect": "If vs melee: 💪^💪 or Opponent is disarmed; weapon lands 1d4 sq away in direction of your choice.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 415,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 15,
+    "name": "Wall Run",
+    "effect": "May move up to 4 sq along vertical surfaces immediately without provoking opportunity Atk; may end atop any ledge within reach.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 416,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 16,
+    "name": "Tumbling Flank",
+    "effect": "Dive & roll up to 👣 to any open sq adjacent to attacker without provoking opportunity Atk; your next melee Atk vs them has Advantage.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 417,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 17,
+    "name": "Self-Inflicted Wound",
+    "effect": "Opponent's momentum drives the blow into themself: Opponent takes damage equal to thier Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 418,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 18,
+    "name": "Flowing Water Stance",
+    "effect": "Gain Advantage on your next 2 Defense checks this Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 419,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 19,
+    "name": "Inspiring Acrobatics",
+    "effect": "All allies with line of sight to you gain Advantage on their next 🚩 check.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 420,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 20,
+    "name": "Second Wind Spin",
+    "effect": "Regain d6 ❤️.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 421,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 21,
+    "name": "Entangled Strike",
+    "effect": "Opponent's weapon lodges in adjacent terrain or obstacle; Opponent must Act(A) to free it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 422,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 22,
+    "name": "Slide Under",
+    "effect": "Slide through attacker's sq to any open sq behind them and become unknown to them.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 423,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 23,
+    "name": "Footwork Feint",
+    "effect": "Attacker cannot use actions for 1-Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 424,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 24,
+    "name": "Dropped Guard",
+    "effect": "Opponent drops held shield or off-hand item; it lands in an adjacent sq of your choice.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 425,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 25,
+    "name": "Bullet Time",
+    "effect": "Gain 1 extra Act(M)",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 426,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 26,
+    "name": "Predator's Read",
+    "effect": "You have Advantage on all rolls vs opponent for Encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 427,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 27,
+    "name": "Rolling Retrieval",
+    "effect": "Pick up any unattended item within 3 sq; may move up to 4 sq without provoking opportunity Atk.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 428,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 28,
+    "name": "Collision Course",
+    "effect": "Opponent crashes into nearest obstacle or enemy creature of your choice within 2 sq; Opponent Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 429,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 29,
+    "name": "Cat's Landing",
+    "effect": "Immune to falling damage and forced movement for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 430,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 30,
+    "name": "Phantom Afterimage",
+    "effect": "Next Atk vs you this Rnd has Disadvantage.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 431,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 31,
+    "name": "Dust in the Eyes",
+    "effect": "Opponent whirls into own kicked-up debris: 👁️^👁️ or Opponent Blinded.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 432,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 32,
+    "name": "Hurled Snatch",
+    "effect": "If vs hurled: catch the projectile",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 433,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 33,
+    "name": "Lightning Pivot",
+    "effect": "Swap places with any willing ally within 3 sq without provoking.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 434,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 34,
+    "name": "Sidestep Counter",
+    "effect": "If adjacent to attacker: make an opportunity Atk vs them.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 435,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 35,
+    "name": "Overcommitted Lunge",
+    "effect": "Opponent loses their next M; Opponent Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 436,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 36,
+    "name": "Momentum Bank",
+    "effect": "Gain +1d Focus",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 437,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 37,
+    "name": "Untouchable Aura",
+    "effect": "All allies within 1 sq gain Advantage on Defense for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 438,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 38,
+    "name": "Arcane Backlash",
+    "effect": "A burst of your magical energy backlashes into attacker; ✨^✨ or Opponent Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 439,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 39,
+    "name": "Smoke and Mirrors",
+    "effect": "Attacker cannot target you with Atks on their next turn.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 440,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 40,
+    "name": "Gravity Defier",
+    "effect": "Leap up to d👣 x2 sq in any direction immediately without provoking.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 441,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 41,
+    "name": "Taunting Grin",
+    "effect": "Attacker's next Atk must target you if able; allies gain Advantage on Atks vs attacker for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 442,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 42,
+    "name": "Bone Shatter",
+    "effect": "Opponent's blow strikes stone: weapon arm cracks; Opponent Weakened and drops held weapon.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 443,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 43,
+    "name": "Precision Reading",
+    "effect": "Gain Advantage on your next 👁️ check and on Defense vs this attacker for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 444,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 44,
+    "name": "Battle Flow",
+    "effect": "Your next successful Atk this Encounter deals +6 damage.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 445,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 45,
+    "name": "Shield Cleave",
+    "effect": "Opponent's own blow splits their shield; shield is useless until repaired; Act(AM) to repair.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 446,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 46,
+    "name": "Rally Roll",
+    "effect": "Roll to ally within 3 sq without provoking; ally regains 1d4 ❤️ and stands if Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 447,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 47,
+    "name": "Wild Rebound",
+    "effect": "Kick off attacker's body: push them 1 sq; move up to 3 sq without provoking.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 448,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 48,
+    "name": "Lucky Break",
+    "effect": "Gain 🍀",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 449,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 49,
+    "name": "Hazard Stumble",
+    "effect": "Opponent lurches toward nearest hazard within 2 sq; If non player moves opponent 2 sq as desired.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 450,
+    "category": "Dodge",
+    "type": "tremendous",
+    "roll_value": 50,
+    "name": "Legendary Evasion",
+    "effect": "Gain Advantage on all Defense checks & 👣+2; both for Encounter",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 451,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 1,
+    "name": "Banana Peel Ballet",
+    "effect": "Slip mid-dodge. Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 452,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 2,
+    "name": "Hazard Magnet",
+    "effect": "Tumble into nearest reasonable hazard within 3sq. If none, Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 453,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 3,
+    "name": "Panic Leap",
+    "effect": "Leap d4 sq in random direction. Land Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 454,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 4,
+    "name": "Telegraphed Footwork",
+    "effect": "Opponent reads your pattern. Opponent gains Advantage on their next Atk vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 455,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 5,
+    "name": "Butterfingers Roll",
+    "effect": "Drop all held items in your sq. Act(M) to retrieve each.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 456,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 6,
+    "name": "Friendly Collision",
+    "effect": "Dodge into nearest ally within 2sq. Both Prone. If no ally, you are Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 457,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 7,
+    "name": "Wall Kiss",
+    "effect": "Slam into nearest structure within 2sq for d8 Dmg. If none, 🏃^15 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 458,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 8,
+    "name": "Momentum Thief",
+    "effect": "Opponent redirects your momentum. Opponent slides you 3sq in a direction of their choice.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 459,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 9,
+    "name": "Wobbly Recovery",
+    "effect": "Bad dodge recovery. All Atks and Defs at Disadvantage for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 460,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 10,
+    "name": "Ankle Roll",
+    "effect": "👣 halved 1-Rnd; 💪^15 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 461,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 11,
+    "name": "Strap Snap",
+    "effect": "Shield strap tears. Shield falls into your sq. Act(AM) to repair.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 462,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 12,
+    "name": "Open Flank",
+    "effect": "Opponent gains opportunity Atk vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 463,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 13,
+    "name": "Dizzy Spin",
+    "effect": "Over-rotated twirl. 👁️^15 or Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 464,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 14,
+    "name": "Boot Betrayal",
+    "effect": "Boot sole tears loose. 👣 -2 until repaired. Act(AM) to repair.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 465,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 15,
+    "name": "Disarming Counter",
+    "effect": "An opponent disarms you. Weapon lands d4 sq away in random direction.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 466,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 16,
+    "name": "Dangerously Over-Extended",
+    "effect": "Lurch 1sq toward attacker. Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 467,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 17,
+    "name": "Pocket Spill",
+    "effect": "d4 random small items/consumables scatter 1sq around you. Act(M) to collect each.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 468,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 18,
+    "name": "Cloak Snare",
+    "effect": "Cloak wraps your legs. 🏃^15 or Immobilized. Act(A) to free.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 469,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 19,
+    "name": "Read Like a Book",
+    "effect": "Opponent studies your evasion. You loose 1d Focus 🎯.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 470,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 20,
+    "name": "Self-Kicked Grit",
+    "effect": "Own slide sprays debris into your eyes. 👁️^15 or Blinded. Act(A) to clear.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 471,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 21,
+    "name": "Pulled Hamstring",
+    "effect": "Leg strain. 🫀^15 or Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 472,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 22,
+    "name": "Quiver Dump",
+    "effect": "Quiver/ammo pouch tears. Ammo spills into your sq. Ranged Atks impossible until Act(AM) to repair.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 473,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 23,
+    "name": "Pinned Hem",
+    "effect": "Opponent plants a foot on your gear mid-dodge. Immobilized 💪^💪",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 474,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 24,
+    "name": "Headfirst Dive",
+    "effect": "Dive 2sq away from attacker. Take d4 Dmg. Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 475,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 25,
+    "name": "Tangled Limbs",
+    "effect": "🏃^18 or Prone and drop off-hand item.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 476,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 26,
+    "name": "Cartwheel Calamity",
+    "effect": "Cartwheel d4 sq in random direction. 🍀 or Prone and Stunned 🫀^🫀",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 477,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 27,
+    "name": "Bait and Switch",
+    "effect": "Opponent feints into your dodge. Opponent shifts 2sq freely and gains Advantage on their next Atk.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 478,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 28,
+    "name": "Visor Slam",
+    "effect": "Helmet knocked askew over eyes. Blinded. Act(M) to fix.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 479,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 29,
+    "name": "Pebble Under Heel",
+    "effect": "Footing lost. 👣 reduced to 1 for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 480,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 30,
+    "name": "Gut Wrench",
+    "effect": "Twisting dodge winds you. 1 Wnd/rnd until 🫀^24 or healed.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 481,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 31,
+    "name": "Riposte Window",
+    "effect": "Opponent gains free opportunity Atk vs you with Advantage.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 482,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 32,
+    "name": "Focus Fumble",
+    "effect": "Loose -1d Focus; All rolls at Disadvantage for 1-Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 483,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 33,
+    "name": "Ricochet Roll",
+    "effect": "Roll into nearest ally within 3sq. Ally takes d6 Dmg. If no ally, you take d10 Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 484,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 34,
+    "name": "Crowd Crush",
+    "effect": "If 2+ creatures adjacent, 🫀^15 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 485,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 35,
+    "name": "Herding Strike",
+    "effect": "Opponent drives your evasion. Opponent slides you 3sq in a direction of their choice, into a hazard if one is in range.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 486,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 36,
+    "name": "Lost Nerve",
+    "effect": "Flinch reflex locks in. 👁️^15 or all Atks at Disadvantage for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 487,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 37,
+    "name": "Pack Burst",
+    "effect": "Backpack splits. Contents spill. Your sq becomes difficult terrain. Act(AM) to repack.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 488,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 38,
+    "name": "Stumble Step",
+    "effect": "Stagger 1sq in random direction. 🏃^21 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 489,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 39,
+    "name": "Exploited Rhythm",
+    "effect": "Opponent and 1 of their allies within 3sq each gain Advantage on their next Atks vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 490,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 40,
+    "name": "Buckle Burst",
+    "effect": "Belt fails. Sheathed weapons & belted items drop into your sq.; 👣 -1 until Act(A) to fix.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 491,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 41,
+    "name": "Edge Teeter",
+    "effect": "If hazard within 2sq, end at its edge. 🏃^18 or fall into. Else Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 492,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 42,
+    "name": "Embarrassing Flourish",
+    "effect": "Showboat spin goes wrong. 🫀^18 or Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 493,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 43,
+    "name": "Shield Hook",
+    "effect": "Opponent hooks your shield/off-hand item and wrenches it free. Item lands 2sq away in a direction of their choice.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 494,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 44,
+    "name": "Jarred Teeth",
+    "effect": "Hard landing. Take d6 Dmg. 🫀^21 or Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 495,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 45,
+    "name": "Torch Tumble",
+    "effect": "Drop held light source into your sq. If terrain flammable, sq becomes fire hazard: d4 Dmg to occupant.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 496,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 46,
+    "name": "Fully Exposed",
+    "effect": "Opponent pins down your evasion pattern. Opponent gains Advantage on all Atks vs you for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 497,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 47,
+    "name": "Toppling Crash",
+    "effect": "Roll into nearest object within 2sq. It topples. Prone. 💪^25 or Immobilized beneath it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 498,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 48,
+    "name": "Bad Slide",
+    "effect": "Drop held item. It skids under nearest adjacent ally.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 499,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 49,
+    "name": "Grapple Catch",
+    "effect": "Opponent snags your limb mid-dodge. Immobilized at 💪^💪 to break free.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 500,
+    "category": "Dodge",
+    "type": "critical",
+    "roll_value": 50,
+    "name": "Total Wipeout",
+    "effect": "Prone. Drop all held items. All Atks and Defs at Disadvantage for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 501,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 1,
+    "name": "Iron Wall Stance",
+    "effect": "Kinetic absorption: gain AR+2 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 502,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 2,
+    "name": "Mirror Deflection",
+    "effect": "Deflect Atk back at Opponent using original Atk roll; Opponent takes full rolled Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 503,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 3,
+    "name": "Over-Extended",
+    "effect": "Opponent over-extended: all Atks vs Opponent have Advantage 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 504,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 4,
+    "name": "Shield Bash Riposte",
+    "effect": "Free riposte vs Opponent: Block Rtg as Atk, d(Block) Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 505,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 5,
+    "name": "Guardian's Reach",
+    "effect": "May Block vs any Atk targeting an Ally within AoE 1r 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 506,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 6,
+    "name": "Shield Shockwave",
+    "effect": "Shockwave: Opponent pushed 2sq and Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 507,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 7,
+    "name": "Shattered Edge",
+    "effect": "Opponent's weapon shatters; Opponent fights unarmed or with backup weapon.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 508,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 8,
+    "name": "Bracer Lock",
+    "effect": "Trap weapon arm hold: 💪^💪 or Opponent Immobilized.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 509,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 9,
+    "name": "Momentum Siphon",
+    "effect": "Convert impact to tempo: +1d Focus",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 510,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 10,
+    "name": "Embarrassing Slip",
+    "effect": "Opponent trips over own footing and is Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 511,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 11,
+    "name": "Counter-Hook Disarm",
+    "effect": "Hook weapon: 💪^🏃 or Opponent disarmed; weapon lands 1d4sq away in PC's chosen direction.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 512,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 12,
+    "name": "Force Barrier Bloom",
+    "effect": "Barrier erupts: PC and Allies within AoE 1r gain +1 AR 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 513,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 13,
+    "name": "Absorbing Bulwark",
+    "effect": "Reduce next Dmg taken this Rnd by d(Block).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 514,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 14,
+    "name": "Numbed Grip",
+    "effect": "Impact numbs Opponent's hands: Opponent drops held weapon.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 515,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 15,
+    "name": "Unbreakable Footing",
+    "effect": "Cannot be pushed, pulled, or knocked Prone for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 516,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 16,
+    "name": "Rebound Strike",
+    "effect": "Next Atk vs Opponent gains +d(Block) Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 517,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 17,
+    "name": "Wild Rebound",
+    "effect": "Opponent's weapon rebounds into own face: Opponent takes own weapon Dmg; 💪^🫀 or Opponent Blinded.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 518,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 18,
+    "name": "Parry Cascade",
+    "effect": "Block+4 for 1-Rnd",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 519,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 19,
+    "name": "Steel Echo",
+    "effect": "Deafening clang: each Opponent within AoE 1r 💪^🫀 or Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 520,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 20,
+    "name": "Spinning Deflection",
+    "effect": "Free shift 2sq; provokes no opportunity Atks.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 521,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 21,
+    "name": "Shield Cleaved",
+    "effect": "Opponent's shield splits in two.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 522,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 22,
+    "name": "Hurled Catcher",
+    "effect": "If hurled: catch it; free throw-back Atk using 🏃 as Atk, original projectile Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 523,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 23,
+    "name": "Second Wind Guard",
+    "effect": "Heal d(Block) ❤️.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 524,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 24,
+    "name": "Bone Shatter",
+    "effect": "Opponent's striking limb fractures against PC's guard: Opponent Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 525,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 25,
+    "name": "Taunting Guard",
+    "effect": "Contemptuous block: 👁️^👁️ or Opponent must target PC with next Atk.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 526,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 26,
+    "name": "Bulwark Charge",
+    "effect": "Free Move 2sq into Opponent; Opponent pushed 2sq.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 527,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 27,
+    "name": "Kinetic Battery",
+    "effect": "Store blow's force: next Atk this encounter gains +Dmg equal to Dmg blocked.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 528,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 28,
+    "name": "Off-Balance Stumble",
+    "effect": "Opponent stumbles past PC into PC's chosen adjacent sq; Opponent loses next M.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 529,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 29,
+    "name": "Lucky Glint",
+    "effect": "Next 🍀 check this encounter is rolled twice take the better.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 530,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 30,
+    "name": "Twin Guard",
+    "effect": "Gain free 🍀 Block vs next Atk this Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 531,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 31,
+    "name": "Fumbled Recovery",
+    "effect": "Opponent loses grip mid-swing: weapon flung 1d6sq in PC's chosen direction.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 532,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 32,
+    "name": "Pommel Retort",
+    "effect": "Free pommel auto-hit: d(Block) Dmg; 💪^🫀 or Opponent Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 533,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 33,
+    "name": "Arcane Ward Flare",
+    "effect": "Force barrier flares: Opponent takes d(✨) Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 534,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 34,
+    "name": "Iron Mind Focus",
+    "effect": "Read Opponent's rhythm: next Atk vs Opponent has Advantage.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 535,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 35,
+    "name": "Tangled Feet",
+    "effect": "Opponent's legs cross on recoil: Opponent Prone; Opponent's 👣 halved for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 536,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 36,
+    "name": "Unyielding Rampart",
+    "effect": "Allies adjacent behind PC gain +2 AR 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 537,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 37,
+    "name": "Sweeping Parry",
+    "effect": "Bind blade downward: Opponent -2 to next Atk.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 538,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 38,
+    "name": "Self-Inflicted Wound",
+    "effect": "Opponent's blade glances into own leg: Opponent takes half own weapon Dmg; 👣-2  for encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 539,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 39,
+    "name": "Vaulting Guard",
+    "effect": "Spring off impact: free Jump up to half 👣 sq.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 540,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 40,
+    "name": "Crushing Bind",
+    "effect": "Pin weapon to ground: 💪^💪",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 541,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 41,
+    "name": "Hero's Resolve",
+    "effect": "Gain temp ❤️ equal to Block Rtg for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 542,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 42,
+    "name": "Exposed Flank",
+    "effect": "Opponent's guard collapses: Opponent AR-2 1 Rnd; Allies  Atk+2 vs Opponent 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 543,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 43,
+    "name": "Shieldwall Rally",
+    "effect": "Allies within 1r gain Atk+1 and Block+1 for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 544,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 44,
+    "name": "Counter-Stance",
+    "effect": "First Opponent to Atk PC next Rnd takes d(Block) Dmg.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 545,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 45,
+    "name": "Shaken Nerve",
+    "effect": "Opponent's courage breaks: 🫀^👁️ or Opponent flees for 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 546,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 46,
+    "name": "Thunder Parry",
+    "effect": "Each Opponent within 1r: 💪^💪 or pushed 1sq.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 547,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 47,
+    "name": "Masterful Read",
+    "effect": "PC gains +2 to all rolls vs opponent for Encounter.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 548,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 48,
+    "name": "Bracer Spark",
+    "effect": "Steel bracer throws sparks: ✨^🫀 or Opponent Blinded.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 549,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 49,
+    "name": "Weapon Lodged",
+    "effect": "Opponent's weapon lodges in PC's shield: Opponent disarmed; PC may wield or discard it.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 550,
+    "category": "Block",
+    "type": "tremendous",
+    "roll_value": 50,
+    "name": "Legendary Aegis",
+    "effect": "AR+3 1 Rnd; may Block vs any Atk targeting an Ally within AoE 1r 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 551,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 1,
+    "name": "Shield Cleave",
+    "effect": "Shield/weapon cracks: no Block until repaired Act(AM).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 552,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 2,
+    "name": "Embarrassing Tumble",
+    "effect": "Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 553,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 3,
+    "name": "Bulldozed",
+    "effect": "Knocked d4 sq backward and Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 554,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 4,
+    "name": "Hooked Rim",
+    "effect": "Opponent hooks your block: slides you up to 3 sq in any direction opponent chooses.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 555,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 5,
+    "name": "Battering Recoil",
+    "effect": "Knocked d6 sq backward. Collide with wall/obstacle: d4 Wnds.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 556,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 6,
+    "name": "Dead Arm",
+    "effect": "Blocking arm numb and useless for 1 Rnd: no Block, no two-handed actions.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 557,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 7,
+    "name": "Rim to the Teeth",
+    "effect": "Weapon/shield recoils into your face: d4 Wnds.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 558,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 8,
+    "name": "Open Guard",
+    "effect": "Opponent gains free opportunity Atk vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 559,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 9,
+    "name": "Strap Snap",
+    "effect": "Shield strap tears: shield drops in your sq. Act(A) to recover and re-strap.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 560,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 10,
+    "name": "Jarred Skull",
+    "effect": "🫀^25 or Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 561,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 11,
+    "name": "Momentum Thief",
+    "effect": "Opponent redirects your momentum: slides you 2 sq and you are Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 562,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 12,
+    "name": "Buckled Knee",
+    "effect": "💪^💪 or Prone. 👣 halved 1 Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 563,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 13,
+    "name": "Crumpled Shield",
+    "effect": "d3 Wnds.No Blocks until repaired Act(AM).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 564,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 14,
+    "name": "Crusing Blow",
+    "effect": "d6 Wnds. No blocks until healing.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 565,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 15,
+    "name": "Read Like a Book",
+    "effect": "Opponent gains Advantage on all rolls vs you 1-Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 566,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 16,
+    "name": "Notched Edge",
+    "effect": "Weapon/shield is notched: Block-3 until repaired Act(AM).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 567,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 17,
+    "name": "Mud Anchor",
+    "effect": "Feet sink (legs jambed) under impact: 🏃^18 or Immobilized",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 568,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 18,
+    "name": "Sparks in the Eyes",
+    "effect": "Clashing steel showers sparks: 👁️^21 or Blinded",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 569,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 19,
+    "name": "Disarming Twist",
+    "effect": "Opponent disarms you: shield/weapon flung d4 sq in direction opponent chooses.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 570,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 20,
+    "name": "Shoulder Pop",
+    "effect": "🫀^18 or blocking arm dislocated d4 Wnds and useless until reset Act(AM).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 571,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 21,
+    "name": "Dangerously Over-Extended",
+    "effect": "Lunge into block: 👣 reduced to 0 this Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 572,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 22,
+    "name": "Rally Cry",
+    "effect": "Opponent's allies within 3 sq each gain Advantage on next Atk vs you.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 573,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 23,
+    "name": "Ringing Helm",
+    "effect": "Concussive shock through helm: Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 574,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 24,
+    "name": "Butterfingers",
+    "effect": "🍀 or shield/weapon shatters, even artifact.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 575,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 25,
+    "name": "Shin Slammer",
+    "effect": "Shield edge drives into your own shin: d4 Wnds. 👣 -2 this Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 576,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 26,
+    "name": "Pinned Shield",
+    "effect": "Opponent pins your shield to your body: Immobilized at💪^💪",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 577,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 27,
+    "name": "Spinning Shield Deflection",
+    "effect": "Force of block spins you facing away: no Blocks this Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 578,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 28,
+    "name": "Tangled Cloak",
+    "effect": "Cloak snags on shield rim: 🏃^16 or Immobilized. Act(A) to free.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 579,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 29,
+    "name": "Shattered Grip",
+    "effect": "Weapon/Shield splits: unusable until repaired Act(AM).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 580,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 30,
+    "name": "Exploit the Gap",
+    "effect": "Opponent gains Advantage on all rolls vs you for Encoutner; And may shift 1 sq free.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 581,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 31,
+    "name": "Debris Skid",
+    "effect": "Slide d2 sq random direction. 🏃^25 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 582,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 32,
+    "name": "Wrist Sprain",
+    "effect": "d2 Wnds. Disadvantage on next Block.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 583,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 33,
+    "name": "Rattled Nerve",
+    "effect": "🫀^16 or Disadvantage on next roll.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 584,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 34,
+    "name": "Taunting Flourish",
+    "effect": "Opponent mocks your clumsy block: opponent gains Advantage on next roll. Suffer ❤️-1 as hummiliation.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 585,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 35,
+    "name": "Block Overload",
+    "effect": "d4 Wnds to all adjacent incl you. 🫀^18 or Stunned.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 586,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 36,
+    "name": "Rivets Pop",
+    "effect": "Shield/Weapon rivets burst: Block-2 until repaired Act(AM).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 587,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 37,
+    "name": "Bowled Over",
+    "effect": "Knocked d6 sq backward and Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 588,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 38,
+    "name": "Guard Breaker",
+    "effect": "Opponent shatters your guard: no Block vs opponent 1 Rnd. Opponent gains free opportunity Atk.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 589,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 39,
+    "name": "Bone Hum",
+    "effect": "Vibration rattles both arms: Disadvantage on all Atks this Rnd.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 590,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 40,
+    "name": "Fumbled Footwork",
+    "effect": "Trip over own feet: 🍀 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 591,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 41,
+    "name": "Splinter Spray",
+    "effect": "Shield/Weapon shard flies: d4 Wnds. 🫀^15 or Blinded.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 592,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 42,
+    "name": "Wall Shove",
+    "effect": "Opponent drives you d4 sq into nearest wall/obstacle: d6 Wnds.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 593,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 43,
+    "name": "Winded",
+    "effect": "Blow to the gut through guard: 🫀^16 or Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 594,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 44,
+    "name": "Lodged Missile",
+    "effect": "Projectile wedges in shield: 👣 -2 until pried loose Act(A).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 595,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 45,
+    "name": "Twisted Ankle",
+    "effect": "👣 halved until ankle bound Act(AM) or healed.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 596,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 46,
+    "name": "Turned Blade",
+    "effect": "Opponent slides steel along your guard: opponent gains Advantage on next Atk.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 597,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 47,
+    "name": "Inversion",
+    "effect": "pushed 2 sq backward. 🏃^16 or Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 598,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 48,
+    "name": "Strained Back",
+    "effect": "Heavy absorb wrenches spine: 🫀^18 or Weakened.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 599,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 49,
+    "name": "Block Lock",
+    "effect": "Opponent locks hilt/shield and wrenches: opponent disarms you or slides you up to 2 sq (opponent's choice).",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  },
+  {
+    "id": 600,
+    "category": "Block",
+    "type": "critical",
+    "roll_value": 50,
+    "name": "Catastrophic Collapse",
+    "effect": "Shield/weapon shatters destroyed (if non-artifact). d12 Wnds. Prone.",
+    "created_at": "2026-10-03T20:27:38.813416+00:00"
+  }
+]

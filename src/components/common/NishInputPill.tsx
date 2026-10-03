@@ -8,9 +8,10 @@ import { gameApi } from '../../services/api';
 
 interface NishInputPillProps {
   onOpenNishTc?: (type: 'tremendous' | 'critical', count?: number) => void;
+  onOpenTc?: (category: 'Nish', type: 'tremendous' | 'critical', count?: number) => void;
 }
 
-export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc }) => {
+export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc, onOpenTc }) => {
   const { activeCharacter, updateActiveSheetData, saveActiveCharacter, activePartyId } = useCharacterStore();
   const [isRolling, setIsRolling] = useState(false);
   const [tcData, setTcData] = useState<{
@@ -202,10 +203,16 @@ export const NishInputPill: React.FC<NishInputPillProps> = ({ onOpenNishTc }) =>
         />
 
         {/* T, TT, C, or CC Trigger Pill Button */}
-        {tcData && onOpenNishTc && (
+        {tcData && (onOpenTc || onOpenNishTc) && (
           <button
             type="button"
-            onClick={() => onOpenNishTc(tcData.type, tcData.count)}
+            onClick={() => {
+              if (onOpenTc) {
+                onOpenTc('Nish', tcData.type, tcData.count);
+              } else if (onOpenNishTc) {
+                onOpenNishTc(tcData.type, tcData.count);
+              }
+            }}
             className={`px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider animate-pulse transition-all cursor-pointer shadow-sm ${
               tcData.type === 'tremendous'
                 ? 'bg-amber-500 text-slate-950 border border-amber-300 hover:bg-amber-400'

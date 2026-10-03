@@ -5,6 +5,7 @@ interface ResourcesPopoverProps {
   onClose: () => void;
   onOpenLootGenerator?: () => void;
   onOpenNishTcGenerator?: () => void;
+  onOpenTcGenerator?: () => void;
   onOpenCraftingMall?: () => void;
   onOpenPlayerWorkshop?: () => void;
   isGmMode?: boolean;
@@ -14,6 +15,7 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({
   onClose, 
   onOpenLootGenerator, 
   onOpenNishTcGenerator,
+  onOpenTcGenerator,
   onOpenCraftingMall,
   onOpenPlayerWorkshop,
   isGmMode = false,
@@ -38,11 +40,11 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({
       {/* Links & Tools List */}
       <div className="flex flex-col gap-2">
 
-        {/* Tool 1: Nish T/C Generator (Hidden on GM Screen, lives in GM Tools) */}
-        {!isGmMode && onOpenNishTcGenerator && (
+        {/* Tool 1: T/C Generator (Hidden on GM Screen, lives in GM Tools) */}
+        {!isGmMode && (onOpenTcGenerator || onOpenNishTcGenerator) && (
           <button
             onClick={() => {
-              onOpenNishTcGenerator();
+              (onOpenTcGenerator || onOpenNishTcGenerator)?.();
               onClose();
             }}
             className="group flex items-start gap-3 p-2.5 rounded-lg bg-rose-950/30 hover:bg-rose-900/40 border border-rose-500/40 hover:border-rose-400 transition-all text-left w-full cursor-pointer"
@@ -53,14 +55,14 @@ export const ResourcesPopover: React.FC<ResourcesPopoverProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-1">
                 <span className="font-outfit font-bold text-rose-200 group-hover:text-rose-100 transition-colors truncate">
-                  Nish T/C Generator
+                  T/C Generator
                 </span>
                 <span className="text-[10px] font-bold text-rose-950 bg-rose-400 px-1.5 py-0.5 rounded uppercase shrink-0">
-                  Nish
+                  T/C
                 </span>
               </div>
               <p className="text-[11px] text-rose-200/70 group-hover:text-rose-100 transition-colors leading-tight mt-0.5">
-                Roll secret Tremendous or Critical Nish effects.
+                Roll Tremendous or Critical Effects
               </p>
             </div>
           </button>

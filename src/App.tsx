@@ -17,7 +17,7 @@ import { useReceivedLinksStore } from './store/useReceivedLinksStore';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { GmToolsPopover } from './components/header/GmToolsPopover';
 import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
-import { NishTcModal } from './components/modals/NishTcModal';
+import { TcGeneratorModal, TcCategory } from './components/modals/TcGeneratorModal';
 import { PlayerWorkshopModal } from './components/modals/PlayerWorkshopModal';
 import { CraftingMallModal } from './components/modals/CraftingMallModal';
 import { MasterArchitectDeskModal } from './components/modals/MasterArchitectDeskModal';
@@ -47,8 +47,17 @@ export default function App() {
   const [showCraftingMallModal, setShowCraftingMallModal] = useState(false);
   const [showMasterArchitectDeskModal, setShowMasterArchitectDeskModal] = useState(false);
   const [showLootGeneratorModal, setShowLootGeneratorModal] = useState(false);
-  const [showNishTcModal, setShowNishTcModal] = useState(false);
-  const [nishTcAutoRoll, setNishTcAutoRoll] = useState<{ type: 'tremendous' | 'critical'; count: number } | null>(null);
+  const [tcModalConfig, setTcModalConfig] = useState<{
+    isOpen: boolean;
+    initialCategory: TcCategory;
+    autoRollType?: 'tremendous' | 'critical' | null;
+    autoRollCount?: number;
+  }>({
+    isOpen: false,
+    initialCategory: 'Nish',
+    autoRollType: null,
+    autoRollCount: 1,
+  });
   const [showApManagerModal, setShowApManagerModal] = useState(false);
   const [showAttributeManagerModal, setShowAttributeManagerModal] = useState(false);
   const [showVitalityManagerModal, setShowVitalityManagerModal] = useState(false);
@@ -708,7 +717,8 @@ export default function App() {
                   <GmToolsPopover
                     onClose={() => setShowGmToolsPopover(false)}
                     onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
-                    onOpenNishTcGenerator={() => setShowNishTcModal(true)}
+                    onOpenTcGenerator={() => setTcModalConfig({ isOpen: true, initialCategory: 'Nish', autoRollType: null, autoRollCount: 1 })}
+                    onOpenNishTcGenerator={() => setTcModalConfig({ isOpen: true, initialCategory: 'Nish', autoRollType: null, autoRollCount: 1 })}
                     onOpenCraftingMall={() => setShowCraftingMallModal(true)}
                     onOpenPlayerWorkshop={() => setShowPlayerWorkshopModal(true)}
                     onOpenMasterArchitectDesk={() => setShowMasterArchitectDeskModal(true)}
@@ -762,7 +772,8 @@ export default function App() {
                   <ResourcesPopover 
                     onClose={() => setShowResourcesPopover(false)} 
                     onOpenLootGenerator={() => setShowLootGeneratorModal(true)}
-                    onOpenNishTcGenerator={() => setShowNishTcModal(true)}
+                    onOpenTcGenerator={() => setTcModalConfig({ isOpen: true, initialCategory: 'Nish', autoRollType: null, autoRollCount: 1 })}
+                    onOpenNishTcGenerator={() => setTcModalConfig({ isOpen: true, initialCategory: 'Nish', autoRollType: null, autoRollCount: 1 })}
                     onOpenCraftingMall={() => setShowCraftingMallModal(true)}
                     onOpenPlayerWorkshop={() => setShowPlayerWorkshopModal(true)}
                     isGmMode={false}
@@ -779,9 +790,21 @@ export default function App() {
             <PersistentHeaderHUD
               onOpenAttributeManager={() => setShowAttributeManagerModal(true)}
               onOpenFocusManager={() => setShowFocusManagerModal(true)}
+              onOpenTc={(category, type, count = 1) => {
+                setTcModalConfig({
+                  isOpen: true,
+                  initialCategory: category,
+                  autoRollType: type,
+                  autoRollCount: count,
+                });
+              }}
               onOpenNishTc={(type, count = 1) => {
-                setNishTcAutoRoll({ type, count });
-                setShowNishTcModal(true);
+                setTcModalConfig({
+                  isOpen: true,
+                  initialCategory: 'Nish',
+                  autoRollType: type,
+                  autoRollCount: count,
+                });
               }}
             />
           </div>
@@ -911,18 +934,18 @@ export default function App() {
         />
       </ErrorBoundary>
 
-      {/* 🌟 Nish Tremendous & Critical Generator Modal */}
-      <ErrorBoundary fallbackTitle="Nish T/C Generator Error" onClose={() => setShowNishTcModal(false)}>
-        {showNishTcModal && (
-          <NishTcModal
-            isOpen={showNishTcModal}
+      {/* 🎲 Tremendous & Critical Generator Modal */}
+      <ErrorBoundary fallbackTitle="T/C Generator Error" onClose={() => setTcModalConfig(prev => ({ ...prev, isOpen: false, autoRollType: null }))}>
+        {tcModalConfig.isOpen && (
+          <TcGeneratorModal
+            isOpen={tcModalConfig.isOpen}
             onClose={() => {
-              setShowNishTcModal(false);
-              setNishTcAutoRoll(null);
+              setTcModalConfig(prev => ({ ...prev, isOpen: false, autoRollType: null }));
             }}
             characterName={activeCharacter?.name || 'Active Hero'}
-            autoRollType={nishTcAutoRoll?.type}
-            autoRollCount={nishTcAutoRoll?.count}
+            initialCategory={tcModalConfig.initialCategory}
+            autoRollType={tcModalConfig.autoRollType}
+            autoRollCount={tcModalConfig.autoRollCount}
           />
         )}
       </ErrorBoundary>

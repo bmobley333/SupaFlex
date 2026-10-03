@@ -34,12 +34,14 @@ interface PersistentHeaderHUDProps {
   onOpenAttributeManager?: () => void;
   onOpenFocusManager?: () => void;
   onOpenNishTc?: (type: 'tremendous' | 'critical', count?: number) => void;
+  onOpenTc?: (category: 'Nish', type: 'tremendous' | 'critical', count?: number) => void;
 }
 
 export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
   onOpenAttributeManager,
   onOpenFocusManager,
   onOpenNishTc,
+  onOpenTc,
 }) => {
   const {
     activeCharacter,
@@ -249,7 +251,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
       {/* Center Zone: Centered Split-Pill Control Deck (Nish, Focus, Luck, Spark) */}
       <div className="flex-1 flex justify-center items-center gap-3 flex-wrap">
         {/* 🚩 Nish Initiative Split Pill & Roller (1st position) */}
-        <NishInputPill onOpenNishTc={onOpenNishTc} />
+        <NishInputPill onOpenNishTc={onOpenNishTc} onOpenTc={onOpenTc} />
 
         {/* 🎯 Focus Split Pill Container */}
         <div className="relative">
