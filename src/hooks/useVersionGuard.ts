@@ -56,22 +56,33 @@ export function useVersionGuard(): VersionInfo {
     setIsChecking(true);
 
     try {
-      // 1. Probe /version.json on Vercel with anti-cache timestamp
-      const versionRes = await fetch(`/version.json?t=${now}`, {
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-      });
+      // 1. Probe /version.json on Vercel with anti-cache timestamp (skip auto-reload on localhost/dev to prevent HMR spasms)
+      const isLocalhost = typeof window !== 'undefined' && 
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const isDev = import.meta.env.DEV || isLocalhost;
 
-      if (versionRes.ok) {
-        const remoteVersion = await versionRes.json();
-        if (remoteVersion?.vercelBuild && remoteVersion.vercelBuild !== localVercelBuild) {
-          console.warn(
-            `[VersionGuard] New Vercel deployment detected! Local: ${localVercelBuild}, Remote: ${remoteVersion.vercelBuild}. Forcing immediate hard reload...`
-          );
-          setIsOutdated(true);
-          // Immediate hard reload per Blake's approved directive
-          forceReload();
-          return;
+      if (!isDev) {
+        const versionRes = await fetch(`/version.json?t=${now}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+        });
+
+        if (versionRes.ok) {
+          const remoteVersion = await versionRes.json();
+          if (remoteVersion?.vercelBuild && remoteVersion.vercelBuild !== localVercelBuild) {
+            console.warn(
+              `[VersionGuard] New Vercel deployment detected! Local: ${localVercelBuild}, Remote: ${remoteVersion.vercelBuild}.`
+            );
+            setIsOutdated(true);
+
+            // Circuit breaker: prevent infinite reload loop if build number doesn't change after reload
+            const lastReloadedBuild = sessionStorage.getItem('supaflex_last_reloaded_build');
+            if (lastReloadedBuild !== remoteVersion.vercelBuild) {
+              sessionStorage.setItem('supaflex_last_reloaded_build', remoteVersion.vercelBuild);
+              forceReload();
+              return;
+            }
+          }
         }
       }
 
