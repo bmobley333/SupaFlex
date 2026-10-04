@@ -22,33 +22,54 @@ try {
   console.warn('[BuildMetadata] Could not read package.json version:', e.message);
 }
 
-let commitCount = 627;
+let commitCount = 631;
 let gitCommit = 'dev';
-
-try {
-  const countStr = execSync('git rev-list --count HEAD', { cwd: rootDir, encoding: 'utf-8' }).trim();
-  const parsed = parseInt(countStr, 10);
-  if (!isNaN(parsed) && parsed > 0) {
-    commitCount = parsed;
-  }
-} catch {
-  // Fallback if shallow clone on Vercel
-  if (fs.existsSync(versionJsonPath)) {
-    try {
-      const prev = JSON.parse(fs.readFileSync(versionJsonPath, 'utf-8'));
-      if (prev.vercelBuild) {
-        const prevCount = parseInt(prev.vercelBuild.replace(/\D/g, ''), 10);
-        if (!isNaN(prevCount)) commitCount = prevCount + 1;
-      }
-    } catch {}
-  }
-}
 
 try {
   gitCommit = execSync('git rev-parse --short HEAD', { cwd: rootDir, encoding: 'utf-8' }).trim();
 } catch {
   if (process.env.VERCEL_GIT_COMMIT_SHA) {
     gitCommit = process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 7);
+  }
+}
+
+// Read previously committed version.json if available
+let prevCount = 0;
+let prevCommit = '';
+if (fs.existsSync(versionJsonPath)) {
+  try {
+    const prev = JSON.parse(fs.readFileSync(versionJsonPath, 'utf-8'));
+    if (prev.vercelBuild) {
+      const parsedPrev = parseInt(prev.vercelBuild.replace(/\D/g, ''), 10);
+      if (!isNaN(parsedPrev)) prevCount = parsedPrev;
+    }
+    if (prev.gitCommit) {
+      prevCommit = prev.gitCommit;
+    }
+  } catch {}
+}
+
+let isShallow = false;
+try {
+  isShallow = execSync('git rev-parse --is-shallow-repository', { cwd: rootDir, encoding: 'utf-8' }).trim() === 'true';
+} catch {}
+
+try {
+  const countStr = execSync('git rev-list --count HEAD', { cwd: rootDir, encoding: 'utf-8' }).trim();
+  const parsed = parseInt(countStr, 10);
+  if (!isNaN(parsed) && parsed > 0) {
+    if (isShallow && prevCount > parsed) {
+      // Vercel shallow clone (e.g. depth 10) - preserve monotonic commit count from committed version.json
+      commitCount = prevCommit === gitCommit ? prevCount : prevCount + 1;
+    } else {
+      commitCount = Math.max(parsed, prevCount);
+    }
+  } else if (prevCount > 0) {
+    commitCount = prevCommit === gitCommit ? prevCount : prevCount + 1;
+  }
+} catch {
+  if (prevCount > 0) {
+    commitCount = prevCommit === gitCommit ? prevCount : prevCount + 1;
   }
 }
 
