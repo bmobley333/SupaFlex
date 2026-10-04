@@ -31,6 +31,7 @@ import { ErrorBoundary } from './components/modals/ErrorBoundary';
 import { UpdatePasswordModal } from './components/modals/UpdatePasswordModal';
 import { FireworksModal } from './components/common/FireworksModal';
 import { SyncStatusPillSwitch } from './components/common/SyncStatusPillSwitch';
+import { VersionBadge } from './components/header/VersionBadge';
 import { resolveCharFirstName } from './components/common/PartyCharacterCard';
 import { useScrollRestoration } from './hooks/useScrollRestoration';
 import { useModalScrollGuard } from './hooks/useModalScrollGuard';
@@ -640,6 +641,9 @@ export default function App() {
 
             {/* 🌐 Compact Reactive Sync Status Pill */}
             <SyncStatusPillSwitch />
+
+            {/* 🏷️ Tri-Part Version & Cache Freshness Badge */}
+            <VersionBadge />
           </div>
 
           {/* Center Zone: S-Tier Glassmorphic GM Screen (GM Mode) vs Prominent Hero Title (Player Mode) */}

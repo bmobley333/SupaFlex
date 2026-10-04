@@ -1429,6 +1429,22 @@ export const gameApi = {
     }
   },
 
+  async getCatalogBeaconInfo(): Promise<{ timestamp: string | null; sequence: string }> {
+    try {
+      const { data } = await supabase
+        .from('players')
+        .select('first_name, last_name')
+        .eq('email', 'system_catalogs_version@supaflex.local')
+        .maybeSingle();
+      return {
+        timestamp: data?.first_name || null,
+        sequence: data?.last_name || '891s',
+      };
+    } catch {
+      return { timestamp: null, sequence: '891s' };
+    }
+  },
+
   async updateCatalogBeacon(): Promise<string> {
     const nowIso = new Date().toISOString();
     try {
