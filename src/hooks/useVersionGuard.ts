@@ -24,11 +24,15 @@ export interface VersionInfo {
 
 export function useVersionGuard(): VersionInfo {
   const localAppVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '3';
-  const localVercelBuild = typeof __VERCEL_BUILD__ !== 'undefined' ? __VERCEL_BUILD__ : '627v';
-  const localGitCommit = typeof __GIT_COMMIT__ !== 'undefined' ? __GIT_COMMIT__ : 'dev';
-  const localBuiltAt = typeof __BUILD_TIMESTAMP__ !== 'undefined' ? __BUILD_TIMESTAMP__ : '';
+  const initialVercelBuild = typeof __VERCEL_BUILD__ !== 'undefined' ? __VERCEL_BUILD__ : '632v';
+  const initialGitCommit = typeof __GIT_COMMIT__ !== 'undefined' ? __GIT_COMMIT__ : 'dev';
+  const initialBuiltAt = typeof __BUILD_TIMESTAMP__ !== 'undefined' ? __BUILD_TIMESTAMP__ : '';
 
-  const [supabaseBeacon, setSupabaseBeacon] = useState<string>('891s');
+  const [vercelBuild, setVercelBuild] = useState<string>(initialVercelBuild);
+  const [gitCommit, setGitCommit] = useState<string>(initialGitCommit);
+  const [builtAt, setBuiltAt] = useState<string>(initialBuiltAt);
+
+  const [supabaseBeacon, setSupabaseBeacon] = useState<string>('893s');
   const [isOutdated, setIsOutdated] = useState<boolean>(false);
   const [isChecking, setIsChecking] = useState<boolean>(false);
   const [lastChecked, setLastChecked] = useState<number | null>(null);
@@ -56,22 +60,27 @@ export function useVersionGuard(): VersionInfo {
     setIsChecking(true);
 
     try {
-      // 1. Probe /version.json on Vercel with anti-cache timestamp (skip auto-reload on localhost/dev to prevent HMR spasms)
+      // 1. Probe /version.json with anti-cache timestamp
       const isLocalhost = typeof window !== 'undefined' && 
         (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       const isDev = import.meta.env.DEV || isLocalhost;
 
-      if (!isDev) {
-        const versionRes = await fetch(`/version.json?t=${now}`, {
-          cache: 'no-store',
-          headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-        });
+      const versionRes = await fetch(`/version.json?t=${now}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+      });
 
-        if (versionRes.ok) {
-          const remoteVersion = await versionRes.json();
-          if (remoteVersion?.vercelBuild && remoteVersion.vercelBuild !== localVercelBuild) {
+      if (versionRes.ok) {
+        const remoteVersion = await versionRes.json();
+        if (remoteVersion?.vercelBuild) {
+          if (isDev) {
+            // In dev / localhost: adopt the live metadata from public/version.json without hard-reloading
+            setVercelBuild(remoteVersion.vercelBuild);
+            if (remoteVersion.gitCommit) setGitCommit(remoteVersion.gitCommit);
+            if (remoteVersion.builtAt) setBuiltAt(remoteVersion.builtAt);
+          } else if (remoteVersion.vercelBuild !== vercelBuild) {
             console.warn(
-              `[VersionGuard] New Vercel deployment detected! Local: ${localVercelBuild}, Remote: ${remoteVersion.vercelBuild}.`
+              `[VersionGuard] New Vercel deployment detected! Local: ${vercelBuild}, Remote: ${remoteVersion.vercelBuild}.`
             );
             setIsOutdated(true);
 
@@ -100,7 +109,7 @@ export function useVersionGuard(): VersionInfo {
       isCheckingRef.current = false;
       setIsChecking(false);
     }
-  }, [localVercelBuild, forceReload]);
+  }, [vercelBuild, forceReload]);
 
   useEffect(() => {
     // 1. Initial check on mount
@@ -143,15 +152,15 @@ export function useVersionGuard(): VersionInfo {
     };
   }, [checkNow]);
 
-  const fullVersionString = `${localAppVersion}.${localVercelBuild}.${supabaseBeacon}`;
+  const fullVersionString = `${localAppVersion}.${vercelBuild}.${supabaseBeacon}`;
 
   return {
     appVersion: localAppVersion,
-    vercelBuild: localVercelBuild,
+    vercelBuild,
     supabaseBeacon,
     fullVersionString,
-    gitCommit: localGitCommit,
-    builtAt: localBuiltAt,
+    gitCommit,
+    builtAt,
     isOutdated,
     isChecking,
     lastChecked,
