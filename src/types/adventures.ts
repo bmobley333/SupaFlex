@@ -3,8 +3,6 @@
 
 import { ParsedMonster } from '../utils/monsterStatParser';
 
-export type GmSessionMode = 'design' | 'game_day';
-
 export interface PreStagedMonster extends ParsedMonster {
   count?: number;
   custom_notes?: string;
