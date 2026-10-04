@@ -959,8 +959,15 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
         }
       }
 
+      let hiddenTicks = 0;
       heartbeatInterval = setInterval(() => {
-        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+        // Continuous GM heartbeat: pulse every 30s when visible, throttle to 60s when hidden (document.visibilityState === 'hidden')
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+          hiddenTicks++;
+          if (hiddenTicks % 2 !== 0) return;
+        } else {
+          hiddenTicks = 0;
+        }
         gameApi.sendGmHeartbeat(selectedParty.id).catch(console.error);
       }, 30000);
     };
@@ -971,11 +978,20 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       gameApi.closePartyRoomBeacon(selectedParty.id);
     };
 
+    const handleVisibilityChange = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && selectedParty?.id) {
+        gameApi.sendGmHeartbeat(selectedParty.id).catch(console.error);
+        loadSessionMembers(selectedParty.id, true);
+      }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       if (heartbeatInterval) clearInterval(heartbeatInterval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       // NOTE: Do not close party room on component unmount; closures occur strictly on beforeunload or explicit GM action
     };
   }, [selectedParty?.id]);

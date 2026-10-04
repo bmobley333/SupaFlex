@@ -122,15 +122,11 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
         } else {
           const { data: p } = await supabase
             .from('parties')
-            .select('room_code, party_code, is_active, status, last_active_at')
+            .select('room_code, party_code, is_active, status')
             .eq('id', activePartyId)
             .maybeSingle();
 
-          const lastActiveTime = p?.last_active_at ? new Date(p.last_active_at).getTime() : 0;
-          const elapsedSeconds = (Date.now() - lastActiveTime) / 1000;
-          const isStale = elapsedSeconds > 90;
-
-          if (!p || !p.is_active || p.status === 'expired' || !p.room_code || isStale) {
+          if (!p || !p.is_active || p.status === 'expired' || !p.room_code) {
             if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');
             setActivePartyId(null);
             return;

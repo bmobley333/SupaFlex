@@ -1739,18 +1739,14 @@ export const gameApi = {
     }
 
     try {
-      // 1. Verify that the GM party is still active, has a valid room code, and is not stale (>90s absence/power loss)
+      // 1. Verify that the GM party is still active and has a valid room code
       const { data: partyRecord } = await supabase
         .from('parties')
-        .select('id, is_active, status, room_code, last_active_at')
+        .select('id, is_active, status, room_code')
         .eq('id', targetPartyUuid)
         .maybeSingle();
 
-      const lastActiveTime = partyRecord?.last_active_at ? new Date(partyRecord.last_active_at).getTime() : 0;
-      const elapsedSeconds = (Date.now() - lastActiveTime) / 1000;
-      const isStale = elapsedSeconds > 90;
-
-      if (!partyRecord || !partyRecord.is_active || partyRecord.status === 'expired' || !partyRecord.room_code || isStale) {
+      if (!partyRecord || !partyRecord.is_active || partyRecord.status === 'expired' || !partyRecord.room_code) {
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('supaflex_active_party_id');
         }
@@ -2035,11 +2031,11 @@ export const gameApi = {
 
     const lastActiveTime = existingParty?.last_active_at ? new Date(existingParty.last_active_at).getTime() : 0;
     const elapsedSeconds = (Date.now() - lastActiveTime) / 1000;
-    const isStale = elapsedSeconds > 90; // GM absence / power outage > 90s
+    const isStale = elapsedSeconds > 7200; // GM absence / meal break threshold (2 hours)
     const isInactive = !existingParty?.is_active || !existingParty?.room_code || existingParty?.status === 'expired';
     const existingCode = existingParty?.room_code || existingParty?.party_code;
 
-    // Quick F5 reload (<90 seconds): If active, valid code, and within threshold, preserve table & connected players
+    // Quick F5 reload or return from meal break (<2 hours): If active, valid code, and within threshold, preserve table & connected players
     if (!forceNew && !isStale && !isInactive && existingCode && existingCode.trim().length === 4) {
       await this.sendGmHeartbeat(partyId);
       return { party: existingParty, roomCode: existingCode.trim().toUpperCase(), isNewSession: false };
@@ -2141,13 +2137,13 @@ export const gameApi = {
   },
 
   async cleanupStaleRooms() {
-    const ninetySecsAgo = new Date(Date.now() - 90 * 1000).toISOString();
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
     try {
       const { data: staleParties } = await supabase
         .from('parties')
         .select('id')
         .eq('is_active', true)
-        .lt('last_active_at', ninetySecsAgo);
+        .lt('last_active_at', twoHoursAgo);
 
       if (staleParties && staleParties.length > 0) {
         const ids = staleParties.map((p) => p.id);

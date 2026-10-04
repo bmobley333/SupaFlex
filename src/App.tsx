@@ -297,6 +297,19 @@ export default function App() {
     }
   }, [activeRole, activeCharacter?.name]);
 
+  // Auto-sync tab character with active party session if hero changes while connected
+  const prevPartyCharIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (activePartyId && tabSessionId && activeCharacter?.id) {
+      if (prevPartyCharIdRef.current !== null && prevPartyCharIdRef.current !== activeCharacter.id) {
+        gameApi.joinPartySession(activePartyId, playerEmail || 'player', activeCharacter.id, tabSessionId).catch(console.error);
+      }
+      prevPartyCharIdRef.current = activeCharacter.id;
+    } else {
+      prevPartyCharIdRef.current = activeCharacter?.id || null;
+    }
+  }, [activePartyId, tabSessionId, activeCharacter?.id, playerEmail]);
+
   // Player Party Session Heartbeat & Window Unload Life-cycle
   useEffect(() => {
     if (!activePartyId || !tabSessionId || !activeCharacter?.id) return;
@@ -331,6 +344,9 @@ export default function App() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         gameApi.sendPlayerHeartbeat(tabSessionId).catch(console.error);
+        if (activePartyId && activeCharacter?.id) {
+          gameApi.ensureTabPartySession(activePartyId, tabSessionId, activeCharacter.id, playerEmail || 'player').catch(console.error);
+        }
       }
     };
 
@@ -341,9 +357,10 @@ export default function App() {
       clearInterval(interval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      gameApi.leavePartySession(tabSessionId, activePartyId).catch(console.error);
+      // NOTE: Do not leave party session here during React re-renders or hero switching.
+      // Explicit departures occur strictly via handleBeforeUnload or explicit GM/player modal actions.
     };
-  }, [activePartyId, tabSessionId, activeCharacter?.id]);
+  }, [activePartyId, tabSessionId, activeCharacter?.id, playerEmail]);
 
   // Realtime Party Link Broadcast Listener
   useEffect(() => {
