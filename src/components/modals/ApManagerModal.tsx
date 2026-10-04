@@ -446,52 +446,53 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
           <div className="w-1/2 flex flex-col p-5 bg-slate-900/60 overflow-hidden">
             {/* Status Banner */}
             <div className="p-4 rounded-xl bg-slate-950/90 border border-purple-500/30 mb-4 shadow-lg shrink-0">
-              <div className="grid grid-cols-4 gap-2 text-center items-stretch">
-                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex flex-col justify-between items-center">
+              <div className="grid grid-cols-5 gap-2 text-center items-stretch">
+                {/* Card 1: Level (Clean, No Subtext) */}
+                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex flex-col justify-center items-center">
                   <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
                     Level⭐
                   </span>
-                  <span className="font-outfit font-black text-lg text-amber-300 my-auto">{level}</span>
-                  <span className="text-[9px] text-slate-500 font-mono mt-0.5">Hero Level</span>
+                  <span className="font-outfit font-black text-2xl text-amber-300 mt-1">{level}</span>
                 </div>
 
-                <div className="p-2 rounded-lg bg-slate-900 border border-purple-500/30 flex flex-col justify-between items-center">
+                {/* Card 2: Total AP (Larger Badge - 2 Columns) */}
+                <div className="col-span-2 p-2.5 rounded-lg bg-slate-900 border border-purple-500/40 shadow-inner flex flex-col justify-between items-center">
                   <span className="text-[10px] font-extrabold text-purple-300 uppercase tracking-wider block">
                     Total AP
                   </span>
-                  <span className="font-outfit font-black text-xl text-purple-200 my-auto">
+                  <span className="font-outfit font-black text-2xl text-purple-200 my-auto">
                     {lifetimeAp + gmBonusAp}
                   </span>
                   {gmBonusAp !== 0 ? (
-                    <span className="text-[9px] text-slate-400 font-mono flex items-center justify-center gap-0.5 mt-0.5 whitespace-nowrap">
-                      <span>{lifetimeAp} Lvl</span>
-                      <span className="text-slate-500">+</span>
-                      <span className="text-amber-300 font-bold flex items-center gap-0.5">
-                        <Gift className="w-2.5 h-2.5 text-amber-400 inline" />
+                    <div className="px-2.5 py-0.5 rounded-full bg-slate-950/80 border border-purple-500/30 text-xs font-bold text-slate-300 flex items-center gap-1.5 whitespace-nowrap">
+                      <span className="text-purple-300">{lifetimeAp} Level AP</span>
+                      <span className="text-slate-500 font-bold">+</span>
+                      <span className="text-amber-300 font-extrabold flex items-center gap-1">
+                        <Gift className="w-3.5 h-3.5 text-amber-400" />
                         {gmBonusAp > 0 ? `+${gmBonusAp}` : gmBonusAp} GM
                       </span>
-                    </span>
+                    </div>
                   ) : (
-                    <span className="text-[9px] text-slate-400 font-mono block mt-0.5 whitespace-nowrap">
+                    <span className="text-xs font-bold text-slate-400 font-mono">
                       {lifetimeAp} Level AP
                     </span>
                   )}
                 </div>
 
-                <div className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex flex-col justify-between items-center">
+                {/* Card 3: Total Spent (Clean, No Subtext) */}
+                <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex flex-col justify-center items-center">
                   <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
                     Total Spent
                   </span>
-                  <span className="font-outfit font-black text-lg text-rose-400 my-auto">{spentAp}</span>
-                  <span className="text-[9px] text-slate-500 font-mono mt-0.5">Invested AP</span>
+                  <span className="font-outfit font-black text-2xl text-rose-400 mt-1">{spentAp}</span>
                 </div>
 
-                <div className="p-2 rounded-lg bg-purple-950/40 border border-purple-500/50 flex flex-col justify-between items-center">
+                {/* Card 4: Available AP (Clean, No Subtext) */}
+                <div className="p-2.5 rounded-lg bg-purple-950/40 border border-purple-500/50 flex flex-col justify-center items-center">
                   <span className="text-[10px] font-extrabold text-purple-300 uppercase tracking-wider block">
                     Available AP
                   </span>
-                  <span className="font-outfit font-black text-xl text-emerald-400 my-auto">{availableAp}</span>
-                  <span className="text-[9px] text-emerald-400/80 font-mono mt-0.5">Unspent AP</span>
+                  <span className="font-outfit font-black text-2xl text-emerald-400 mt-1">{availableAp}</span>
                 </div>
               </div>
 
