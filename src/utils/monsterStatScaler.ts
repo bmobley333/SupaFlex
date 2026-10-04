@@ -2,7 +2,7 @@
 // Mathematical scaling engine for Monster Stats based on Master Difficulty rating (GM Dif: 3 to 30+)
 
 import { MonsterData } from '../components/common/GmMonsterCard';
-import { ParsedMonster, parseMonsterLine } from './monsterStatParser';
+import { ParsedMonster, parseMonsterLine, parseMonsterAttributes } from './monsterStatParser';
 import { SupabaseMonster } from '../types/game';
 
 export interface StatAnchor {
@@ -255,10 +255,15 @@ export function scaleSupabaseMonster(sm: SupabaseMonster, dif: number): Supabase
   const defVal = defNums[0] !== undefined ? defNums[0] : 10;
   const armorVal = defNums[1] !== undefined ? defNums[1] : 0;
 
-  // Parse attributes e.g. "✨12 / 💪14 / 👁️10 / 🏃10 / 🫀12" -> [12, 14, 10, 10, 12]
-  let attrNums = extractAllInts(sm.attributes);
-  if (attrNums.length === 0) attrNums = [10, 10, 10, 10, 10];
-  while (attrNums.length < 5) attrNums.push(10);
+  // Parse attributes e.g. "✨12 / 💪14 / 👁️10 / 🏃10 / 🫀12" -> canonical [magic, might, mind, motion, moxie]
+  const parsedSmAttrs = parseMonsterAttributes(sm.attributes || '');
+  const attrNums = [
+    parsedSmAttrs.attributes.magic,
+    parsedSmAttrs.attributes.might,
+    parsedSmAttrs.attributes.mind,
+    parsedSmAttrs.attributes.motion,
+    parsedSmAttrs.attributes.moxie,
+  ];
 
   const scaledNish = scaleStatByAnchor('initiative', nishNum, dif);
   const scaledMr = scaleStatByAnchor('mr', mrNum, dif);
@@ -295,34 +300,9 @@ export function parseMonsterLineToData(raw: string, id: string = 'mon_tmp'): Mon
   const defNums = parsed.defenseStat.match(/\d+/g) || [];
   const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
 
-  // Match system attributes with or without individual inline icons
-  let attrMatch = raw.match(/\[✨?\s*(\d+)\s*\/\s*💪?\s*(\d+)\s*\/\s*👁️?\s*(\d+)\s*\/\s*🏃?\s*(\d+)\s*\/\s*(?:🫀|💖)?\s*(\d+)\]/u);
-
-  // Fallback: extract any 5 integers inside square brackets [ ... ]
-  let attrValues = { magic: 10, might: 10, mind: 10, motion: 10, moxie: 10 };
-  if (attrMatch) {
-    attrValues = {
-      magic: parseInt(attrMatch[1], 10),
-      might: parseInt(attrMatch[2], 10),
-      mind: parseInt(attrMatch[3], 10),
-      motion: parseInt(attrMatch[4], 10),
-      moxie: parseInt(attrMatch[5], 10),
-    };
-  } else {
-    const bracketMatch = raw.match(/\[(.*?)\]/);
-    if (bracketMatch) {
-      const nums = bracketMatch[1].match(/\d+/g);
-      if (nums && nums.length >= 5) {
-        attrValues = {
-          magic: parseInt(nums[0], 10),
-          might: parseInt(nums[1], 10),
-          mind: parseInt(nums[2], 10),
-          motion: parseInt(nums[3], 10),
-          moxie: parseInt(nums[4], 10),
-        };
-      }
-    }
-  }
+  // Match system attributes using universal attribute parser
+  const attrResult = parseMonsterAttributes(raw, undefined, scaleStatByAnchor);
+  const attrValues = attrResult.attributes;
 
   const cleanName = (parsed.name || parsed.nameWithEquip || 'Monster')
     .replace(/\s*\([^)]*\)/g, '')

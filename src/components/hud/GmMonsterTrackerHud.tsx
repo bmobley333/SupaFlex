@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { PlayerMonsterCard } from '../common/PlayerMonsterCard';
-import { parseMonsterLine, sortMonstersAlphabetically } from '../../utils/monsterStatParser';
+import { parseMonsterLine, sortMonstersAlphabetically, parseMonsterAttributes } from '../../utils/monsterStatParser';
 import { gameApi } from '../../services/api';
 import { supabase } from '../../lib/supabase';
 
@@ -163,8 +163,7 @@ export const GmMonsterTrackerHud: React.FC = () => {
     const atkNums = parsed.attackStat.match(/\d+/g) || [];
     const defNums = parsed.defenseStat.match(/\d+/g) || [];
     const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
-
-    const attrMatch = raw.match(/\[✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*👁️\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(?:🫀|💖)\s*(\d+)\]/u);
+    const attrResult = parseMonsterAttributes(raw);
 
     return {
       id: m.id,
@@ -180,19 +179,7 @@ export const GmMonsterTrackerHud: React.FC = () => {
       armor: m.armor ?? (defNums[1] ? parseInt(defNums[1], 10) : 0),
       max_vit: m.max_vit ?? (hpNums[0] ? parseInt(hpNums[0], 10) : 10),
       current_vit: m.current_vit ?? (hpNums[0] ? parseInt(hpNums[0], 10) : 10),
-      attributes: m.attributes || (attrMatch ? {
-        magic: parseInt(attrMatch[1], 10),
-        might: parseInt(attrMatch[2], 10),
-        mind: parseInt(attrMatch[3], 10),
-        motion: parseInt(attrMatch[4], 10),
-        moxie: parseInt(attrMatch[5], 10),
-      } : {
-        magic: 10,
-        might: 10,
-        mind: 10,
-        motion: 10,
-        moxie: 10,
-      }),
+      attributes: m.attributes || attrResult.attributes,
       gm_notes: (m as any).codex_notes || m.gm_notes || undefined,
     };
   };

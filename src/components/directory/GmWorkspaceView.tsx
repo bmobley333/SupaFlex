@@ -6,7 +6,15 @@ import { RotateCcw } from 'lucide-react';
 import { gameApi } from '../../services/api';
 import { supabase } from '../../lib/supabase';
 import { Party, PartySessionMember, SupabaseMonster } from '../../types/game';
-import { parseMonsterLine, ParsedMonster, resolveCodexMonsterNotes, formatMonsterDataToStatblock, decomposeMonsterStatblock } from '../../utils/monsterStatParser';
+import {
+  parseMonsterLine,
+  ParsedMonster,
+  resolveCodexMonsterNotes,
+  formatMonsterDataToStatblock,
+  decomposeMonsterStatblock,
+  parseMonsterAttributes,
+  normalizeMonsterStatblockAttributes,
+} from '../../utils/monsterStatParser';
 import { PartyCharacterCard, resolveCharFirstName } from '../common/PartyCharacterCard';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { MonsterManagerModal } from '../modals/MonsterManagerModal';
@@ -112,29 +120,13 @@ export function parseMonsterForGmRoster(
   const isMinionHeart = vitMatch ? vitMatch[0].startsWith('💔') : false;
   const minionVitVal = isMinionHeart && vitMatch ? parseInt(vitMatch[1], 10) : undefined;
 
-  // Attributes: [✨.../💪.../👁️.../🏃.../(🫀|💖)...]
-  const attrMatch = trimmed.match(/\[\s*✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*(?:👁️|👁️)\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(🫀|💖)\s*(\d+)\s*\]/u);
+  // Attributes: Universal parsing (handles any order, missing attributes defaulted to TL 0 baseline)
+  const attrResult = parseMonsterAttributes(trimmed, scaled_dif, scaleStatByAnchor);
+  const attrBlock = attrResult.attrBlock;
 
-  let attrBlock = '';
-  if (attrMatch) {
-    const magic = attrMatch[1];
-    const might = attrMatch[2];
-    const mind = attrMatch[3];
-    const motion = attrMatch[4];
-    const moxieIcon = attrMatch[5]; // preserves 💖 or 🫀 exactly
-    const moxie = attrMatch[6];
-    attrBlock = `– [✨${magic}/💪${might}/👁️${mind}/🏃${motion}/${moxieIcon}${moxie}]`;
-  } else {
-    // Fallback if bracket notation has non-standard tokens
-    const rawAttrMatch = trimmed.match(/(\[[^\]]*?(?:🫀|💖)[^\]]*?\])/u);
-    if (rawAttrMatch) {
-      attrBlock = `– ${rawAttrMatch[1]}`;
-    }
-  }
-
-  // Extract Abilities (🔥) from text after attributes
+  // Extract Abilities (🔥) from text after attribute bracket ']'
   let abilities = '';
-  const attrEndMatch = trimmed.match(/(?:🫀|💖)\s*\d+\s*\]\s*(.*)$/u);
+  const attrEndMatch = trimmed.match(/\]\s*(.*)$/su);
   if (attrEndMatch && attrEndMatch[1]) {
     let trailing = attrEndMatch[1].trim();
     const outerParen = trailing.match(/^\((.*)\)$/);
@@ -149,13 +141,16 @@ export function parseMonsterForGmRoster(
   const heartIcon = isMinionHeart ? '💔' : '❤️';
   const coreStatsText = `👣${mr} ⚔️${atk}/${dmg}${wounds} 🧥${def}/${arm} ${heartIcon}${vit} ${attrBlock}`.trim();
 
+  const normalizedFullText = normalizeMonsterStatblockAttributes(trimmed, scaled_dif);
+  const normalizedBaseText = baseFullText ? normalizeMonsterStatblockAttributes(baseFullText, scaled_dif) : normalizedFullText;
+
   return {
     id: monId,
     name: cleanName,
     nish,
     coreStatsText,
-    fullText: trimmed,
-    baseFullText: baseFullText || trimmed,
+    fullText: normalizedFullText,
+    baseFullText: normalizedBaseText,
     scaled_dif: scaled_dif ?? 10,
     mr,
     attack: parseInt(atk, 10) || 10,
@@ -169,15 +164,7 @@ export function parseMonsterForGmRoster(
     gear: gear || undefined,
     abilities: abilities || undefined,
     gm_notes: abilities || undefined,
-    attributes: attrMatch ? {
-      magic: parseInt(attrMatch[1], 10) || 10,
-      might: parseInt(attrMatch[2], 10) || 10,
-      mind: parseInt(attrMatch[3], 10) || 10,
-      motion: parseInt(attrMatch[4], 10) || 10,
-      moxie: parseInt(attrMatch[6], 10) || 10,
-    } : {
-      magic: 10, might: 10, mind: 10, motion: 10, moxie: 10,
-    },
+    attributes: attrResult.attributes,
   };
 }
 
@@ -1184,7 +1171,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
     const atkNums = parsed.attackStat.match(/\d+/g) || [];
     const defNums = parsed.defenseStat.match(/\d+/g) || [];
     const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
-    const attrMatch = raw.match(/\[✨\s*(\d+)\s*\/\s*💪\s*(\d+)\s*\/\s*👁️\s*(\d+)\s*\/\s*🏃\s*(\d+)\s*\/\s*(?:🫀|💖)\s*(\d+)\]/u);
+    const attrResult = parseMonsterAttributes(raw, m.scaled_dif, scaleStatByAnchor);
 
     // Resolve gear and abilities
     let gear = m.gear || parsed.gear || undefined;
@@ -1229,19 +1216,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       current_vit: m.minion_vit ? m.minion_vit : (hpNums[0] ? parseInt(hpNums[0], 10) : 10),
       minion_vit: m.minion_vit,
       base_vit: m.base_vit ?? (m.minion_vit ? undefined : (hpNums[0] ? parseInt(hpNums[0], 10) : 10)),
-      attributes: attrMatch ? {
-        magic: parseInt(attrMatch[1], 10),
-        might: parseInt(attrMatch[2], 10),
-        mind: parseInt(attrMatch[3], 10),
-        motion: parseInt(attrMatch[4], 10),
-        moxie: parseInt(attrMatch[5], 10),
-      } : {
-        magic: 10,
-        might: 10,
-        mind: 10,
-        motion: 10,
-        moxie: 10,
-      },
+      attributes: attrResult.attributes,
       gm_notes: codexNotes,
       is_codex: !!codexNotes || m.is_codex,
     };
@@ -1285,7 +1260,7 @@ export const GmWorkspaceView: React.FC<GmWorkspaceViewProps> = ({
       current_vit: monster.minion_vit ? monster.minion_vit : (monster.max_vit ?? 10),
       minion_vit: monster.minion_vit,
       base_vit: monster.base_vit ?? (monster.minion_vit ? undefined : (monster.max_vit ?? 10)),
-      attributes: monster.attributes ?? { magic: 10, might: 10, mind: 10, motion: 10, moxie: 10 },
+      attributes: monster.attributes ?? parseMonsterAttributes(monster.fullText || monster.coreStatsText, monster.scaled_dif, scaleStatByAnchor).attributes,
       gm_notes: codexNotes,
       is_codex: !!codexNotes,
     };

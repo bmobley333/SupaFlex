@@ -1,5 +1,182 @@
 import { SupabaseMonster } from '../types/game';
 
+export interface MonsterAttributes {
+  magic: number;
+  might: number;
+  mind: number;
+  motion: number;
+  moxie: number;
+}
+
+export const DEFAULT_MONSTER_ATTRIBUTES: MonsterAttributes = {
+  magic: 12,
+  might: 16,
+  mind: 12,
+  motion: 15,
+  moxie: 12,
+};
+
+export interface ParsedAttributesResult {
+  attributes: MonsterAttributes;
+  attrBlock: string;
+  rawBracket?: string;
+}
+
+/**
+ * Universal Attribute Parser & Normalizer.
+ * - Parses attributes in ANY arbitrary order (e.g. [💪19/🏃12/👁️11/✨9])
+ * - Supports all standard & legacy emojis: Magic (✨), Might (💪, 🥊), Mind (👁️, 👁, 🧠), Motion (🏃, 👣), Moxie (🫀, 💖, ❤)
+ * - Automatically fills any missing attribute using Threat Level 0 Quick Add baseline (✨12, 💪16, 👁️12, 🏃15, 🫀12)
+ * - Positional fallback for bracketed numbers without emojis:
+ *     5 numbers -> Magic, Might, Mind, Motion, Moxie
+ *     4 numbers -> Might, Motion, Mind, Magic (legacy order)
+ * - Returns canonical ordered block: - [✨{magic}/💪{might}/👁️{mind}/🏃{motion}/🫀{moxie}]
+ */
+export function parseMonsterAttributes(
+  rawText: string,
+  targetDif: number = 10,
+  scaleFn?: (key: string, base: number, dif: number) => number
+): ParsedAttributesResult {
+  const defaultMagic = targetDif !== 10 && scaleFn ? scaleFn('magic', 12, targetDif) : 12;
+  const defaultMight = targetDif !== 10 && scaleFn ? scaleFn('might', 16, targetDif) : 16;
+  const defaultMind = targetDif !== 10 && scaleFn ? scaleFn('mind', 12, targetDif) : 12;
+  const defaultMotion = targetDif !== 10 && scaleFn ? scaleFn('motion', 15, targetDif) : 15;
+  const defaultMoxie = targetDif !== 10 && scaleFn ? scaleFn('moxie', 12, targetDif) : 12;
+
+  if (!rawText) {
+    return {
+      attributes: {
+        magic: defaultMagic,
+        might: defaultMight,
+        mind: defaultMind,
+        motion: defaultMotion,
+        moxie: defaultMoxie,
+      },
+      attrBlock: `- [✨${defaultMagic}/💪${defaultMight}/👁️${defaultMind}/🏃${defaultMotion}/🫀${defaultMoxie}]`,
+    };
+  }
+
+  // Find attribute bracket: look for [ ... ] containing slashes or attribute icons
+  // Must avoid gear brackets before combat icons
+  const firstCombatIcon = rawText.match(/[🚩👣🥊⚔️🛡️🧥🥋❤️💔]/u);
+  const textToSearch = (firstCombatIcon && firstCombatIcon.index !== undefined)
+    ? rawText.substring(firstCombatIcon.index)
+    : rawText;
+
+  const bracketMatch = textToSearch.match(/\[([^\]]*?(?:[\/]|✨|💪|🥊|👁️|👁|🧠|🏃|👣|🫀|💖|❤)[^\]]*?)\]/u)
+    || rawText.match(/\[([^\]]*?(?:[\/]|✨|💪|🥊|👁️|👁|🧠|🏃|👣|🫀|💖|❤)[^\]]*?)\]/u);
+
+  if (!bracketMatch) {
+    return {
+      attributes: {
+        magic: defaultMagic,
+        might: defaultMight,
+        mind: defaultMind,
+        motion: defaultMotion,
+        moxie: defaultMoxie,
+      },
+      attrBlock: `- [✨${defaultMagic}/💪${defaultMight}/👁️${defaultMind}/🏃${defaultMotion}/🫀${defaultMoxie}]`,
+    };
+  }
+
+  const rawBracket = bracketMatch[0];
+  const content = bracketMatch[1].trim();
+  const segments = content.split('/');
+
+  let magic: number | undefined;
+  let might: number | undefined;
+  let mind: number | undefined;
+  let motion: number | undefined;
+  let moxie: number | undefined;
+
+  let anyEmojiMatched = false;
+
+  for (const seg of segments) {
+    const numMatch = seg.match(/\d+/);
+    if (!numMatch) continue;
+    const val = parseInt(numMatch[0], 10);
+
+    if (/✨/u.test(seg)) {
+      magic = val;
+      anyEmojiMatched = true;
+    } else if (/(?:💪|🥊)/u.test(seg)) {
+      might = val;
+      anyEmojiMatched = true;
+    } else if (/(?:👁️|👁|🧠)/u.test(seg)) {
+      mind = val;
+      anyEmojiMatched = true;
+    } else if (/(?:🏃|👣)/u.test(seg)) {
+      motion = val;
+      anyEmojiMatched = true;
+    } else if (/(?:🫀|💖|❤)/u.test(seg)) {
+      moxie = val;
+      anyEmojiMatched = true;
+    }
+  }
+
+  // Fallback: If no emojis matched in any segment, use positional logic
+  if (!anyEmojiMatched) {
+    const nums: number[] = [];
+    for (const seg of segments) {
+      const m = seg.match(/\d+/);
+      if (m) nums.push(parseInt(m[0], 10));
+    }
+
+    if (nums.length >= 5) {
+      magic = nums[0];
+      might = nums[1];
+      mind = nums[2];
+      motion = nums[3];
+      moxie = nums[4];
+    } else if (nums.length === 4) {
+      // Legacy 4-attribute order: Might, Motion, Mind, Magic
+      might = nums[0];
+      motion = nums[1];
+      mind = nums[2];
+      magic = nums[3];
+    }
+  }
+
+  const finalAttributes: MonsterAttributes = {
+    magic: magic !== undefined ? magic : defaultMagic,
+    might: might !== undefined ? might : defaultMight,
+    mind: mind !== undefined ? mind : defaultMind,
+    motion: motion !== undefined ? motion : defaultMotion,
+    moxie: moxie !== undefined ? moxie : defaultMoxie,
+  };
+
+  const attrBlock = `- [✨${finalAttributes.magic}/💪${finalAttributes.might}/👁️${finalAttributes.mind}/🏃${finalAttributes.motion}/🫀${finalAttributes.moxie}]`;
+
+  return {
+    attributes: finalAttributes,
+    attrBlock,
+    rawBracket,
+  };
+}
+
+/**
+ * Normalizes any statblock string so that its attribute bracket is formatted in canonical
+ * alphabetical order [✨/💪/👁️/🏃/🫀] with any missing attributes defaulted.
+ */
+export function normalizeMonsterStatblockAttributes(rawText: string, targetDif: number = 10): string {
+  if (!rawText) return '';
+  const parsed = parseMonsterAttributes(rawText, targetDif);
+  if (!parsed.rawBracket) {
+    // If no attribute bracket at all, insert canonical block after vitality
+    const vitMatch = rawText.match(/(?:❤️|💔)\s*\d+/u);
+    if (vitMatch && vitMatch.index !== undefined) {
+      const insertIdx = vitMatch.index + vitMatch[0].length;
+      return `${rawText.substring(0, insertIdx)} ${parsed.attrBlock} ${rawText.substring(insertIdx).trim()}`.replace(/\s+/g, ' ').trim();
+    }
+    return `${rawText} ${parsed.attrBlock}`.trim();
+  }
+
+  // Replace existing attribute bracket (and any leading dash) with canonical attrBlock
+  const escapedBracket = parsed.rawBracket.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const replaceRegex = new RegExp(`(?:[-–—]\\s*)?${escapedBracket}`, 'u');
+  return rawText.replace(replaceRegex, parsed.attrBlock);
+}
+
 export interface ParsedMonster {
   id: string;
   nameWithEquip: string;
@@ -18,6 +195,7 @@ export interface ParsedMonster {
   is_codex?: boolean;
   codex_notes?: string;
   codex_id?: number | string;
+  attributes?: MonsterAttributes;
 }
 
 export function parseMonsterLine(line: string): ParsedMonster {
@@ -36,6 +214,10 @@ export function parseMonsterLine(line: string): ParsedMonster {
       baseFullText: line,
     };
   }
+
+  // Parse and normalize attributes
+  const parsedAttrs = parseMonsterAttributes(trimmed);
+  const normalizedLine = normalizeMonsterStatblockAttributes(trimmed);
 
   // 1. Extract Attack Stat (⚔️ or ⚔️)
   const atkMatch = trimmed.match(/(?:⚔️|⚔️)\s*[\d\/\(\)\s\-+]+/u);
@@ -77,9 +259,9 @@ export function parseMonsterLine(line: string): ParsedMonster {
     .replace(/[\:\–\-]+$/, '')
     .trim() || nameWithEquip;
 
-  // 4c. Extract Abilities/Notes (🔥) from all text after [✨.../🫀#] or [✨.../💖#] or attribute bracket ']'
+  // 4c. Extract Abilities/Notes (🔥) from all text after attribute bracket ']'
   let extractedAbilities = '';
-  const attrEndMatch = trimmed.match(/(?:🫀|💖)\s*\d+\s*\]\s*(.*)$/u) || trimmed.match(/^(?:.*?\[[^\]]*\])\s*(.+)$/su);
+  const attrEndMatch = trimmed.match(/\]\s*(.*)$/su);
   if (attrEndMatch && attrEndMatch[1]) {
     let trailing = attrEndMatch[1].trim();
     const outerParen = trailing.match(/^\((.*)\)$/s);
@@ -114,9 +296,10 @@ export function parseMonsterLine(line: string): ParsedMonster {
     defenseStat,
     vitalityStat,
     minion_vit: parsedMinionVit,
-    fullText: trimmed,
+    fullText: normalizedLine,
     reducedText,
-    baseFullText: trimmed,
+    baseFullText: normalizedLine,
+    attributes: parsedAttrs.attributes,
   };
 }
 
@@ -297,12 +480,15 @@ export function decomposeMonsterStatblock(raw: string): {
   const trimmed = (raw || '').trim();
   if (!trimmed) return { statline: '', gear: '', abilities: '' };
 
+  // First normalize attributes to canonical format if present
+  const normalized = normalizeMonsterStatblockAttributes(trimmed);
+
   // 1. Separate abilities past attributes bracket ']' (or trailing parens)
-  let statline = trimmed;
+  let statline = normalized;
   let abilities = '';
 
   // Match closing bracket of attributes block
-  const attrCloseMatch = trimmed.match(/^(.*?\[[^\]]*(?:🫀|💖)[^\]]*\])\s*(.*)$/su) || trimmed.match(/^(.*?\[[^\]]*\])\s*(.*)$/su);
+  const attrCloseMatch = normalized.match(/^(.*?\[[^\]]*\])\s*(.*)$/su);
   if (attrCloseMatch) {
     statline = attrCloseMatch[1].trim();
     let trailing = (attrCloseMatch[2] || '').trim();
@@ -312,7 +498,7 @@ export function decomposeMonsterStatblock(raw: string): {
     }
   } else {
     // If no attribute block, check for trailing parenthetical after ❤️ or 💔
-    const vitEndMatch = trimmed.match(/^(.*?(?:❤️|💔)\s*\d+)\s*(?:–|-)?\s*\(([^)]+)\)\s*$/u);
+    const vitEndMatch = normalized.match(/^(.*?(?:❤️|💔)\s*\d+)\s*(?:–|-)?\s*\(([^)]+)\)\s*$/u);
     if (vitEndMatch) {
       statline = vitEndMatch[1].trim();
       abilities = vitEndMatch[2].trim();

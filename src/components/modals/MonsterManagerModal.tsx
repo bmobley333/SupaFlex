@@ -12,6 +12,7 @@ import {
   parseMultiRowMonsterBlock,
   resolveCodexMonsterNotes,
   decomposeMonsterStatblock,
+  parseMonsterAttributes,
 } from '../../utils/monsterStatParser';
 import { GmMonsterCard, MonsterData } from '../common/GmMonsterCard';
 import { GmThreatStepper } from '../common/GmThreatStepper';
@@ -196,33 +197,9 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     const defNums = parsed.defenseStat.match(/\d+/g) || [];
     const hpNums = parsed.vitalityStat.match(/\d+/g) || [];
     
-    // Match system attributes with or without individual inline icons
-    let attrMatch = raw.match(/\[✨?\s*(\d+)\s*\/\s*💪?\s*(\d+)\s*\/\s*👁️?\s*(\d+)\s*\/\s*🏃?\s*(\d+)\s*\/\s*(?:🫀|💖)?\s*(\d+)\]/u);
-    let attrValues = { magic: 10, might: 10, mind: 10, motion: 10, moxie: 10 };
-    
-    if (attrMatch) {
-      attrValues = {
-        magic: parseInt(attrMatch[1], 10),
-        might: parseInt(attrMatch[2], 10),
-        mind: parseInt(attrMatch[3], 10),
-        motion: parseInt(attrMatch[4], 10),
-        moxie: parseInt(attrMatch[5], 10),
-      };
-    } else {
-      const bracketMatch = raw.match(/\[(.*?)\]/);
-      if (bracketMatch) {
-        const nums = bracketMatch[1].match(/\d+/g);
-        if (nums && nums.length >= 5) {
-          attrValues = {
-            magic: parseInt(nums[0], 10),
-            might: parseInt(nums[1], 10),
-            mind: parseInt(nums[2], 10),
-            motion: parseInt(nums[3], 10),
-            moxie: parseInt(nums[4], 10),
-          };
-        }
-      }
-    }
+    // Universal attribute parser: handles any emoji sequence, order, and defaults missing stats
+    const attrResult = parseMonsterAttributes(raw, m.scaled_dif, scaleStatByAnchor);
+    const attrValues = attrResult.attributes;
 
     // Resolve gear and abilities
     let gear = m.gear || parsed.gear || undefined;
