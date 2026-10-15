@@ -16,7 +16,7 @@
   },
   "col.weapons.range": {
     "title": "Range (🎯)",
-    "summary": "Effective targeting distance: Self, Touch, 1 sq, 2 sq, Short (up to 6 sq), Medium (up to 12 sq), Long (up to 24 sq), Extreme (25+ sq).",
+    "summary": "Effective targeting distance: Self, Touch, 1sq, 2sq, 3sq, Short (up to 6 sq), Medium (up to 12 sq), Long (up to 24 sq).",
     "anchor": "#48-range-area"
   },
   "col.weapons.atr": {
@@ -41,7 +41,7 @@
   },
   "col.powers.range": {
     "title": "Range (🎯)",
-    "summary": "Targeting distance: Self, Touch, 1 sq, 2 sq, Short (up to 6 sq), Medium (up to 12 sq), Long (up to 24 sq), Extreme (25+ sq).",
+    "summary": "Targeting distance: Self, Touch, 1sq, 2sq, 3sq, Short (up to 6 sq), Medium (up to 12 sq), Long (up to 24 sq).",
     "anchor": "#48-range-area"
   },
   "col.powers.ap": {
@@ -126,12 +126,12 @@
   },
   "powers.basics": {
     "title": "Powers & Combat Rules",
-    "summary": "Auto-Readied Power Card:\n• Always Skilled — Powers 🔥 Exotics 🧿 are ALWAYS rolled as Skilled (2H20 + d(Atr)).\n\nExclusive Stacking Rule:\n• Best Effect Wins — Same-category bonuses or effects from Powers, Exotics, or Artifacts do not stack with each other; only the single best effect applies at any time.\n\nReading a Power:\n• Usage Frequency (🔄) — 1-⚡ (1 Bolt = 5 Sparks), 1-🍀 (1 Luck), 1-Enc, 2-Enc, 3-Enc, or 1-Rnd.\n• Duration (⏳) — Instant, This Rnd, 1 Rnd (default if unstated), Encounter, or Next … (triggers on next specified roll or event).\n• Range Bands (🎯) — Self, Touch, 1 sq, 2 sq, Short (up to 6 sq), Medium (up to 12 sq), Long (up to 24 sq), Extreme (25+ sq).\n\nThe Luck Twist (Rule of 1):\n• Spend 1 Luck 🍀 — Apply a one-time boost to an activation: +1 Target, +1d Die Step, +1 Range Band, or +1 Push/Move square.",
+    "summary": "Core Power Rules:\n• Always Skilled — Powers 🔥 including Exotics 🧿 Powers 🔥 are ALWAYS rolled as Skilled (2H20 + d(Atr)).\n\nExclusive Stacking Rule:\n• Best Effect Wins — Bonuses or effects from Powers, Exotics, or Artifacts do not stack with each other; only the single best bonus/effect applies at any time.\n\nReading a Power:\n• Usage Frequency (🔄) — 1-⚡ (1 Bolt = 5 Sparks), 1-🍀 (1 Luck), 1-Enc, 2-Enc, 3-Enc, or 1-Rnd.\n• Duration (⏳) — Instant, This Rnd, 1 Rnd (default if unstated), Encounter, or Next … (triggers on next specified roll or event).\n• Range Bands (🎯) — Self, Touch, 1sq, 2sq, 3sq, Short (up to 6 sq), Medium (up to 12 sq), Long (up to 24 sq).\n\nThe Luck Twist (Rule of 1):\n• Spend 1 Luck 🍀 — Apply a one-time boost to an activation: +1 Target, +1d Die Step, +1 Range Band, or +1 Push/Move square.",
     "anchor": "#61-how-to-read-a-power"
   },
   "magic_items.basics": {
     "title": "Exotics, Mods & Artifacts",
-    "summary": "Equipment & Mod Lineage:\n• Exotics (🧿) — Any purchasable Gear ⚙️ chassis that has at least one Mod 🔌 (such as the free factory Inherent mod or a purchased aftermarket Mod).\n• Artifacts (🔮) — Legendary or unique Exotic treasures (Cost = \"Artifact\") found through adventuring, loot drops, or Essence crafting.\n• Physical Ownership Gate — To learn or use an Exotic Power 🔥, you must physically own and wield or wear the host Gear chassis and have its parent Mod installed.\n\nLearning & AP Refunds:\n• 1 AP Learning Cost — Every Exotic Power 🔥 costs 1 AP to learn (with Free ⭕ abilities costing 0 AP).\n• Full AP Refund — Unlearning an Exotic Power, removing a Mod, or dropping/selling the host Gear immediately refunds 100% of invested AP.",
+    "summary": "Equipment & Mod Lineage:\n• Exotics (🧿) — Any purchasable Gear ⚙️ chassis that has at least one Mod 🔌 (such as the free factory Inherent mod or a purchased aftermarket Mod).\n• Artifacts (🔮) — Legendary or unique Exotic treasures (Cost = \"Artifact\") found through adventuring, loot drops, or Essence crafting.\n• Physical Ownership Gate — To learn or use an Exotic Power 🔥, you must physically own and wield or wear the host Gear chassis and have its parent Mod installed.\n\nLearning & AP Refunds:\n• 1 AP Learning Cost — Every Exotic Power 🔥 costs 1 AP to learn.\n• Full AP Refund — Unlearning an Exotic Power, removing a Mod, or dropping/selling the host Gear immediately refunds 100% of invested AP.",
     "anchor": "#63-exotics-mods-artifacts"
   },
   "gear": {
@@ -141,7 +141,7 @@
   },
   "chaos_gauntlet.basics": {
     "title": "Chaos Gauntlet & Chaos Gems",
-    "summary": "Core Mechanics:\n• Gauntlet Slots — 6 Conduits: 1 Wrist Mega Slot (👑) + 5 Finger Slots (🖐️).\n• Gem Custody — Volatile crystallizations that cannot be carried loosely in packs; they only exist when socketed directly into a Chaos Gauntlet.\n• Permanent Destruction on Removal — Removing a socketed gem from a gauntlet immediately shatters and destroys it.\n• 3 Finite Uses — Socketed gems start with 3 uses and auto-shatter upon the 3rd use.\n• Wrist Mega Slot Bolt Synergy — The Wrist Mega Slot can be activated by spending a Bolt (1-⚡ = 5 Sparks) without consuming any of the gem's 3 charges!\n• Free Action (F) — Activating a Chaos Gem is a Free (F) action.",
+    "summary": "Core Mechanics:\n• Gauntlet Slots — 6 Slots: 1 Wrist Mega Slot (👑) + 5 Finger Slots (🖐️).\n• Gem Custody — Volatile crystallizations that cannot be carried loosely in packs; they only exist when socketed directly into a Chaos Gauntlet.\n• Permanent Destruction on Removal — Removing a socketed gem from a gauntlet immediately shatters and destroys it.\n• 3 Finite Uses — Socketed gems start with 3 uses and auto-shatter upon the 3rd use.\n• Wrist Mega Slot Bolt Synergy — The Wrist Mega Slot can be activated by spending a Bolt (1-⚡ = 5 Sparks) without consuming any of the gem's 3 charges!\n• Free Action (F) — Activating a Chaos Gem is a Free (F) action.",
     "anchor": "#64-chaos-gauntlet-gems"
   }
 }

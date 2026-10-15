@@ -47,7 +47,7 @@ const USAGE_OPTIONS = [
   { id: '1-Rnd', label: '1-Rnd (1/Round)' },
 ];
 
-// 8 Canonical Range Bands
+// Canonical Range Bands
 const RANGE_BANDS = [
   { id: 'Touch', label: 'Touch (≤1 sq)', text: 'Rng Touch; ' },
   { id: '1sq', label: '1sq', text: 'Rng 1sq; ' },
@@ -56,7 +56,6 @@ const RANGE_BANDS = [
   { id: 'Short', label: 'Short (≤6 sq)', text: 'Rng Short; ' },
   { id: 'Medium', label: 'Medium (≤12 sq)', text: 'Rng Medium; ' },
   { id: 'Long', label: 'Long (≤24 sq)', text: 'Rng Long; ' },
-  { id: 'Extreme', label: 'Extreme (≥25 sq)', text: 'Rng Extreme; ' },
 ];
 
 // AoE Presets (Only [#]r and [#]x[#] allowed)
@@ -10395,7 +10394,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-slate-300">Effect</span>
                     <GuardrailBadge isValid={isEffectValid} />
-                    <InfoTooltip text="Use strict SupaFlex notation grammar. Attributes: ✨💪👁️🏃🫀👣. Range: Touch (≤1 sq), 1sq, 2sq, 3sq, Short (≤6 sq), Medium (≤12 sq), Long (≤24 sq), Extreme (≥25 sq). AoE: AoE [#]r or [#]x[#]." />
+                    <InfoTooltip text="Use strict SupaFlex notation grammar. Attributes: ✨💪👁️🏃🫀👣. Range: Touch (≤1 sq), 1sq, 2sq, 3sq, Short (≤6 sq), Medium (≤12 sq), Long (≤24 sq). AoE: AoE [#]r or [#]x[#]." />
                   </div>
                   <span className="text-[10px] text-slate-500 font-mono">KaTeX & Math Compliant</span>
                 </div>
