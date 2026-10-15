@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, Trash2, AlertCircle, Check, ArrowUpDown, Cpu } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
@@ -34,8 +34,11 @@ import {
   groupFunctionsByParent,
 } from '../../utils/functionSourceHelper';
 import { reconcileCharacterVaultWithGear } from '../../utils/gearFunctionSync';
-import { EmergencyHardwareShuntModal } from '../modals/EmergencyHardwareShuntModal';
 import { FunctionNameArea } from '../common/FunctionNameArea';
+
+const EmergencyHardwareShuntModal = React.lazy(() =>
+  import('../modals/EmergencyHardwareShuntModal').then((m) => ({ default: m.EmergencyHardwareShuntModal }))
+);
 
 const POWER_DISCIPLINES = [
   'BioTech',
@@ -3590,11 +3593,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         )}
       </div>
 
-      {type === 'spells' && (
-        <EmergencyHardwareShuntModal
-          isOpen={showShuntModal}
-          onClose={() => setShowShuntModal(false)}
-        />
+      {type === 'spells' && showShuntModal && (
+        <Suspense fallback={null}>
+          <EmergencyHardwareShuntModal
+            isOpen={showShuntModal}
+            onClose={() => setShowShuntModal(false)}
+          />
+        </Suspense>
       )}
     </div>
   );

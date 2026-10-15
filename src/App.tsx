@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, lazy, Suspense } from 'react';
 import { BookOpen, Loader2, ChevronDown, ChevronUp, Crown } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseKey } from './lib/supabase';
 import { gameApi } from './services/api';
@@ -7,7 +7,6 @@ import { reconcileCharacterVaultWithGear } from './utils/gearFunctionSync';
 import { useCharacterStore } from './store/useCharacterStore';
 import { useAdventureStore } from './store/useAdventureStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
-import { GmWorkspaceView } from './components/directory/GmWorkspaceView';
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { AccountPillButton } from './components/header/AccountPillButton';
 import { GmHeaderHUD } from './components/header/GmHeaderHUD';
@@ -16,25 +15,28 @@ import { SharedLinkDispatchPayload, ReceivedLinkItem } from './types/adventures'
 import { useReceivedLinksStore } from './store/useReceivedLinksStore';
 import { ResourcesPopover } from './components/header/ResourcesPopover';
 import { GmToolsPopover } from './components/header/GmToolsPopover';
-import { LootGeneratorModal } from './components/modals/LootGeneratorModal';
-import { TcGeneratorModal, TcCategory } from './components/modals/TcGeneratorModal';
-import { PlayerWorkshopModal } from './components/modals/PlayerWorkshopModal';
-import { CraftingMallModal } from './components/modals/CraftingMallModal';
-import { MasterArchitectDeskModal } from './components/modals/MasterArchitectDeskModal';
-import { ApManagerModal } from './components/modals/ApManagerModal';
-import { AttributeManagerModal } from './components/modals/AttributeManagerModal';
-import { VitalityManagerModal } from './components/modals/VitalityManagerModal';
-import { FocusManagerModal } from './components/modals/FocusManagerModal';
-import { UnifiedLaunchHubModal } from './components/modals/UnifiedLaunchHubModal';
-import { CharacterPartyModal } from './components/modals/CharacterPartyModal';
+import type { TcCategory } from './components/modals/TcGeneratorModal';
 import { ErrorBoundary } from './components/modals/ErrorBoundary';
-import { UpdatePasswordModal } from './components/modals/UpdatePasswordModal';
-import { FireworksModal } from './components/common/FireworksModal';
 import { SyncStatusPillSwitch } from './components/common/SyncStatusPillSwitch';
 import { VersionBadge } from './components/header/VersionBadge';
 import { resolveCharFirstName } from './components/common/PartyCharacterCard';
 import { useScrollRestoration } from './hooks/useScrollRestoration';
 import { useModalScrollGuard } from './hooks/useModalScrollGuard';
+
+const GmWorkspaceView = lazy(() => import('./components/directory/GmWorkspaceView').then(m => ({ default: m.GmWorkspaceView })));
+const LootGeneratorModal = lazy(() => import('./components/modals/LootGeneratorModal').then(m => ({ default: m.LootGeneratorModal })));
+const TcGeneratorModal = lazy(() => import('./components/modals/TcGeneratorModal').then(m => ({ default: m.TcGeneratorModal })));
+const PlayerWorkshopModal = lazy(() => import('./components/modals/PlayerWorkshopModal').then(m => ({ default: m.PlayerWorkshopModal })));
+const CraftingMallModal = lazy(() => import('./components/modals/CraftingMallModal').then(m => ({ default: m.CraftingMallModal })));
+const MasterArchitectDeskModal = lazy(() => import('./components/modals/MasterArchitectDeskModal').then(m => ({ default: m.MasterArchitectDeskModal })));
+const ApManagerModal = lazy(() => import('./components/modals/ApManagerModal').then(m => ({ default: m.ApManagerModal })));
+const AttributeManagerModal = lazy(() => import('./components/modals/AttributeManagerModal').then(m => ({ default: m.AttributeManagerModal })));
+const VitalityManagerModal = lazy(() => import('./components/modals/VitalityManagerModal').then(m => ({ default: m.VitalityManagerModal })));
+const FocusManagerModal = lazy(() => import('./components/modals/FocusManagerModal').then(m => ({ default: m.FocusManagerModal })));
+const UnifiedLaunchHubModal = lazy(() => import('./components/modals/UnifiedLaunchHubModal').then(m => ({ default: m.UnifiedLaunchHubModal })));
+const CharacterPartyModal = lazy(() => import('./components/modals/CharacterPartyModal').then(m => ({ default: m.CharacterPartyModal })));
+const UpdatePasswordModal = lazy(() => import('./components/modals/UpdatePasswordModal').then(m => ({ default: m.UpdatePasswordModal })));
+const FireworksModal = lazy(() => import('./components/common/FireworksModal').then(m => ({ default: m.FireworksModal })));
 
 export default function App() {
   const [newCharName, setNewCharName] = useState('');
@@ -846,12 +848,19 @@ export default function App() {
             {/* Main View Shell: GM Workspace vs Player Character Sheet */}
             <div className={`flex-1 min-h-0 ${activeRole === 'gm' ? 'lg:h-full' : ''}`}>
               {activeRole === 'gm' ? (
-                <GmWorkspaceView
-                  activeParty={null}
-                  currentEmail={playerEmail}
-                  onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
-                  onRoomCodeReady={(code) => setActiveRoomCode(code)}
-                />
+                <Suspense fallback={
+                  <div className="flex-1 flex flex-col items-center justify-center gap-2 min-h-[300px]">
+                    <Loader2 className="w-7 h-7 text-amber-400 animate-spin" />
+                    <p className="text-xs font-medium text-slate-400">Loading GM Workspace...</p>
+                  </div>
+                }>
+                  <GmWorkspaceView
+                    activeParty={null}
+                    currentEmail={playerEmail}
+                    onOpenLaunchHub={() => setShowUnifiedLaunchHubModal(true)}
+                    onRoomCodeReady={(code) => setActiveRoomCode(code)}
+                  />
+                </Suspense>
               ) : (
                 <CharacterSheetView
                   onOpenVitalityManager={() => setShowVitalityManagerModal(true)}
@@ -909,237 +918,282 @@ export default function App() {
       )}
 
       {/* 💰 Random Loot Generator Modal */}
-      <LootGeneratorModal
-        isOpen={showLootGeneratorModal}
-        onClose={() => setShowLootGeneratorModal(false)}
-        characterName={activeCharacter?.name || 'Hero'}
-        currentSilver={activeCharacter?.sheet_data?.silver || 0}
-        currentGold={activeCharacter?.sheet_data?.gold || 0}
-        onMoveToSheet={handleMoveToSheet}
-      />
+      {showLootGeneratorModal && (
+        <Suspense fallback={null}>
+          <LootGeneratorModal
+            isOpen={showLootGeneratorModal}
+            onClose={() => setShowLootGeneratorModal(false)}
+            characterName={activeCharacter?.name || 'Hero'}
+            currentSilver={activeCharacter?.sheet_data?.silver || 0}
+            currentGold={activeCharacter?.sheet_data?.gold || 0}
+            onMoveToSheet={handleMoveToSheet}
+          />
+        </Suspense>
+      )}
 
       {/* 🧩 AP Manager Modal */}
-      <ErrorBoundary fallbackTitle="AP Manager Error" onClose={() => setShowApManagerModal(false)}>
-        <ApManagerModal
-          isOpen={showApManagerModal}
-          onClose={() => setShowApManagerModal(false)}
-          onOpenAttributeManager={() => {
-            setOpenedFromApManager(true);
-            setShowApManagerModal(false);
-            setShowAttributeManagerModal(true);
-          }}
-          onOpenVitalityManager={() => {
-            setOpenedFromApManager(true);
-            setShowApManagerModal(false);
-            setShowVitalityManagerModal(true);
-          }}
-          onOpenFocusManager={() => {
-            setOpenedFromApManager(true);
-            setShowApManagerModal(false);
-            setShowFocusManagerModal(true);
-          }}
-        />
-      </ErrorBoundary>
+      {showApManagerModal && (
+        <ErrorBoundary fallbackTitle="AP Manager Error" onClose={() => setShowApManagerModal(false)}>
+          <Suspense fallback={null}>
+            <ApManagerModal
+              isOpen={showApManagerModal}
+              onClose={() => setShowApManagerModal(false)}
+              onOpenAttributeManager={() => {
+                setOpenedFromApManager(true);
+                setShowApManagerModal(false);
+                setShowAttributeManagerModal(true);
+              }}
+              onOpenVitalityManager={() => {
+                setOpenedFromApManager(true);
+                setShowApManagerModal(false);
+                setShowVitalityManagerModal(true);
+              }}
+              onOpenFocusManager={() => {
+                setOpenedFromApManager(true);
+                setShowApManagerModal(false);
+                setShowFocusManagerModal(true);
+              }}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       {/* ✨ Attribute Manager Modal */}
-      <ErrorBoundary fallbackTitle="Attribute Manager Error" onClose={() => setShowAttributeManagerModal(false)}>
-        <AttributeManagerModal
-          isOpen={showAttributeManagerModal}
-          onClose={() => {
-            setShowAttributeManagerModal(false);
-            if (openedFromApManager) {
-              setOpenedFromApManager(false);
-              setShowApManagerModal(true);
-            }
-          }}
-        />
-      </ErrorBoundary>
+      {showAttributeManagerModal && (
+        <ErrorBoundary fallbackTitle="Attribute Manager Error" onClose={() => setShowAttributeManagerModal(false)}>
+          <Suspense fallback={null}>
+            <AttributeManagerModal
+              isOpen={showAttributeManagerModal}
+              onClose={() => {
+                setShowAttributeManagerModal(false);
+                if (openedFromApManager) {
+                  setOpenedFromApManager(false);
+                  setShowApManagerModal(true);
+                }
+              }}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       {/* 🎲 Tremendous & Critical Generator Modal */}
-      <ErrorBoundary fallbackTitle="T/C Generator Error" onClose={() => setTcModalConfig(prev => ({ ...prev, isOpen: false, autoRollType: null }))}>
-        {tcModalConfig.isOpen && (
-          <TcGeneratorModal
-            isOpen={tcModalConfig.isOpen}
-            onClose={() => {
-              setTcModalConfig(prev => ({ ...prev, isOpen: false, autoRollType: null }));
-            }}
-            characterName={activeCharacter?.name || 'Active Hero'}
-            initialCategory={tcModalConfig.initialCategory}
-            autoRollType={tcModalConfig.autoRollType}
-            autoRollCount={tcModalConfig.autoRollCount}
-          />
-        )}
-      </ErrorBoundary>
-
+      {tcModalConfig.isOpen && (
+        <ErrorBoundary fallbackTitle="T/C Generator Error" onClose={() => setTcModalConfig(prev => ({ ...prev, isOpen: false, autoRollType: null }))}>
+          <Suspense fallback={null}>
+            <TcGeneratorModal
+              isOpen={tcModalConfig.isOpen}
+              onClose={() => {
+                setTcModalConfig(prev => ({ ...prev, isOpen: false, autoRollType: null }));
+              }}
+              characterName={activeCharacter?.name || 'Active Hero'}
+              initialCategory={tcModalConfig.initialCategory}
+              autoRollType={tcModalConfig.autoRollType}
+              autoRollCount={tcModalConfig.autoRollCount}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       {/* ⚒️ Forge Modal / Path Viewer */}
-      <ErrorBoundary fallbackTitle="Forge Error" onClose={() => {
-        const wasPathViewer = Boolean(pathViewerTarget);
-        const returnTo = pathViewerTarget?.returnTo;
-        setShowPlayerWorkshopModal(false);
-        setEditingWorkshopItem(null);
-        setPathViewerTarget(null);
-        if (wasPathViewer) {
-          window.dispatchEvent(new CustomEvent('supaflex:path-viewer-closed', { detail: { returnTo } }));
-        }
-      }}>
-        <PlayerWorkshopModal
-          isOpen={showPlayerWorkshopModal}
-          initialItem={editingWorkshopItem}
-          isPathViewer={Boolean(pathViewerTarget)}
-          pathViewerTarget={pathViewerTarget}
-          onClose={() => {
-            const wasPathViewer = Boolean(pathViewerTarget);
-            const returnTo = pathViewerTarget?.returnTo;
-            setShowPlayerWorkshopModal(false);
-            setEditingWorkshopItem(null);
-            setPathViewerTarget(null);
-            if (wasPathViewer) {
-              window.dispatchEvent(new CustomEvent('supaflex:path-viewer-closed', { detail: { returnTo } }));
-            }
-          }}
-          onOpenWorkshop={() => {
-            setShowPlayerWorkshopModal(false);
-            setEditingWorkshopItem(null);
-            setPathViewerTarget(null);
-            setShowCraftingMallModal(true);
-          }}
-        />
-      </ErrorBoundary>
+      {showPlayerWorkshopModal && (
+        <ErrorBoundary fallbackTitle="Forge Error" onClose={() => {
+          const wasPathViewer = Boolean(pathViewerTarget);
+          const returnTo = pathViewerTarget?.returnTo;
+          setShowPlayerWorkshopModal(false);
+          setEditingWorkshopItem(null);
+          setPathViewerTarget(null);
+          if (wasPathViewer) {
+            window.dispatchEvent(new CustomEvent('supaflex:path-viewer-closed', { detail: { returnTo } }));
+          }
+        }}>
+          <Suspense fallback={null}>
+            <PlayerWorkshopModal
+              isOpen={showPlayerWorkshopModal}
+              initialItem={editingWorkshopItem}
+              isPathViewer={Boolean(pathViewerTarget)}
+              pathViewerTarget={pathViewerTarget}
+              onClose={() => {
+                const wasPathViewer = Boolean(pathViewerTarget);
+                const returnTo = pathViewerTarget?.returnTo;
+                setShowPlayerWorkshopModal(false);
+                setEditingWorkshopItem(null);
+                setPathViewerTarget(null);
+                if (wasPathViewer) {
+                  window.dispatchEvent(new CustomEvent('supaflex:path-viewer-closed', { detail: { returnTo } }));
+                }
+              }}
+              onOpenWorkshop={() => {
+                setShowPlayerWorkshopModal(false);
+                setEditingWorkshopItem(null);
+                setPathViewerTarget(null);
+                setShowCraftingMallModal(true);
+              }}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       {/* 🛠️ Workshop Modal */}
-      <ErrorBoundary fallbackTitle="Workshop Error" onClose={() => setShowCraftingMallModal(false)}>
-        <CraftingMallModal
-          isOpen={showCraftingMallModal}
-          onClose={() => setShowCraftingMallModal(false)}
-          onOpenForge={(itemToEdit) => {
-            setEditingWorkshopItem(itemToEdit || null);
-            setShowCraftingMallModal(false);
-            setShowPlayerWorkshopModal(true);
-          }}
-        />
-      </ErrorBoundary>
-
+      {showCraftingMallModal && (
+        <ErrorBoundary fallbackTitle="Workshop Error" onClose={() => setShowCraftingMallModal(false)}>
+          <Suspense fallback={null}>
+            <CraftingMallModal
+              isOpen={showCraftingMallModal}
+              onClose={() => setShowCraftingMallModal(false)}
+              onOpenForge={(itemToEdit) => {
+                setEditingWorkshopItem(itemToEdit || null);
+                setShowCraftingMallModal(false);
+                setShowPlayerWorkshopModal(true);
+              }}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       {/* 🏰 Master Architect Curation Desk Modal */}
-      <ErrorBoundary fallbackTitle="Master Architect Desk Error" onClose={() => setShowMasterArchitectDeskModal(false)}>
-        <MasterArchitectDeskModal
-          isOpen={showMasterArchitectDeskModal}
-          onClose={() => setShowMasterArchitectDeskModal(false)}
-        />
-      </ErrorBoundary>
+      {showMasterArchitectDeskModal && (
+        <ErrorBoundary fallbackTitle="Master Architect Desk Error" onClose={() => setShowMasterArchitectDeskModal(false)}>
+          <Suspense fallback={null}>
+            <MasterArchitectDeskModal
+              isOpen={showMasterArchitectDeskModal}
+              onClose={() => setShowMasterArchitectDeskModal(false)}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       {/* ❤️ Vitality Manager Modal */}
-      <ErrorBoundary fallbackTitle="Vitality Manager Error" onClose={() => setShowVitalityManagerModal(false)}>
-        <VitalityManagerModal
-          isOpen={showVitalityManagerModal}
-          onClose={() => {
-            setShowVitalityManagerModal(false);
-            if (openedFromApManager) {
-              setOpenedFromApManager(false);
-              setShowApManagerModal(true);
-            }
-          }}
-        />
-      </ErrorBoundary>
+      {showVitalityManagerModal && (
+        <ErrorBoundary fallbackTitle="Vitality Manager Error" onClose={() => setShowVitalityManagerModal(false)}>
+          <Suspense fallback={null}>
+            <VitalityManagerModal
+              isOpen={showVitalityManagerModal}
+              onClose={() => {
+                setShowVitalityManagerModal(false);
+                if (openedFromApManager) {
+                  setOpenedFromApManager(false);
+                  setShowApManagerModal(true);
+                }
+              }}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       {/* 🎯 Focus Manager Modal */}
-      <ErrorBoundary fallbackTitle="Focus Manager Error" onClose={() => setShowFocusManagerModal(false)}>
-        <FocusManagerModal
-          isOpen={showFocusManagerModal}
-          onClose={() => {
-            setShowFocusManagerModal(false);
-            if (openedFromApManager) {
-              setOpenedFromApManager(false);
-              setShowApManagerModal(true);
-            }
-          }}
-        />
-      </ErrorBoundary>
+      {showFocusManagerModal && (
+        <ErrorBoundary fallbackTitle="Focus Manager Error" onClose={() => setShowFocusManagerModal(false)}>
+          <Suspense fallback={null}>
+            <FocusManagerModal
+              isOpen={showFocusManagerModal}
+              onClose={() => {
+                setShowFocusManagerModal(false);
+                if (openedFromApManager) {
+                  setOpenedFromApManager(false);
+                  setShowApManagerModal(true);
+                }
+              }}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       {/* 🌌 Unified Launch & Account Hub Modal */}
-      <ErrorBoundary fallbackTitle="Launch Hub Error" onClose={() => setShowUnifiedLaunchHubModal(false)}>
-        <UnifiedLaunchHubModal
-          isOpen={showUnifiedLaunchHubModal}
-          onClose={() => setShowUnifiedLaunchHubModal(false)}
-          currentEmail={playerEmail}
-          activeCharacter={activeCharacter}
-          userCharacters={myHeroes}
-          isLoadingCharacters={isLoading}
-          tabSessionId={tabSessionId}
-          initialTab={launchHubInitialTab}
-          onSelectCharacter={selectCharacter}
-          onCreateNewCharacter={createNewCharacter}
-          onLoginSuccess={(email) => {
-            setPlayerEmail(email);
-            sessionStorage.setItem('supaflex_player_email', email);
-            fetchInitialData();
-          }}
-          onLogout={async () => {
-            const partyId = useCharacterStore.getState().activePartyId;
-            if (tabSessionId && partyId) {
-              try {
-                await gameApi.leavePartySession(tabSessionId, partyId);
-              } catch (e) {
-                console.warn('Error leaving party on logout:', e);
-              }
-            }
-            try {
-              await supabase.auth.signOut();
-            } catch (e) {
-              console.error('Error during signOut:', e);
-            }
-            setPlayerEmail('');
-            setPlayerName('');
-            setActiveRoomCode(null);
-            sessionStorage.removeItem('supaflex_player_email');
-            sessionStorage.removeItem('supaflex_player_name');
-            sessionStorage.removeItem('supaflex_active_party_id');
-            sessionStorage.removeItem('supaflex_last_active_char_id');
-            sessionStorage.removeItem('supaflex_active_role');
-            sessionStorage.removeItem('supaflex_auth_token');
-            sessionStorage.removeItem('supaflex_tab_jwt');
-            if (typeof window !== 'undefined') {
-              sessionStorage.removeItem(`supaflex_auth_${tabSessionId}`);
-            }
-            useCharacterStore.setState({ activeRole: 'player', activeCharacter: null, activePartyId: null, playerLinks: [] });
-            setLaunchHubInitialTab('account');
-            setShowUnifiedLaunchHubModal(true);
-          }}
-          onCharacterCloned={(clonedChar) => {
-            fetchInitialData();
-            selectCharacter(clonedChar.id);
-          }}
-          onRefreshCharacters={fetchInitialData}
-        />
-      </ErrorBoundary>
+      {showUnifiedLaunchHubModal && (
+        <ErrorBoundary fallbackTitle="Launch Hub Error" onClose={() => setShowUnifiedLaunchHubModal(false)}>
+          <Suspense fallback={null}>
+            <UnifiedLaunchHubModal
+              isOpen={showUnifiedLaunchHubModal}
+              onClose={() => setShowUnifiedLaunchHubModal(false)}
+              currentEmail={playerEmail}
+              activeCharacter={activeCharacter}
+              userCharacters={myHeroes}
+              isLoadingCharacters={isLoading}
+              tabSessionId={tabSessionId}
+              initialTab={launchHubInitialTab}
+              onSelectCharacter={selectCharacter}
+              onCreateNewCharacter={createNewCharacter}
+              onLoginSuccess={(email) => {
+                setPlayerEmail(email);
+                sessionStorage.setItem('supaflex_player_email', email);
+                fetchInitialData();
+              }}
+              onLogout={async () => {
+                const partyId = useCharacterStore.getState().activePartyId;
+                if (tabSessionId && partyId) {
+                  try {
+                    await gameApi.leavePartySession(tabSessionId, partyId);
+                  } catch (e) {
+                    console.warn('Error leaving party on logout:', e);
+                  }
+                }
+                try {
+                  await supabase.auth.signOut();
+                } catch (e) {
+                  console.error('Error during signOut:', e);
+                }
+                setPlayerEmail('');
+                setPlayerName('');
+                setActiveRoomCode(null);
+                sessionStorage.removeItem('supaflex_player_email');
+                sessionStorage.removeItem('supaflex_player_name');
+                sessionStorage.removeItem('supaflex_active_party_id');
+                sessionStorage.removeItem('supaflex_last_active_char_id');
+                sessionStorage.removeItem('supaflex_active_role');
+                sessionStorage.removeItem('supaflex_auth_token');
+                sessionStorage.removeItem('supaflex_tab_jwt');
+                if (typeof window !== 'undefined') {
+                  sessionStorage.removeItem(`supaflex_auth_${tabSessionId}`);
+                }
+                useCharacterStore.setState({ activeRole: 'player', activeCharacter: null, activePartyId: null, playerLinks: [] });
+                setLaunchHubInitialTab('account');
+                setShowUnifiedLaunchHubModal(true);
+              }}
+              onCharacterCloned={(clonedChar) => {
+                fetchInitialData();
+                selectCharacter(clonedChar.id);
+              }}
+              onRefreshCharacters={fetchInitialData}
+            />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       {/* ⚔️ Dedicated Per-Character Party Modal */}
       {showCharacterPartyModal && (
-        <CharacterPartyModal
-          isOpen={showCharacterPartyModal}
-          onClose={() => setShowCharacterPartyModal(false)}
-          activeCharacter={activeCharacter}
-          tabSessionId={tabSessionId}
-          currentEmail={playerEmail}
-          onPartyChanged={() => {
-            fetchInitialData({ silent: true });
-          }}
-        />
+        <Suspense fallback={null}>
+          <CharacterPartyModal
+            isOpen={showCharacterPartyModal}
+            onClose={() => setShowCharacterPartyModal(false)}
+            activeCharacter={activeCharacter}
+            tabSessionId={tabSessionId}
+            currentEmail={playerEmail}
+            onPartyChanged={() => {
+              fetchInitialData({ silent: true });
+            }}
+          />
+        </Suspense>
       )}
 
-
       {/* 🔐 Password Reset Modal */}
-      <UpdatePasswordModal
-        isOpen={showUpdatePasswordModal}
-        onClose={() => setShowUpdatePasswordModal(false)}
-      />
+      {showUpdatePasswordModal && (
+        <Suspense fallback={null}>
+          <UpdatePasswordModal
+            isOpen={showUpdatePasswordModal}
+            onClose={() => setShowUpdatePasswordModal(false)}
+          />
+        </Suspense>
+      )}
 
       {/* 🎆 2D Fireworks Celebration Simulation Modal */}
-      <FireworksModal
-        isOpen={showFireworksModal}
-        onClose={() => setShowFireworksModal(false)}
-      />
+      {showFireworksModal && (
+        <Suspense fallback={null}>
+          <FireworksModal
+            isOpen={showFireworksModal}
+            onClose={() => setShowFireworksModal(false)}
+          />
+        </Suspense>
+      )}
 
       {/* Footer */}
       <footer className="w-full py-3 px-6 border-t border-slate-900 text-center text-xs text-slate-600 font-medium">

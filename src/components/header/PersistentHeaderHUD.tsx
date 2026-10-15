@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { ArrowDown, Zap, ChevronDown, ChevronUp, Sparkles, X, Plus, Minus, RotateCcw } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { AttributeKey, DieRating } from '../../types/game';
 import { stepDownDie } from '../../lib/dice';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
-import { UniversalLinksModal } from '../modals/UniversalLinksModal';
 import { NishInputPill } from '../common/NishInputPill';
+
+const UniversalLinksModal = lazy(() => import('../modals/UniversalLinksModal').then(m => ({ default: m.UniversalLinksModal })));
 
 interface AttributeConfig {
   key: AttributeKey;
@@ -576,13 +577,15 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
       </div>
 
       {showDossierModal && (
-        <UniversalLinksModal
-          isOpen={showDossierModal}
-          onClose={() => setShowDossierModal(false)}
-          initialScope="character"
-          initialTab="dossier"
-          themeColor="indigo"
-        />
+        <Suspense fallback={null}>
+          <UniversalLinksModal
+            isOpen={showDossierModal}
+            onClose={() => setShowDossierModal(false)}
+            initialScope="character"
+            initialTab="dossier"
+            themeColor="indigo"
+          />
+        </Suspense>
       )}
     </div>
   );

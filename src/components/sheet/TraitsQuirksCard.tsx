@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import {
   Sparkles,
   ArrowDown,
@@ -7,8 +7,11 @@ import {
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { TraitNameWithNotes } from '../common/TraitNameWithNotes';
-import { ManageTraitsModal } from '../modals/ManageTraitsModal';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
+
+const ManageTraitsModal = React.lazy(() =>
+  import('../modals/ManageTraitsModal').then((m) => ({ default: m.ManageTraitsModal }))
+);
 
 export interface TraitsQuirksCardProps {
   onTogglePosition?: () => void;
@@ -210,10 +213,14 @@ export const TraitsQuirksCard: React.FC<TraitsQuirksCardProps> = ({ onTogglePosi
       </div>
 
       {/* Modal Drawer */}
-      <ManageTraitsModal
-        isOpen={showManageModal}
-        onClose={() => setShowManageModal(false)}
-      />
+      {showManageModal && (
+        <Suspense fallback={null}>
+          <ManageTraitsModal
+            isOpen={showManageModal}
+            onClose={() => setShowManageModal(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

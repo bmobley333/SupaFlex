@@ -1,9 +1,12 @@
 // src/components/sheet/GearPowersCard.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, Suspense } from 'react';
 import { RotateCcw, Zap, ChevronDown, Sparkles, Search, X } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { ManageGearPowersModal } from '../modals/ManageGearPowersModal';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
+
+const ManageGearPowersModal = React.lazy(() =>
+  import('../modals/ManageGearPowersModal').then((m) => ({ default: m.ManageGearPowersModal }))
+);
 import {
   FunctionItem,
   SimpleGearItem,
@@ -569,11 +572,13 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
 
       {/* Exotic Gear Manager Modal */}
       {isExoticGearManagerModalOpen && (
-        <ManageGearPowersModal
-          isOpen={isExoticGearManagerModalOpen}
-          onClose={() => setExoticGearManagerModalOpen(false)}
-          initialTargetItem={exoticGearManagerTargetItem}
-        />
+        <Suspense fallback={null}>
+          <ManageGearPowersModal
+            isOpen={isExoticGearManagerModalOpen}
+            onClose={() => setExoticGearManagerModalOpen(false)}
+            initialTargetItem={exoticGearManagerTargetItem}
+          />
+        </Suspense>
       )}
     </>
   );

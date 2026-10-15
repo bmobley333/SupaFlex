@@ -1,10 +1,13 @@
 // src/components/sheet/PathsCard.tsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { ManagePathsModal } from '../modals/ManagePathsModal';
 import { isMsoEntry, cleanPathName } from '../../utils/kitUtils';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { getCharacterKnownPaths, getCharacterKnownSets } from '../../utils/pathApUtils';
+
+const ManagePathsModal = React.lazy(() =>
+  import('../modals/ManagePathsModal').then((m) => ({ default: m.ManagePathsModal }))
+);
 
 interface PathsCardProps {
   className?: string;
@@ -176,10 +179,12 @@ export const PathsCard: React.FC<PathsCardProps> = ({ className = '' }) => {
       </div>
 
       {showPathsModal && (
-        <ManagePathsModal
-          isOpen={showPathsModal}
-          onClose={() => setShowPathsModal(false)}
-        />
+        <Suspense fallback={null}>
+          <ManagePathsModal
+            isOpen={showPathsModal}
+            onClose={() => setShowPathsModal(false)}
+          />
+        </Suspense>
       )}
     </>
   );

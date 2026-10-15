@@ -1,11 +1,13 @@
 // src/components/hud/UniversalLinksDropdown.tsx
 // High-Density Parameterized Links Trigger Button that opens the Unified UniversalLinksModal
 
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { Link2, ChevronDown } from 'lucide-react';
 import { EncounterLink } from '../../types/adventures';
-import { UniversalLinksModal, LinkScope, EditorTab } from '../modals/UniversalLinksModal';
+import type { LinkScope, EditorTab } from '../modals/UniversalLinksModal';
 import { useReceivedLinksStore } from '../../store/useReceivedLinksStore';
+
+const UniversalLinksModal = lazy(() => import('../modals/UniversalLinksModal').then(m => ({ default: m.UniversalLinksModal })));
 
 export interface UniversalLinksDropdownProps {
   label: string; // e.g. "GM Links", "Adventure Links", "Encounter Links", "Player Links", "Character Links"
@@ -140,13 +142,17 @@ export const UniversalLinksDropdown: React.FC<UniversalLinksDropdownProps> = ({
       </div>
 
       {/* Unified Master Links Modal */}
-      <UniversalLinksModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        initialScope={resolvedScope}
-        initialTab={initialTab}
-        themeColor={themeColor}
-      />
+      {isModalOpen && (
+        <Suspense fallback={null}>
+          <UniversalLinksModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            initialScope={resolvedScope}
+            initialTab={initialTab}
+            themeColor={themeColor}
+          />
+        </Suspense>
+      )}
     </>
   );
 };

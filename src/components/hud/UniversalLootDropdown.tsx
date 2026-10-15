@@ -1,10 +1,11 @@
 // src/components/hud/UniversalLootDropdown.tsx
 // High-Density Parameterized Loot Trigger Button that opens UniversalLootModal
 
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { Coins, ChevronDown } from 'lucide-react';
 import { StagedLootItem } from '../../types/adventures';
-import { UniversalLootModal } from '../modals/UniversalLootModal';
+
+const UniversalLootModal = lazy(() => import('../modals/UniversalLootModal').then(m => ({ default: m.UniversalLootModal })));
 
 export interface UniversalLootDropdownProps {
   label: string; // e.g. "Adventure Loot", "Encounter Loot"
@@ -120,17 +121,21 @@ export const UniversalLootDropdown: React.FC<UniversalLootDropdownProps> = ({
       </div>
 
       {/* Universal Two-Pane Loot Modal */}
-      <UniversalLootModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={label}
-        loot={loot}
-        onAddLoot={onAddLoot}
-        onDeleteLoot={onDeleteLoot}
-        onClearLoot={onClearLoot}
-        onSendToPartyVault={onSendToPartyVault}
-        themeColor={themeColor === 'yellow' ? 'amber' : themeColor}
-      />
+      {isModalOpen && (
+        <Suspense fallback={null}>
+          <UniversalLootModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            title={label}
+            loot={loot}
+            onAddLoot={onAddLoot}
+            onDeleteLoot={onDeleteLoot}
+            onClearLoot={onClearLoot}
+            onSendToPartyVault={onSendToPartyVault}
+            themeColor={themeColor === 'yellow' ? 'amber' : themeColor}
+          />
+        </Suspense>
+      )}
     </>
   );
 };
