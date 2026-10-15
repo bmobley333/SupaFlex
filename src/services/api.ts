@@ -36,7 +36,7 @@ import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { resolveArtifactCatalog, CatalogArtifact, ArtifactTier } from '../utils/artifactCatalogResolver';
 import { resolveExoticCatalog, CatalogExotic, ExoticTier } from '../utils/exoticCatalogResolver';
 import { updateCharacterSheetCanonicalItem, removeCharacterSheetCanonicalItem, CanonicalPropagationParams, CanonicalEntityType } from '../utils/canonicalPropagation';
-import { isBelongsToMatch, splitBelongsToTargets, cleanBelongsToName } from '../utils/gearFunctionSync';
+import { isBelongsToMatch, splitBelongsToTargets, cleanBelongsToName } from '../utils/gearExoticPowerSync';
 import { parseItemPaths, isPathStringMatch } from '../utils/pathApUtils';
 import { cleanPathName } from '../utils/kitUtils';
 import { sanitizeMonsterForPlayerEgress } from '../utils/monsterSanitizer';

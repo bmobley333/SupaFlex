@@ -9,7 +9,7 @@ import { CustomCreationType, CustomCreationItem, CustomCreationData, PathElement
 import { InfoTooltip } from '../common/InfoTooltip';
 import { compareMsoOptions, cleanPathName } from '../../utils/kitUtils';
 import { parseCostToSilver } from '../../utils/moneyUtils';
-import { isBelongsToMatch } from '../../utils/gearFunctionSync';
+import { isBelongsToMatch } from '../../utils/gearExoticPowerSync';
 import { resolvePathElementsFromCatalogs } from '../../utils/pathApUtils';
 import { collectPathAndSetGrants, applyPathAndSetGrantsToSheet } from '../../utils/bundleGrants';
 import { reconcileAbilitiesOnPathAdded } from '../../utils/pathReconciliationUtils';
@@ -4217,7 +4217,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
             }`}
             title={
               isChassisComplete
-                ? 'Add a modular hardware upgrade to this chassis'
+                ? 'Add a modular mod upgrade to this chassis'
                 : 'Complete Chassis setup first to add mods'
             }
           >
@@ -7949,7 +7949,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                       />
                     ) : (
                       <div className="px-3 py-2 rounded-xl bg-purple-950/70 border border-purple-500/40 text-purple-300 font-bold text-xs flex items-center justify-between">
-                        <span>🔮 Artifact (Priceless Relic)</span>
+                        <span>🔮 Artifact (Priceless Loot)</span>
                         <span className="text-[10px] font-mono text-purple-400">Locked to 'Artifact'</span>
                       </div>
                     )}
@@ -8046,7 +8046,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                             : 'New Modular Upgrade / Mod'}
                         </h3>
                         <p className="text-[11px] text-slate-400">
-                          Define aftermarket hardware, modifications, or specialized attachments.
+                          Define aftermarket mods, modifications, or specialized attachments.
                         </p>
                       </div>
                     </div>
@@ -8136,7 +8136,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
                   </div>
 
                   <div className="flex flex-col gap-1">
-                    <span className="font-bold text-slate-300">Hardware Notes & Specs</span>
+                    <span className="font-bold text-slate-300">Mod Notes & Specs</span>
                     <textarea
                       value={modFormNotes}
                       onChange={(e) => setModFormNotes(e.target.value)}

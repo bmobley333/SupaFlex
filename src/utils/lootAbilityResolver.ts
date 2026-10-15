@@ -7,7 +7,7 @@ import {
   getFunctionsForGearItem,
   isModFreeForHost,
   getFunctionsForMod,
-} from './gearFunctionSync';
+} from './gearExoticPowerSync';
 
 export interface ResolvedFunctionAbility {
   id: string | number;

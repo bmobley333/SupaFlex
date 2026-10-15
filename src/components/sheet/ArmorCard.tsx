@@ -19,7 +19,7 @@ import {
   getFunctionsForGearItem,
   isModCompatibleWithItem,
   reconcileCharacterVaultWithGear,
-} from '../../utils/gearFunctionSync';
+} from '../../utils/gearExoticPowerSync';
 import { resolveStatHooks } from '../../utils/statHooks';
 import {
   getCharacterKnownPaths,

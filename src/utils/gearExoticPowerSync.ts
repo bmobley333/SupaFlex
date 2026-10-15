@@ -1,6 +1,6 @@
-// src/utils/gearFunctionSync.ts
+// src/utils/gearExoticPowerSync.ts
 // Centralized, authoritative reconciliation engine for physically owned gear in simple_gear
-// and character_vault functions.
+// and character_vault Exotic Powers.
 
 import {
   CharacterSheetData,
@@ -782,3 +782,9 @@ export const reconcileCharacterVaultWithGear = (
     removedFunctions,
   };
 };
+
+// Canonical S-Tier export names for Exotic Powers
+export const getExoticPowersForMod = getFunctionsForMod;
+export const getExoticPowersForGearItem = getFunctionsForGearItem;
+export const mapExoticPowerToVaultItem = mapFunctionToVaultItem;
+

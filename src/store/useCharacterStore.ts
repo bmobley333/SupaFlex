@@ -4,7 +4,7 @@ import { gameApi, createDefaultSheetData, CatalogScope } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex } from '../utils/readyMatrixSchedule';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
-import { reconcileCharacterVaultWithGear, cleanBelongsToName, getFunctionsForMod } from '../utils/gearFunctionSync';
+import { reconcileCharacterVaultWithGear, cleanBelongsToName, getFunctionsForMod } from '../utils/gearExoticPowerSync';
 import { parseCostToSilver, deductFundsWithChange } from '../utils/moneyUtils';
 import { reconcileCharacterFreeTraits } from '../utils/pathReconciliationUtils';
 import { reconcileCanonicalSnapshots, updateCharacterSheetCanonicalItem, removeCharacterSheetCanonicalItem, CanonicalEntityType } from '../utils/canonicalPropagation';

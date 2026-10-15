@@ -1,11 +1,11 @@
-// src/components/sheet/GearPowersCard.tsx
+// src/components/sheet/ExoticsCard.tsx
 import React, { useState, useMemo, Suspense } from 'react';
 import { RotateCcw, Zap, ChevronDown, Sparkles, Search, X } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 
-const ManageGearPowersModal = React.lazy(() =>
-  import('../modals/ManageGearPowersModal').then((m) => ({ default: m.ManageGearPowersModal }))
+const ManageExoticsModal = React.lazy(() =>
+  import('../modals/ManageExoticsModal').then((m) => ({ default: m.ManageExoticsModal }))
 );
 import {
   FunctionItem,
@@ -20,15 +20,17 @@ import {
   getFunctionsForMod,
   isModCompatibleWithItem,
   isModFreeForHost,
-} from '../../utils/gearFunctionSync';
+} from '../../utils/gearExoticPowerSync';
 import { ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
 
 export type ExoticFilterMode = 'ALL' | 'MODS_WITH_POWERS' | 'POWERS_ONLY';
 export type ExpandCollapseMode = 'expand' | 'collapse';
 
-interface GearPowersCardProps {
+export interface ExoticsCardProps {
   className?: string;
 }
+
+export type GearPowersCardProps = ExoticsCardProps;
 
 const parseUsageCount = (usage?: string): number => {
   if (!usage) return 0;
@@ -38,7 +40,7 @@ const parseUsageCount = (usage?: string): number => {
 
 const cleanName = (name: string) => (name || '').replace(/^[⭕\s]+/, '').trim();
 
-export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }) => {
+export const ExoticsCard: React.FC<ExoticsCardProps> = ({ className = '' }) => {
   const [chassisSearch, setChassisSearch] = useState('');
   const [exoticFilter, setExoticFilter] = useState<ExoticFilterMode>('ALL');
   const [expandMode, setExpandMode] = useState<ExpandCollapseMode>('expand');
@@ -570,10 +572,10 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
         </div>
       </div>
 
-      {/* Exotic Gear Manager Modal */}
+      {/* Exotics Manager Modal */}
       {isExoticGearManagerModalOpen && (
         <Suspense fallback={null}>
-          <ManageGearPowersModal
+          <ManageExoticsModal
             isOpen={isExoticGearManagerModalOpen}
             onClose={() => setExoticGearManagerModalOpen(false)}
             initialTargetItem={exoticGearManagerTargetItem}
@@ -583,3 +585,6 @@ export const GearPowersCard: React.FC<GearPowersCardProps> = ({ className = '' }
     </>
   );
 };
+
+export const GearPowersCard = ExoticsCard;
+

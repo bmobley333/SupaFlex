@@ -10,7 +10,7 @@ import { EchoVaultModal } from './EchoVaultModal';
 import { ChaosGauntletSocketModal } from './ChaosGauntletSocketModal';
 import { ResolveBaseItemModal } from './ResolveBaseItemModal';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
-import { GearModFunctionTree } from '../common/GearModFunctionTree';
+import { GearModExoticTree } from '../common/GearModExoticTree';
 import { VaultItem, SupabaseChaosGem } from '../../types/game';
 import { isMsoEntry, compareMsoItems } from '../../utils/kitUtils';
 import { resolveLootAbilities, ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
@@ -1276,7 +1276,7 @@ export const LootGeneratorModal: React.FC<LootGeneratorModalProps> = ({
                         )}
 
                         {/* Line 5: Collapsible 2-Level Tree Hierarchy Drawer */}
-                        <GearModFunctionTree
+                        <GearModExoticTree
                           hostItem={res.magicItem || { name: res.title, category: res.categoryKey, notes: res.description }}
                           modsCatalog={modsCatalog || []}
                           functionsCatalog={functionsCatalog || []}

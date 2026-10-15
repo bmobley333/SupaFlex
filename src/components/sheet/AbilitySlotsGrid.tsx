@@ -1,15 +1,14 @@
-import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, Search, X, Plus, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, Trash2, AlertCircle, Check, ArrowUpDown, Cpu } from 'lucide-react';
+import { Search, X, Edit2, Lock, Sparkles, Flame, Star, RotateCcw, Trash2, AlertCircle, Check, ArrowUpDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { matchesGenre } from '../../store/useGenreStore';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { QuickDeckBar } from '../common/QuickDeckBar';
-import { AbilitySlot, Power, MagicItem, calculateAvailableAp, getCategorySlotWeight, calculateVersionUpgradeCost, calculateTotalPowerRefundAp } from '../../types/game';
+import { AbilitySlot, Power, MagicItem, calculateAvailableAp, calculateVersionUpgradeCost, calculateTotalPowerRefundAp } from '../../types/game';
 import {
   calculateTotalLoadoutCapacity,
-  calculateSpentApOnLoadoutExpansions,
   calculateTotalLoadoutSlotsUsed,
   getItemSlotWeight,
 } from '../../utils/loadoutCapacitySchedule';
@@ -31,14 +30,8 @@ import { PathBadge } from '../common/PathBadge';
 import {
   formatCompositeFunctionName,
   matchFunctionSourceSearch,
-  groupFunctionsByParent,
-} from '../../utils/functionSourceHelper';
-import { reconcileCharacterVaultWithGear } from '../../utils/gearFunctionSync';
-import { FunctionNameArea } from '../common/FunctionNameArea';
-
-const EmergencyHardwareShuntModal = React.lazy(() =>
-  import('../modals/EmergencyHardwareShuntModal').then((m) => ({ default: m.EmergencyHardwareShuntModal }))
-);
+} from '../../utils/exoticPowerSourceHelper';
+import { reconcileCharacterVaultWithGear } from '../../utils/gearExoticPowerSync';
 
 const POWER_DISCIPLINES = [
   'BioTech',
@@ -108,37 +101,6 @@ const parseAbilityVersion = (name: string): { baseName: string; version: number 
   return match ? { baseName: match[1].trim(), version: parseInt(match[2], 10) } : { baseName: cleaned, version: 1 };
 };
 
-const getMagicItemTierBadge = (itemObj: any, catalog?: any[]): { label: string; icon: string; style: string; slotsText: string } => {
-  if (!itemObj) return { label: 'Standard', icon: '🛡️', style: 'bg-slate-900/80 text-slate-300 border-slate-700/50', slotsText: '1 Slot' };
-
-  let subStr = itemObj.category || itemObj.rarity || itemObj.artifact_tier || itemObj.tier || '';
-
-  if (!subStr && catalog && catalog.length > 0) {
-    const rawName = itemObj.name || itemObj.title || '';
-    const baseName = parseAbilityVersion(cleanName(rawName)).baseName.toLowerCase();
-    const found = catalog.find((c) => {
-      const cBase = parseAbilityVersion(cleanName(c.name || '')).baseName.toLowerCase();
-      return cBase === baseName || cleanName(c.name || '').toLowerCase().includes(baseName);
-    });
-    if (found) {
-      subStr = found.category || found.rarity || found.artifact_tier || found.tier || '';
-    }
-  }
-
-  const str = `${itemObj.rarity || ''} ${subStr} ${itemObj.name || itemObj.title || ''}`.toLowerCase();
-
-  if (str.includes('free') || str.includes('⭕') || str.includes('0 slot') || itemObj.slot_weight === 0) {
-    return { label: 'Free', icon: '⭕', style: 'bg-slate-900/80 text-slate-300 border-slate-700/50', slotsText: '0 Slots' };
-  }
-  if (str.includes('artifact') || str.includes('relic') || itemObj.cost === 'Artifact') {
-    return { label: 'Artifact', icon: '🔮', style: 'bg-purple-950/80 text-purple-300 border-purple-500/40', slotsText: '1 Slot' };
-  }
-  if (str.includes('exotic') || str.includes('hardware') || itemObj.is_hardware || itemObj.is_exotic) {
-    return { label: 'Exotic', icon: '🧿', style: 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40', slotsText: '1 Slot' };
-  }
-  return { label: 'Standard', icon: '🛡️', style: 'bg-slate-900/80 text-slate-300 border-slate-700/50', slotsText: '1 Slot' };
-};
-
 const formatTableNameDisplay = (tblName: string): string => {
   if (!tblName) return '';
   if (/free/i.test(tblName)) return '⭕ Free (0 Slots)';
@@ -190,8 +152,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   const sheetData: any = activeCharacter?.sheet_data || {};
   const slotKey = type === 'powers' ? 'power_slots' : 'spell_slots';
 
-  const [showShuntModal, setShowShuntModal] = useState(false);
-
   const rawSlots: AbilitySlot[] = (activeCharacter?.sheet_data?.[slotKey as keyof typeof activeCharacter.sheet_data] as AbilitySlot[]) || [];
   const slots: AbilitySlot[] = useMemo(() => {
     return rawSlots.filter((s) => s && s.name && s.name.trim() !== '');
@@ -220,47 +180,10 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     return calculateTotalLoadoutSlotsUsed(slots);
   }, [slots]);
 
-  const totalLoadoutApSpent = calculateSpentApOnLoadoutExpansions(loadoutExpansions);
-
   const availableAp = calculateAvailableAp(
     activeCharacter?.sheet_data?.level || 1,
     activeCharacter?.sheet_data
   );
-
-  const handleUnlockLoadoutExpansion = async () => {
-    if (availableAp < 1) {
-      setCatalogFeedback({
-        type: 'error',
-        message: `Insufficient AP (${availableAp} AP available, 1 AP required for +1 Slot).`,
-      });
-      return;
-    }
-
-    const newExpansions = loadoutExpansions + 1;
-    const newTotalSlots = calculateTotalLoadoutCapacity(newExpansions);
-
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      loadout_expansions_purchased: newExpansions,
-      unlocked_loadout_slots: newTotalSlots,
-      unlocked_magic_slots: newTotalSlots,
-    }));
-
-    recordApExpenditure(
-      1,
-      'Loadout Slots' as any,
-      `Unlocked Exotic Power Slot (${newTotalSlots} Slots Total)`,
-      1,
-      "Exotics Manager"
-    );
-
-    await saveActiveCharacter();
-
-    setCatalogFeedback({
-      type: 'success',
-      message: `Successfully unlocked +1 Exotic Power Slot! New capacity: ${newTotalSlots} slots.`,
-    });
-  };
 
   const cardContainerRef = useRef<HTMLDivElement>(null);
   const prevTopRef = useRef<number | null>(null);
@@ -345,16 +268,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
   // Search Filters for Left and Right Panes
   const [leftSearchQuery, setLeftSearchQuery] = useState('');
   const [rightSearchQuery, setRightSearchQuery] = useState('');
-  const [collapsedGearGroups, setCollapsedGearGroups] = useState<Set<string>>(new Set());
-
-  const toggleGearGroup = (groupKey: string) => {
-    setCollapsedGearGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(groupKey)) next.delete(groupKey);
-      else next.add(groupKey);
-      return next;
-    });
-  };
   
   // Right Pane Active View: 'VAULT' | 'CODEX' | 'CATALOG' | 'SLOTS' | 'EDITOR'
   const [activeRightTab, setActiveRightTab] = useState<'VAULT' | 'CODEX' | 'CATALOG' | 'SLOTS' | 'EDITOR'>(
@@ -904,57 +817,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     saveActiveCharacter();
   };
 
-  const handleEquipVaultItem = (vaultItem: MagicItem) => {
-    const weight = typeof vaultItem.slot_weight === 'number' ? vaultItem.slot_weight : getCategorySlotWeight(vaultItem.category || vaultItem.rarity);
-    const currentSlots: AbilitySlot[] = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
-    const activeSlotsUsed = calculateTotalLoadoutSlotsUsed(currentSlots);
-
-    const cleanTarget = cleanName(vaultItem.base_name || vaultItem.name).toLowerCase();
-    if (currentSlots.some((s: any) => s && s.name && cleanName(s.base_name || s.name).toLowerCase() === cleanTarget)) {
-      alert(`⚠️ "${cleanName(vaultItem.name)}" is already equipped.`);
-      return;
-    }
-
-    if (weight > 0 && activeSlotsUsed + weight > totalLoadoutCapacity) {
-      alert(`❌ Insufficient Exotic Slots! Active loadout is ${activeSlotsUsed}/${totalLoadoutCapacity} slots. Item requires ${weight} slots. Unlock +1 Slot in the Buy Slots tab.`);
-      return;
-    }
-
-    updateActiveSheetData((prev) => {
-      const currentVault = Array.isArray(prev.character_vault) ? prev.character_vault : [];
-      const currentTargetSlots = Array.isArray(prev.spell_slots) ? prev.spell_slots : [];
-
-      const initialChecked = vaultItem.checked_state || [false, false, false];
-
-      const newSlot: any = {
-        select: true,
-        name: vaultItem.name,
-        base_name: vaultItem.base_name || cleanName(vaultItem.name),
-        version: vaultItem.version || 1,
-        action: (vaultItem.action?.toUpperCase() as any) || 'P',
-        usage: vaultItem.usage || '1-Enc',
-        effect: vaultItem.effect || '',
-        checked: initialChecked,
-        notes: vaultItem.notes,
-        source: vaultItem.source,
-        source_gear: (vaultItem as any).source_gear,
-        source_mod: (vaultItem as any).source_mod,
-        category: vaultItem.category || null,
-        slot_weight: weight,
-      };
-
-      const inVault = currentVault.some((v) => cleanName(v.base_name || v.name).toLowerCase() === cleanTarget);
-      const updatedVault = inVault ? currentVault : [...currentVault, vaultItem];
-
-      return {
-        ...prev,
-        character_vault: updatedVault,
-        spell_slots: [...currentTargetSlots, newSlot],
-      };
-    });
-    saveActiveCharacter();
-  };
-
   // Custom Creation / Version Save Handler (Powers and Functions)
   const handleSaveCustomAbility = () => {
     if (!createName.trim()) return;
@@ -1444,20 +1306,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
     });
   }, [type, activeDisplaySlots, slots, leftSearchQuery, functionsCatalog, modsCatalog, activeCharacter]);
 
-  // Grouped active functions by parent gear (Option A: 2+ threshold)
-  const groupedActiveSections = useMemo(() => {
-    if (type !== 'spells') return [];
-    const vaultList: MagicItem[] = Array.isArray(sheetData.character_vault) ? sheetData.character_vault : [];
-    return groupFunctionsByParent(
-      filteredRoster,
-      functionsCatalog,
-      modsCatalog,
-      activeCharacter,
-      vaultList,
-      isGsUnlocked
-    );
-  }, [type, filteredRoster, functionsCatalog, modsCatalog, activeCharacter, sheetData.character_vault, isGsUnlocked]);
-
   const sectionIcon = type === 'powers' ? '🔥' : '🧿';
   const displayTitle = title || (type === 'powers' ? 'POWERS' : "EXOTICS");
 
@@ -1645,18 +1493,6 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         </div>
 
         <div className="flex items-center justify-end gap-2 shrink-0">
-          {type === 'spells' && (
-            <button
-              type="button"
-              onClick={() => setShowShuntModal(true)}
-              className="py-1 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 shadow-sm cursor-pointer bg-cyan-950/70 hover:bg-cyan-900/70 border-cyan-500/50 text-cyan-300 hover:text-white shrink-0"
-              title="Emergency Gear Shunt: Spend 1 Move Action [M] and 1 Luck Chit (🍀) to hot-swap Exotics Vault abilities during combat."
-            >
-              <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="font-outfit text-xs font-bold">Shunt</span>
-            </button>
-          )}
-
           <div className="relative">
             <button
               type="button"
@@ -1906,753 +1742,43 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             </div>
                           );
                         })
-                      ) : (
-                        groupedActiveSections.map((section) => {
-                          const isSearchActive = !!leftSearchQuery.trim();
-                          const isExpanded = isSearchActive || !collapsedGearGroups.has(section.key);
-
-                          if (section.isGroup) {
-                            const telemetryText = `${section.items.length} Active • ${section.totalSlots} Slot${
-                              section.totalSlots > 1 ? 's' : ''
-                            }${section.otherPaneCount > 0 ? ` (${section.otherPaneCount} in Vault)` : ''}`;
-
-                            return (
-                              <div
-                                key={section.key}
-                                className="bg-slate-950/70 rounded-xl border border-slate-800/90 p-2 flex flex-col gap-2 transition-all shrink-0"
-                              >
-                                {/* Parent Gear Header */}
-                                <button
-                                  type="button"
-                                  onClick={() => toggleGearGroup(section.key)}
-                                  className="w-full flex items-center justify-between p-2 rounded-lg bg-slate-900/90 hover:bg-slate-850 border border-slate-800 transition text-left cursor-pointer group select-none"
-                                >
-                                  <div className="flex items-center gap-2 flex-wrap min-w-0">
-                                    <span className="text-base leading-none">{section.gearIcon || '🛡️'}</span>
-                                    <span className="font-outfit font-bold text-sm text-slate-100 group-hover:text-cyan-300 transition-colors truncate">
-                                      {section.gearName}
-                                    </span>
-                                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-950 text-cyan-300 border border-cyan-500/30 shrink-0">
-                                      {telemetryText}
-                                    </span>
-                                  </div>
-                                  <ChevronDown
-                                    className={`w-4 h-4 text-slate-400 group-hover:text-white transition-transform shrink-0 ${
-                                      isExpanded ? 'rotate-180' : ''
-                                    }`}
-                                  />
-                                </button>
-
-                                {/* Child Functions */}
-                                {isExpanded && (
-                                  <div className="flex flex-col gap-2 pl-2 border-l-2 border-slate-800/70 ml-1">
-                                    {section.items.map((entry, idx) => {
-                                      const item = entry.item;
-                                      const actionUpper = (item.action || '').toUpperCase();
-                                      const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
-                                      const badge = getMagicItemTierBadge(item, fullCatalog);
-                                      const resolvedNotes =
-                                        (item as any).notes ||
-                                        (fullCatalog.find(
-                                          (c) =>
-                                            c.name.toLowerCase() === entry.baseName.toLowerCase() ||
-                                            c.name.toLowerCase() === cleanName(item.name).toLowerCase()
-                                        ) as any)?.notes;
-
-                                      return (
-                                        <div
-                                          key={(item as any).id || `${item.name}_${idx}`}
-                                          className="p-2.5 bg-slate-900/90 rounded-lg border border-slate-800 flex flex-col gap-1.5 transition-all shrink-0 hover:border-slate-700"
-                                        >
-                                          <div className="flex items-start justify-between border-b border-slate-800/80 pb-1.5 gap-2">
-                                            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                                              <FunctionNameArea
-                                                item={item}
-                                                gearName={entry.gearName || section.gearName}
-                                                gearIcon={entry.gearIcon || section.gearIcon}
-                                                fnName={entry.cleanFnName}
-                                                version={entry.version}
-                                                notes={resolvedNotes}
-                                                activeCharacter={activeCharacter}
-                                                isGsUnlocked={isGsUnlocked}
-                                                starButton={
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => handleToggleStarItem(item)}
-                                                    className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
-                                                      isItemStarred(item)
-                                                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                                        : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
-                                                    }`}
-                                                    title={isItemStarred(item) ? 'On Wish List' : 'Click to add to Wish List'}
-                                                  >
-                                                    <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
-                                                  </button>
-                                                }
-                                              />
-                                              {badge && (
-                                                <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                                                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                                                    <span>{badge.icon}</span>
-                                                    <span>{badge.label}</span>
-                                                    <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                                                  </span>
-                                                </div>
-                                              )}
-                                            </div>
-
-                                            <div className="flex items-center gap-2 shrink-0">
-                                              <div className="flex items-center gap-1">
-                                                {actionUpper && (
-                                                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
-                                                    {actionUpper}
-                                                  </span>
-                                                )}
-                                                {item.usage && (
-                                                  <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-1.5 py-0.5 rounded border border-slate-800">
-                                                    {item.usage}
-                                                  </span>
-                                                )}
-                                              </div>
-
-                                              <button
-                                                type="button"
-                                                onClick={() => handleLaunchVersionEditor(item)}
-                                                className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 transition-colors shrink-0"
-                                                title={`Version edit ${entry.baseName}`}
-                                              >
-                                                <Edit2 className="w-3.5 h-3.5" />
-                                              </button>
-
-                                              <button
-                                                type="button"
-                                                onClick={() => handleForgetAbility(item.name)}
-                                                className="px-2 py-1 bg-pink-950/60 text-pink-300 border border-pink-500/40 hover:bg-pink-900/80 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1 cursor-pointer"
-                                                title="Send item back to Character Vault"
-                                              >
-                                                <span>➡️ Send to Vault</span>
-                                              </button>
-                                            </div>
-                                          </div>
-
-                                          <div className="text-xs pt-1">
-                                            <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                                              {item.effect || 'No description'}
-                                            </p>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          }
-
-                          // Single item section (either 1 function from gear, or standalone)
-                          const entry = section.items[0];
-                          const item = entry.item;
-                          const actionUpper = (item.action || '').toUpperCase();
-                          const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
-                          const badge = getMagicItemTierBadge(item, fullCatalog);
-                          const resolvedNotes =
-                            (item as any).notes ||
-                            (fullCatalog.find(
-                              (c) =>
-                                c.name.toLowerCase() === entry.baseName.toLowerCase() ||
-                                c.name.toLowerCase() === cleanName(item.name).toLowerCase()
-                            ) as any)?.notes;
-
-                          return (
-                            <div
-                              key={section.key}
-                              className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 transition-all shrink-0 hover:border-slate-700"
-                            >
-                              <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
-                                <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                  <FunctionNameArea
-                                    item={item}
-                                    gearName={entry.gearName || section.gearName}
-                                    gearIcon={entry.gearIcon || section.gearIcon}
-                                    fnName={entry.cleanFnName}
-                                    version={entry.version}
-                                    notes={resolvedNotes}
-                                    activeCharacter={activeCharacter}
-                                    isGsUnlocked={isGsUnlocked}
-                                    starButton={
-                                      <button
-                                        type="button"
-                                        onClick={() => handleToggleStarItem(item)}
-                                        className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
-                                          isItemStarred(item)
-                                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                            : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
-                                        }`}
-                                        title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                      >
-                                        <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
-                                      </button>
-                                    }
-                                  />
-                                  {badge && (
-                                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                                        <span>{badge.icon}</span>
-                                        <span>{badge.label}</span>
-                                        <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <div className="flex items-center gap-1">
-                                    {actionUpper && (
-                                      <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
-                                        {actionUpper}
-                                      </span>
-                                    )}
-                                    {item.usage && (
-                                      <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-1.5 py-0.5 rounded border border-slate-800">
-                                        {item.usage}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleLaunchVersionEditor(item)}
-                                    className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 transition-colors shrink-0"
-                                    title={`Version edit ${entry.baseName}`}
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => handleForgetAbility(item.name)}
-                                    className="px-2 py-1 bg-pink-950/60 text-pink-300 border border-pink-500/40 hover:bg-pink-900/80 text-xs font-bold rounded-lg transition-all shrink-0 flex items-center gap-1 cursor-pointer"
-                                    title="Send item back to Character Vault"
-                                  >
-                                    <span>➡️ Send to Vault</span>
-                                  </button>
-                                </div>
-                              </div>
-
-                              <div className="text-xs pt-1">
-                                <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                                  {item.effect || 'No description'}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })
-                      )}
+                      ) : null}
                     </div>
                   </div>
 
                   {/* --- RIGHT COLUMN: TABS INTERFACE --- */}
                   <div className="bg-slate-950/80 rounded-xl border border-slate-800 p-3 flex flex-col h-full min-h-0 overflow-hidden shadow-inner">
                     {/* Pane Sub-Tab Header */}
-                    {type === 'powers' ? (
-                      <div className="flex border-b border-slate-800 mb-4 shrink-0">
+                    <div className="flex border-b border-slate-800 mb-4 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isVersionEditMode) setIsVersionEditMode(false);
+                          setActiveRightTab('CATALOG');
+                        }}
+                        className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                          activeRightTab === 'CATALOG'
+                            ? 'border-emerald-400 text-emerald-400'
+                            : 'border-transparent text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        🌐 Stock Catalog
+                      </button>
+
+                      {isVersionEditMode && (
                         <button
                           type="button"
-                          onClick={() => {
-                            if (isVersionEditMode) setIsVersionEditMode(false);
-                            setActiveRightTab('CATALOG');
-                          }}
+                          onClick={() => setActiveRightTab('EDITOR')}
                           className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                            activeRightTab === 'CATALOG'
-                              ? 'border-emerald-400 text-emerald-400'
+                            activeRightTab === 'EDITOR'
+                              ? 'border-violet-400 text-violet-400'
                               : 'border-transparent text-slate-400 hover:text-slate-200'
                           }`}
                         >
-                          🌐 Stock Catalog
+                          ✨ Version Editor
                         </button>
-
-                        {isVersionEditMode && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveRightTab('EDITOR')}
-                            className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                              activeRightTab === 'EDITOR'
-                                ? 'border-violet-400 text-violet-400'
-                                : 'border-transparent text-slate-400 hover:text-slate-200'
-                            }`}
-                          >
-                            ✨ Version Editor
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex border-b border-slate-800 mb-4 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isVersionEditMode) setIsVersionEditMode(false);
-                            setActiveRightTab('VAULT');
-                          }}
-                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                            activeRightTab === 'VAULT'
-                              ? 'border-cyan-400 text-cyan-400'
-                              : 'border-transparent text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          🏺 Exotics Vault ({(Array.isArray(sheetData.character_vault) ? sheetData.character_vault.length : 0)})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isVersionEditMode) setIsVersionEditMode(false);
-                            setActiveRightTab('SLOTS');
-                          }}
-                          className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                            activeRightTab === 'SLOTS'
-                              ? 'border-indigo-400 text-indigo-400'
-                              : 'border-transparent text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          ⚡ Buy Slots
-                        </button>
-                        {isVersionEditMode && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveRightTab('EDITOR')}
-                            className={`flex-1 py-2 text-xs font-bold border-b-2 transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                              activeRightTab === 'EDITOR'
-                                ? 'border-violet-400 text-violet-400'
-                                : 'border-transparent text-slate-400 hover:text-slate-200'
-                            }`}
-                          >
-                            ✨ Version Editor
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-
-                    {/* TAB 1: CHARACTER VAULT VIEW (spells mode) */}
-                    {activeRightTab === 'VAULT' && type === 'spells' && (() => {
-                      const vaultList: MagicItem[] = Array.isArray(sheetData.character_vault) ? sheetData.character_vault : [];
-                      const vaultStarredCount = vaultList.filter((v) => isItemStarred(v)).length;
-                      const filteredVault = vaultList.filter((v) => {
-                        if (vaultFilter === 'STARRED' && !isItemStarred(v)) return false;
-                        if (!rightSearchQuery.trim()) return true;
-                        const q = rightSearchQuery.toLowerCase().trim();
-                        const textMatch = (v.name || '').toLowerCase().includes(q) || (v.effect || '').toLowerCase().includes(q);
-                        if (textMatch) return true;
-                        return matchFunctionSourceSearch(q, v, functionsCatalog, modsCatalog, activeCharacter);
-                      });
-
-                      const groupedVaultSections = groupFunctionsByParent(
-                        filteredVault,
-                        functionsCatalog,
-                        modsCatalog,
-                        activeCharacter,
-                        slots,
-                        isGsUnlocked
-                      );
-
-                      return (
-                        <div className="flex flex-col gap-2.5 flex-1 min-h-0 mt-2.5">
-                          {/* Search & Filter Bar for Vault */}
-                          <div className="flex items-center gap-2 shrink-0">
-                            <div className="relative flex-1">
-                              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                              <input
-                                type="text"
-                                placeholder="Search Exotics Vault..."
-                                value={rightSearchQuery}
-                                onChange={(e) => setRightSearchQuery(e.target.value)}
-                                className="bg-slate-900 text-slate-200 text-xs pl-8 pr-2 py-1.5 rounded-lg border border-slate-700 outline-none focus:border-cyan-500 w-full"
-                              />
-                            </div>
-                            <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg px-2 py-1 gap-1.5 shrink-0">
-                              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase shrink-0">
-                                Filter
-                              </span>
-                              <select
-                                value={vaultFilter}
-                                onChange={(e) => setVaultFilter(e.target.value as any)}
-                                className={`text-xs font-bold px-1.5 py-0.5 rounded-lg border outline-none cursor-pointer truncate transition-all ${
-                                  vaultFilter !== 'ALL'
-                                    ? 'bg-yellow-950/90 border-yellow-400 text-yellow-100 ring-1 ring-yellow-400/50 shadow-[0_0_12px_rgba(250,204,21,0.3)] font-extrabold'
-                                    : 'bg-slate-900 border-slate-700 text-slate-200 focus:border-cyan-500'
-                                }`}
-                              >
-                                <option value="ALL" className="bg-slate-900 text-slate-200">🌐 All</option>
-                                <option value="STARRED" className="bg-slate-900 text-slate-200">
-                                  ⭐ Wish List ({vaultStarredCount})
-                                </option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-2.5 min-h-0">
-                            {filteredVault.length === 0 ? (
-                              <div className="h-full flex flex-col items-center justify-center text-center p-4 text-slate-500 text-xs italic gap-1">
-                                <Sparkles className="w-8 h-8 text-slate-700 opacity-60 stroke-[1.5]" />
-                                {rightSearchQuery ? (
-                                  <span>No items matching "{rightSearchQuery}" in Exotics Vault.</span>
-                                ) : (
-                                  <span>Exotics Vault is empty. Claim items from Catalog (Tab 2) or Loot Generator.</span>
-                                )}
-                              </div>
-                            ) : (
-                              groupedVaultSections.map((section) => {
-                                const isSearchActive = !!rightSearchQuery.trim();
-                                const isExpanded = isSearchActive || !collapsedGearGroups.has(section.key);
-
-                                if (section.isGroup) {
-                                  const telemetryText = `${section.items.length} in Vault • ${section.totalSlots} Slot${
-                                    section.totalSlots > 1 ? 's' : ''
-                                  }${section.otherPaneCount > 0 ? ` (${section.otherPaneCount} Active)` : ''}`;
-
-                                  return (
-                                    <div
-                                      key={section.key}
-                                      className="bg-slate-950/70 rounded-xl border border-slate-800/90 p-2 flex flex-col gap-2 transition-all shrink-0"
-                                    >
-                                      {/* Parent Gear Header */}
-                                      <button
-                                        type="button"
-                                        onClick={() => toggleGearGroup(section.key)}
-                                        className="w-full flex items-center justify-between p-2 rounded-lg bg-slate-900/90 hover:bg-slate-850 border border-slate-800 transition text-left cursor-pointer group select-none"
-                                      >
-                                        <div className="flex items-center gap-2 flex-wrap min-w-0">
-                                          <span className="text-base leading-none">{section.gearIcon || '🛡️'}</span>
-                                          <span className="font-outfit font-bold text-sm text-slate-100 group-hover:text-cyan-300 transition-colors truncate">
-                                            {section.gearName}
-                                          </span>
-                                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-950 text-cyan-300 border border-cyan-500/30 shrink-0">
-                                            {telemetryText}
-                                          </span>
-                                        </div>
-                                        <ChevronDown
-                                          className={`w-4 h-4 text-slate-400 group-hover:text-white transition-transform shrink-0 ${
-                                            isExpanded ? 'rotate-180' : ''
-                                          }`}
-                                        />
-                                      </button>
-
-                                      {/* Child Functions */}
-                                      {isExpanded && (
-                                        <div className="flex flex-col gap-2 pl-2 border-l-2 border-slate-800/70 ml-1">
-                                          {section.items.map((entry, idx) => {
-                                            const item = entry.item as MagicItem;
-                                            const weight = getItemSlotWeight(item);
-                                            const badge = getMagicItemTierBadge(item, fullCatalog);
-                                            const matchedCatalogFn = functionsCatalog.find(
-                                              (f) => f.name.toLowerCase() === (item.name ? cleanName(item.name) : '').toLowerCase()
-                                            );
-                                            const rawAction = item.action || matchedCatalogFn?.action || '';
-                                            const actionUpper = rawAction.toUpperCase();
-                                            const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
-                                            const resolvedUsage = item.usage || matchedCatalogFn?.usage || '';
-                                            const resolvedNotes =
-                                              (item as any).notes ||
-                                              (fullCatalog.find(
-                                                (c) =>
-                                                  c.name.toLowerCase() === entry.baseName.toLowerCase() ||
-                                                  c.name.toLowerCase() === (item.name ? cleanName(item.name) : '').toLowerCase()
-                                              ) as any)?.notes;
-
-                                            const itemCleanName = cleanName(item.base_name || item.name).toLowerCase();
-                                            const equippedSlots: AbilitySlot[] = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
-                                            const isEquipped = equippedSlots.some(
-                                              (s) => s && s.name && cleanName((s as any).base_name || s.name).toLowerCase() === itemCleanName
-                                            );
-
-                                            return (
-                                              <div
-                                                key={(item as any).id || `${item.name}_${idx}`}
-                                                className="p-2.5 bg-slate-900/90 rounded-lg border border-slate-800 flex flex-col gap-1.5 transition-all shrink-0 hover:border-slate-700"
-                                              >
-                                                <div className="flex items-start justify-between border-b border-slate-800/80 pb-1.5 gap-2">
-                                                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                                                    <FunctionNameArea
-                                                      item={item}
-                                                      gearName={entry.gearName || section.gearName}
-                                                      gearIcon={entry.gearIcon || section.gearIcon}
-                                                      fnName={entry.cleanFnName}
-                                                      version={entry.version}
-                                                      notes={resolvedNotes}
-                                                      activeCharacter={activeCharacter}
-                                                      isGsUnlocked={isGsUnlocked}
-                                                      starButton={
-                                                        <button
-                                                          type="button"
-                                                          onClick={() => handleToggleStarItem(item)}
-                                                          className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
-                                                            isItemStarred(item)
-                                                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                                              : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
-                                                          }`}
-                                                          title={isItemStarred(item) ? 'On Wish List' : 'Click to add to Wish List'}
-                                                        >
-                                                          <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
-                                                        </button>
-                                                      }
-                                                    />
-                                                    <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                                                      {badge && (
-                                                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                                                          <span>{badge.icon}</span>
-                                                          <span>{badge.label}</span>
-                                                          <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                                                        </span>
-                                                      )}
-                                                      {isEquipped && (
-                                                        <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40" title="Equipped in active Exotic Slots">
-                                                          ✅ Equipped
-                                                        </span>
-                                                      )}
-                                                    </div>
-                                                  </div>
-
-                                                  <div className="flex items-center gap-2 shrink-0">
-                                                    <div className="flex items-center gap-1">
-                                                      {actionUpper && (
-                                                        <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
-                                                          {actionUpper}
-                                                        </span>
-                                                      )}
-                                                      {resolvedUsage && (
-                                                        <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-1.5 py-0.5 rounded border border-slate-800">
-                                                          {resolvedUsage}
-                                                        </span>
-                                                      )}
-                                                    </div>
-
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => handleLaunchVersionEditor(item)}
-                                                      className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 transition-colors shrink-0 cursor-pointer"
-                                                      title={`Version edit ${entry.baseName}`}
-                                                    >
-                                                      <Edit2 className="w-3.5 h-3.5" />
-                                                    </button>
-
-                                                    {isEquipped ? (
-                                                      <button
-                                                        type="button"
-                                                        onClick={() => handleForgetAbility(item.name)}
-                                                        className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white shadow-sm transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                                        title="Unequip from active Exotic Slots"
-                                                      >
-                                                        <X className="w-3.5 h-3.5" />
-                                                        Unequip
-                                                      </button>
-                                                    ) : (
-                                                      <button
-                                                        type="button"
-                                                        onClick={() => handleEquipVaultItem(item)}
-                                                        className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                                        title="Equip into active Exotic Slots"
-                                                      >
-                                                        <Plus className="w-3.5 h-3.5" />
-                                                        Equip ({weight === 0 ? '0 ⚙️' : `${weight} 🧿`})
-                                                      </button>
-                                                    )}
-                                                  </div>
-                                                </div>
-
-                                                <div className="text-xs pt-1">
-                                                  <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                                                    {item.effect || 'No description'}
-                                                  </p>
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                }
-
-                                // Single item section (either 1 function from gear, or standalone)
-                                const entry = section.items[0];
-                                const item = entry.item as MagicItem;
-                                const weight = getItemSlotWeight(item);
-                                const badge = getMagicItemTierBadge(item, fullCatalog);
-                                const matchedCatalogFn = functionsCatalog.find(
-                                  (f) => f.name.toLowerCase() === (item.name ? cleanName(item.name) : '').toLowerCase()
-                                );
-                                const rawAction = item.action || matchedCatalogFn?.action || '';
-                                const actionUpper = rawAction.toUpperCase();
-                                const actionClass = ACTION_COLORS[actionUpper] || 'bg-slate-800 text-slate-400 border-slate-700';
-                                const resolvedUsage = item.usage || matchedCatalogFn?.usage || '';
-                                const resolvedNotes =
-                                  (item as any).notes ||
-                                  (fullCatalog.find(
-                                    (c) =>
-                                      c.name.toLowerCase() === entry.baseName.toLowerCase() ||
-                                      c.name.toLowerCase() === (item.name ? cleanName(item.name) : '').toLowerCase()
-                                  ) as any)?.notes;
-
-                                const itemCleanName = cleanName(item.base_name || item.name).toLowerCase();
-                                const equippedSlots: AbilitySlot[] = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
-                                const isEquipped = equippedSlots.some(
-                                  (s) => s && s.name && cleanName((s as any).base_name || s.name).toLowerCase() === itemCleanName
-                                );
-
-                                return (
-                                  <div
-                                    key={section.key}
-                                    className="p-3 bg-slate-900/90 rounded-xl border border-slate-800 flex flex-col gap-2 transition-all shrink-0 hover:border-slate-700"
-                                  >
-                                    <div className="flex items-start justify-between border-b border-slate-800/80 pb-2 gap-2">
-                                      <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                        <FunctionNameArea
-                                          item={item}
-                                          gearName={entry.gearName || section.gearName}
-                                          gearIcon={entry.gearIcon || section.gearIcon}
-                                          fnName={entry.cleanFnName}
-                                          version={entry.version}
-                                          notes={resolvedNotes}
-                                          activeCharacter={activeCharacter}
-                                          isGsUnlocked={isGsUnlocked}
-                                          starButton={
-                                            <button
-                                              type="button"
-                                              onClick={() => handleToggleStarItem(item)}
-                                              className={`p-1 rounded-lg border transition-colors shrink-0 cursor-pointer ${
-                                                isItemStarred(item)
-                                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                                  : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-amber-300 hover:border-slate-700'
-                                              }`}
-                                              title={isItemStarred(item) ? 'Starred Favorite' : 'Star to add to Starred Favorites'}
-                                            >
-                                              <Star className={`w-3.5 h-3.5 ${isItemStarred(item) ? 'fill-amber-400 text-amber-400' : ''}`} />
-                                            </button>
-                                          }
-                                        />
-                                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                                          {badge && (
-                                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border w-fit flex items-center gap-1 ${badge.style}`}>
-                                              <span>{badge.icon}</span>
-                                              <span>{badge.label}</span>
-                                              <span className="opacity-90 font-extrabold font-mono">({badge.slotsText})</span>
-                                            </span>
-                                          )}
-                                          {isEquipped && (
-                                            <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40" title="Equipped in active Exotic Slots">
-                                              ✅ Equipped
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      <div className="flex items-center gap-2 shrink-0">
-                                        <div className="flex items-center gap-1">
-                                          {actionUpper && (
-                                            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${actionClass}`}>
-                                              {actionUpper}
-                                            </span>
-                                          )}
-                                          {resolvedUsage && (
-                                            <span className="bg-slate-950 text-[10px] font-mono text-amber-300 px-1.5 py-0.5 rounded border border-slate-800">
-                                              {resolvedUsage}
-                                            </span>
-                                          )}
-                                        </div>
-
-                                        <button
-                                          type="button"
-                                          onClick={() => handleLaunchVersionEditor(item)}
-                                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-300 transition-colors shrink-0 cursor-pointer"
-                                          title={`Version edit ${entry.baseName}`}
-                                        >
-                                          <Edit2 className="w-3.5 h-3.5" />
-                                        </button>
-
-                                        {isEquipped ? (
-                                          <button
-                                            type="button"
-                                            onClick={() => handleForgetAbility(item.name)}
-                                            className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-rose-950/80 hover:bg-rose-900 border border-rose-500/50 text-rose-300 hover:text-white shadow-sm transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                            title="Unequip from active Exotic Slots"
-                                          >
-                                            <X className="w-3.5 h-3.5" />
-                                            Unequip
-                                          </button>
-                                        ) : (
-                                          <button
-                                            type="button"
-                                            onClick={() => handleEquipVaultItem(item)}
-                                            className="px-2.5 py-1 rounded-lg text-xs font-outfit font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md transition-all shrink-0 cursor-pointer active:scale-95 flex items-center gap-1"
-                                            title="Equip into active Exotic Slots"
-                                          >
-                                            <Plus className="w-3.5 h-3.5" />
-                                            Equip ({weight === 0 ? '0 ⚙️' : `${weight} 🧿`})
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    <div className="text-xs pt-1">
-                                      <p className="text-[11px] text-slate-300 leading-relaxed font-sans">
-                                        {item.effect || 'No description'}
-                                      </p>
-                                    </div>
-                                  </div>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* TAB: BUY SLOTS (Exotic Slots - 1 AP per slot indefinitely) */}
-                    {activeRightTab === 'SLOTS' && type === 'spells' && (
-                      <div className="flex flex-col gap-3 flex-1 min-h-0 mt-2.5 overflow-y-auto pr-1">
-                        {/* Top Status Header Pill */}
-                        <div className="px-3.5 py-1.5 bg-cyan-950/70 border border-cyan-500/40 rounded-full font-mono font-bold text-xs text-cyan-200 flex items-center justify-between shadow-md shrink-0 flex-wrap gap-2">
-                          <div className="flex items-center gap-2">
-                            <span>Capacity <strong className="text-cyan-300">{totalLoadoutCapacity} Slots</strong></span>
-                            <span className="text-cyan-500/60">•</span>
-                            <span>Used <strong className="text-amber-300">{totalUsedLoadoutSlots} Slots</strong></span>
-                            <span className="text-cyan-500/60">•</span>
-                            <span>Spent <strong className="text-rose-400">{totalLoadoutApSpent} AP</strong></span>
-                          </div>
-                          <div>
-                            <span>Available <strong className="text-emerald-400">{availableAp} AP</strong></span>
-                          </div>
-                        </div>
-
-                        {/* Upgrade Action Box */}
-                        <div className="p-4 bg-slate-900/90 rounded-xl border border-cyan-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 shadow-md">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <Sparkles className="w-4 h-4 text-cyan-400" />
-                              <span className="font-outfit font-bold text-sm text-slate-100">
-                                Next Slot: +1 Slot ({totalLoadoutCapacity + 1} Slots Total)
-                              </span>
-                            </div>
-                            <p className="text-xs text-slate-400 font-mono">
-                              Baseline: 5 Slots (0 AP) • Cost: <strong className="text-amber-300">1 AP</strong>
-                            </p>
-                          </div>
-
-                          <button
-                            type="button"
-                            disabled={availableAp < 1}
-                            onClick={handleUnlockLoadoutExpansion}
-                            className={`px-4 py-2 rounded-xl font-outfit font-bold text-xs flex items-center gap-2 shadow-md transition-all shrink-0 ${
-                              availableAp >= 1
-                                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white cursor-pointer active:scale-95'
-                                : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
-                            }`}
-                          >
-                            <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
-                            <span>Unlock +1 Slot (1 AP)</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
                     {/* TAB 2: STOCK CATALOG VIEW */}
                     {activeRightTab === 'CATALOG' && (
@@ -3447,86 +2573,49 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 }`}
               >
                 {/* 1. Name Column with Version Badge */}
-                <div className={`${type === 'spells' ? 'w-64 sm:w-72 md:w-88' : 'w-56 sm:w-64 md:w-80'} shrink-0 flex flex-col gap-0.5`}>
-                  {type === 'spells' ? (
-                    <>
-                      <FunctionNameArea
-                        item={slot}
-                        notes={
-                          slot.notes ||
-                          (functionsCatalog.find(
-                            (c) =>
-                              c.name.toLowerCase() === baseName.toLowerCase() ||
-                              c.name.toLowerCase() === cleanName(slot.name).toLowerCase()
-                          ) as any)?.notes ||
-                          (fullCatalog.find(
-                            (c) =>
-                              c.name.toLowerCase() === baseName.toLowerCase() ||
-                              c.name.toLowerCase() === cleanName(slot.name).toLowerCase()
-                          ) as any)?.notes
-                        }
-                        functionsCatalog={functionsCatalog}
-                        modsCatalog={modsCatalog}
-                        activeCharacter={activeCharacter}
-                        isGsUnlocked={isGsUnlocked}
-                        hideInlineVersionBadge
-                      />
-                      {(() => {
-                        const slotVer = Math.max(version, (slot as any).version || 1);
-                        return slotVer > 1 ? (
-                          <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
-                            <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
-                            v{slotVer}
-                          </span>
-                        ) : null;
-                      })()}
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {(() => {
-                          const displayName = baseName;
-                          const isMso = isMsoEntry(displayName);
-                          const fullName = isGsUnlocked && isMso ? `🌌 ${displayName}` : displayName;
-                          const resolvedNotes =
-                            slot.notes ||
-                            (fullCatalog.find(
-                              (c) =>
-                                c.name.toLowerCase() === baseName.toLowerCase() ||
-                                c.name.toLowerCase() === cleanName(slot.name).toLowerCase()
-                            ) as any)?.notes;
-                          const hasNotes = Boolean(resolvedNotes && resolvedNotes.trim());
+                <div className="w-56 sm:w-64 md:w-80 shrink-0 flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {(() => {
+                      const displayName = baseName;
+                      const isMso = isMsoEntry(displayName);
+                      const fullName = isGsUnlocked && isMso ? `🌌 ${displayName}` : displayName;
+                      const resolvedNotes =
+                        slot.notes ||
+                        (fullCatalog.find(
+                          (c) =>
+                            c.name.toLowerCase() === baseName.toLowerCase() ||
+                            c.name.toLowerCase() === cleanName(slot.name).toLowerCase()
+                        ) as any)?.notes;
+                      const hasNotes = Boolean(resolvedNotes && resolvedNotes.trim());
 
-                          const lastSpaceIdx = fullName.lastIndexOf(' ');
-                          const prefixText = lastSpaceIdx !== -1 ? fullName.slice(0, lastSpaceIdx + 1) : '';
-                          const lastWord = lastSpaceIdx !== -1 ? fullName.slice(lastSpaceIdx + 1) : fullName;
+                      const lastSpaceIdx = fullName.lastIndexOf(' ');
+                      const prefixText = lastSpaceIdx !== -1 ? fullName.slice(0, lastSpaceIdx + 1) : '';
+                      const lastWord = lastSpaceIdx !== -1 ? fullName.slice(lastSpaceIdx + 1) : fullName;
 
-                          return (
-                            <span
-                              className={`font-outfit font-bold text-xs leading-tight ${
-                                isGsUnlocked && isMso ? 'text-purple-300' : 'text-slate-100'
-                              }`}
-                            >
-                              {prefixText}
-                              {hasNotes ? (
-                                <span className="inline-block whitespace-nowrap">
-                                  {lastWord}
-                                  <ItemNotesPopover notes={resolvedNotes} itemName={displayName} inline />
-                                </span>
-                              ) : (
-                                <span>{lastWord}</span>
-                              )}
+                      return (
+                        <span
+                          className={`font-outfit font-bold text-xs leading-tight ${
+                            isGsUnlocked && isMso ? 'text-purple-300' : 'text-slate-100'
+                          }`}
+                        >
+                          {prefixText}
+                          {hasNotes ? (
+                            <span className="inline-block whitespace-nowrap">
+                              {lastWord}
+                              <ItemNotesPopover notes={resolvedNotes} itemName={displayName} inline />
                             </span>
-                          );
-                        })()}
-                      </div>
-                      {version > 1 && (
-                        <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
-                          <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
-                          v{version}
+                          ) : (
+                            <span>{lastWord}</span>
+                          )}
                         </span>
-                      )}
-                    </>
+                      );
+                    })()}
+                  </div>
+                  {version > 1 && (
+                    <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/40 w-fit flex items-center gap-1">
+                      <Sparkles className="w-2.5 h-2.5 text-indigo-400" />
+                      v{version}
+                    </span>
                   )}
                 </div>
 
@@ -3585,22 +2674,11 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
         ) : (
           <div className="p-4 bg-slate-950/40 rounded-lg border border-slate-850 text-xs text-slate-500 italic text-center">
             {abilityActionFilter !== 'ALL'
-              ? `No ${abilityActionFilter} action ${type === 'powers' ? 'powers' : 'exotics'} learned or visible.`
-              : type === 'powers'
-              ? 'No powers learned yet. Click "Powers Manager" above to browse the catalog.'
-              : 'No Active Exotics equipped yet. Click "Exotics Manager" above to select abilities.'}
+              ? `No ${abilityActionFilter} action powers learned or visible.`
+              : 'No powers learned yet. Click "Powers Manager" above to browse the catalog.'}
           </div>
         )}
       </div>
-
-      {type === 'spells' && showShuntModal && (
-        <Suspense fallback={null}>
-          <EmergencyHardwareShuntModal
-            isOpen={showShuntModal}
-            onClose={() => setShowShuntModal(false)}
-          />
-        </Suspense>
-      )}
     </div>
   );
 };

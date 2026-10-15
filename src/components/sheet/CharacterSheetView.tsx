@@ -5,7 +5,7 @@ import { HeroHubCard } from './HeroHubCard';
 import { PathsCard } from './PathsCard';
 import { MoneyCard } from './MoneyCard';
 import { GearCard } from './GearCard';
-import { TraitsQuirksCard } from './TraitsQuirksCard';
+import { TraitsCard } from './TraitsCard';
 import { SkillsetsPanel } from './SkillsetsPanel';
 import { WeaponsCard } from './WeaponsCard';
 import { ArmorCard } from './ArmorCard';
@@ -14,7 +14,7 @@ import { MovementCard } from './MovementCard';
 import { ChaosGauntletCard } from './ChaosGauntletCard';
 import { VitalsHeader } from './VitalsHeader';
 import { AbilitySlotsGrid } from './AbilitySlotsGrid';
-import { GearPowersCard } from './GearPowersCard';
+import { ExoticsCard } from './ExoticsCard';
 import { SectionJumpHUD } from './SectionJumpHUD';
 import { GmMonsterTrackerHud } from '../hud/GmMonsterTrackerHud';
 import { PartyRosterHud } from '../hud/PartyRosterHud';
@@ -65,7 +65,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         <SkillsetsPanel onTogglePosition={handleToggleTraitsSkillsPosition} isAtBottom={traitsSkillsAtBottom} />
       </div>
       <div id="card-traits" className="w-full scroll-mt-28">
-        <TraitsQuirksCard onTogglePosition={handleToggleTraitsSkillsPosition} isAtBottom={traitsSkillsAtBottom} />
+        <TraitsCard onTogglePosition={handleToggleTraitsSkillsPosition} isAtBottom={traitsSkillsAtBottom} />
       </div>
     </div>
   );
@@ -142,7 +142,7 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
             </div>
           </div>
           <div id="card-exotic-gear" className="scroll-mt-28">
-            <GearPowersCard />
+            <ExoticsCard />
           </div>
         </div>
 

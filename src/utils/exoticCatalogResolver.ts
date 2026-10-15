@@ -5,7 +5,7 @@
 // dynamically deriving combat tier (Minor, Lesser, Greater, Epic) strictly from the highest linked function.
 
 import { MagicItem, FunctionItem, ModItem, getCategorySlotWeight } from '../types/game';
-import { cleanBelongsToName } from './gearFunctionSync';
+import { cleanBelongsToName } from './gearExoticPowerSync';
 
 export type ExoticTier = 'Minor' | 'Lesser' | 'Greater' | 'Epic';
 

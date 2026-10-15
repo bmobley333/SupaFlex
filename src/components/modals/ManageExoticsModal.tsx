@@ -1,4 +1,4 @@
-// src/components/modals/ManageGearPowersModal.tsx
+// src/components/modals/ManageExoticsModal.tsx
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Search, Zap, Trash2, Pencil, Sparkles, Lock, Plus, ChevronDown } from 'lucide-react';
@@ -26,18 +26,20 @@ import {
   isModFreeForHost,
   isBelongsToMatch,
   reconcileCharacterVaultWithGear,
-} from '../../utils/gearFunctionSync';
+} from '../../utils/gearExoticPowerSync';
 import { ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
 import { parseCostToSilver, formatCostAbbreviated, deductFundsWithChange } from '../../utils/moneyUtils';
 import { gameApi } from '../../services/api';
 
 export type ExoticCategoryFilter = 'all' | 'supplies' | 'weapons' | 'armor' | 'shields';
 
-interface ManageGearPowersModalProps {
+export interface ManageExoticsModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialTargetItem?: string | null;
 }
+
+export type ManageGearPowersModalProps = ManageExoticsModalProps;
 
 const parseUsageCount = (usage?: string): number => {
   if (!usage) return 0;
@@ -69,7 +71,7 @@ const USAGE_OPTIONS = [
   { value: '1-Rnd', label: '1-Rnd' },
 ];
 
-export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
+export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
   isOpen,
   onClose,
   initialTargetItem,
@@ -1332,3 +1334,6 @@ export const ManageGearPowersModal: React.FC<ManageGearPowersModalProps> = ({
     document.body
   );
 };
+
+export const ManageGearPowersModal = ManageExoticsModal;
+

@@ -4,7 +4,7 @@
 // dynamically deriving their combat tier (Minor, Lesser, Greater, Epic) from the functions table.
 
 import { MagicItem, FunctionItem, getCategorySlotWeight } from '../types/game';
-import { cleanBelongsToName } from './gearFunctionSync';
+import { cleanBelongsToName } from './gearExoticPowerSync';
 
 export type ArtifactTier = 'Minor' | 'Lesser' | 'Greater' | 'Epic';
 

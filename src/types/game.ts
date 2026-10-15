@@ -12,6 +12,7 @@ export type PowerDiscipline = 'Void Magic' | 'Psionics' | 'Somatics' | 'Martial'
 export type TechDiscipline = 'Archaic' | 'Tech' | 'BioTech' | 'CyberTech';
 export type EquipmentDomain = 'Archaic' | 'BioTech' | 'CyberTech' | 'Tech' | 'Psionics' | 'Somatics' | 'Void Magic';
 export type ExoticTier = 'Free' | 'Minor' | 'Lesser' | 'Greater' | 'Epic';
+/** @deprecated Use ExoticTier instead. */
 export type HardwareTier = ExoticTier;
 export type PowerTableCategory = 'Race' | 'Class' | 'Discipline' | 'Combat Style' | 'Handicap' | 'Luck' | 'Custom';
 
@@ -135,7 +136,10 @@ export interface SupabaseKit {
   created_at?: string;
 }
 
+export type KitItem = SupabaseKit;
+/** @deprecated Use KitCategory instead. */
 export type BundleCategory = KitCategory;
+/** @deprecated Use SupabaseKit or KitItem instead. */
 export type SupabaseBundle = SupabaseKit;
 
 /**
@@ -147,6 +151,7 @@ export function getCategorySlotWeight(category?: string): 0 | 1 | 2 | 3 | 4 {
   return 1;
 }
 
+/** @deprecated Legacy sub-item shape; use KitItem / SimpleGearItem instead. */
 export interface HardwareBundleSubItem {
   name: string;
   table?: 'armor' | 'exotics' | 'gear' | 'weapons' | 'shields' | 'artifacts' | string;
@@ -158,6 +163,7 @@ export interface HardwareBundleSubItem {
   notes?: string;
 }
 
+/** @deprecated Legacy bundle item shape; use KitItem instead. */
 export interface HardwareBundleItem {
   id?: string | number;
   name: string;
@@ -195,6 +201,7 @@ export interface TraitItem {
 }
 
 export type RuleItem = TraitItem;
+/** @deprecated Use TraitItem instead. */
 export type TraitQuirkItem = TraitItem;
 
 export interface ReadySlotConfig {
@@ -671,6 +678,9 @@ export interface SimpleGearItem {
   archived_notice?: string;
 }
 
+/** Canonical S-Tier type alias for Gear & Supplies inventory entries */
+export type SupplyItem = SimpleGearItem;
+
 export interface ApLogEntry {
   id: string;
   timestamp: string;
@@ -739,8 +749,10 @@ export interface CharacterSheetData {
   attribute_dice: Record<AttributeKey, DieRating>;
   focus_die_current?: DieRating;
   focus_die_max?: DieRating;
-  charges?: number; // 0-5 Sparks (5 Sparks = 1 Bolt)
-  is_sparked?: boolean; // True when charges === 5 (Holding a Full Bolt: +1 to ALL rolls)
+  /** @persistence-key Frozen JSONB wire key for Sparks (0-5 Sparks; 5 Sparks = 1 Bolt). Do not rename. */
+  charges?: number;
+  /** @persistence-key Frozen JSONB wire key for Full Bolt state (charges === 5: +1 to ALL rolls). Do not rename. */
+  is_sparked?: boolean;
   sparks?: number; // Synonymous with charges
   is_charged?: boolean; // Alias for is_sparked
   luck?: number; // 0-5 Luck Pool (Default 3, Max 5)
@@ -749,6 +761,7 @@ export interface CharacterSheetData {
   gold?: number;
   silver?: number;
   other_treasure?: TreasureItem[];
+  /** @persistence-key Frozen JSONB wire key for character Gear & Supplies inventory. Do not rename. */
   simple_gear?: SimpleGearItem[];
   known_skillsets: string[];
   known_individual_skills?: string[]; // Individually learned skills outside a skillset
@@ -757,8 +770,10 @@ export interface CharacterSheetData {
   free_individual_skills?: string[]; // Individually learned skills granted for free (0 AP)
   free_skillsets?: string[]; // Skillsets granted for free (0 AP)
   custom_skillsets?: CustomSkillsetDefinition[]; // Custom user-created skillsets
-  traits_quirks?: TraitQuirkItem[]; // Passive traits, racial adaptations, unique quirks & flaws
-  hardware_bundles?: HardwareBundleItem[]; // Equipped hardware suites, toolkits, armor suites, cyber rigs
+  /** @persistence-key Frozen JSONB wire key for character Traits array. Do not rename. */
+  traits_quirks?: TraitItem[];
+  /** @persistence-key Legacy JSONB key for Kits/Bundles. Do not rename. */
+  hardware_bundles?: HardwareBundleItem[];
   favorite_trait_tables?: string[]; // Favorited trait tables
   favorite_trait_kits?: string[]; // Favorited trait kits
   favorite_power_tables?: string[]; // Favorited power tables (table_name strings)
@@ -771,34 +786,39 @@ export interface CharacterSheetData {
   favorite_skillset_tables?: string[]; // Favorited skillset tables
   custom_power_tables?: { name: string; sub?: string; category?: string; genres?: string[] }[]; // Custom user-created power tables
   custom_powers?: Power[]; // Custom user-created powers
-  custom_magic_items?: MagicItem[]; // Custom user-created magic items
+  /** @persistence-key Frozen JSONB wire key for custom Artifacts & Exotics. Do not rename. */
+  custom_magic_items?: MagicItem[];
   ability_overrides?: Record<string, { action?: string; usage?: string; effect?: string }>; // Player edits for existing stock abilities
   power_slots: AbilitySlot[];
   character_power_codex?: AbilitySlot[]; // Unlimited storage codex for un-readied powers (matching character_vault)
   tactical_pivot_used_in_encounter?: boolean; // True if player has executed their 1-per-encounter Tactical Pivot
   luck_bolt_sub_used_in_encounter?: boolean; // True if player has spent a Luck chit in place of a Bolt this encounter (1/Enc limit)
-  spell_slots: AbilitySlot[]; // Active Exotic Power Slots (5 baseline)
+  /** @persistence-key Frozen JSONB wire key for learned Exotic Powers (1 AP each + version upgrades). Do not rename. */
+  spell_slots: AbilitySlot[];
   stance_beta_slots?: AbilitySlot[]; // @deprecated Former Standby Stance (Stance Beta)
   active_stance?: 'alpha' | 'beta'; // @deprecated Former Active Stance mode
   stance_switch_count?: number; // @deprecated Former In-encounter Stance switch counter
-  cold_storage_functions?: string[]; // Function names locked out via Emergency Hardware Shunt
+  cold_storage_functions?: string[]; // @deprecated Former Emergency Hardware Shunt lockout list
   gear_slots: EquipmentSlot[];
   weapons?: WeaponSlot[];
   armor_slot?: ArmorData;
+  /** @persistence-key Frozen JSONB wire key for owned Armor inventory. Do not rename. */
   wardrobe?: ArmorData[];
   shield_slot?: ShieldData;
+  /** @persistence-key Frozen JSONB wire key for owned Shield inventory. Do not rename. */
   armory?: ShieldData[];
   character_links?: EncounterLink[]; // Unique links tied to this specific character
   movement_rate?: MovementRateData;
   mr_adj?: number; // Manual Movement Rate adjustment (applies to both Armored and Shield Drawn MR)
   bio: CharacterBio;
   essence_core?: number; // 0-100 Essence Core Progress Ring
-  character_vault?: MagicItem[]; // Unlimited storage vault for claimed Relics and Hardware
-  loadout_expansions_purchased?: number; // Count of +1 Exotic Power Slot expansions purchased with AP (1 AP each)
-  unlocked_loadout_slots?: number; // Total active Exotic Power Slots capacity (Formula: 5 + expansions)
-  unlocked_magic_slots?: number; // Deprecated alias for unlocked_loadout_slots
-  starred_loadout_items?: (number | string)[]; // Starred Loadout Wishlist IDs
-  starred_magic_items?: (number | string)[]; // Starred Magic Item Wishlist IDs (alias)
+  /** @persistence-key Frozen JSONB wire key for unlearned Exotics Vault cache. Do not rename. */
+  character_vault?: MagicItem[];
+  loadout_expansions_purchased?: number; // @deprecated Former Exotic Power Slot expansion counter
+  unlocked_loadout_slots?: number; // @deprecated Former Exotic Power Slots capacity
+  unlocked_magic_slots?: number; // @deprecated Former alias for unlocked_loadout_slots
+  starred_loadout_items?: (number | string)[]; // Starred Exotics Wishlist IDs
+  starred_magic_items?: (number | string)[]; // Starred Artifacts/Exotics Wishlist IDs (alias)
   starred_traits?: (number | string)[]; // Starred Traits Wishlist IDs
   starred_powers?: (number | string)[]; // Starred Powers Wishlist IDs
   starred_weapons?: (number | string)[]; // Starred Weapons Wishlist IDs
@@ -1059,17 +1079,20 @@ export const cleanAbilityName = (name?: string | null): string => {
     .toLowerCase();
 };
 
-export const isGearPowerLearned = (fnName: string, learnedSlots?: AbilitySlot[]): boolean => {
+export const isExoticPowerLearned = (fnName: string, learnedSlots?: AbilitySlot[]): boolean => {
   if (!learnedSlots || !Array.isArray(learnedSlots)) return false;
   const target = cleanAbilityName(fnName);
   return learnedSlots.some((s) => cleanAbilityName(s.name) === target || cleanAbilityName(s.base_name) === target);
 };
 
-export const getLearnedGearPower = (fnName: string, learnedSlots?: AbilitySlot[]): AbilitySlot | undefined => {
+export const getLearnedExoticPower = (fnName: string, learnedSlots?: AbilitySlot[]): AbilitySlot | undefined => {
   if (!learnedSlots || !Array.isArray(learnedSlots)) return undefined;
   const target = cleanAbilityName(fnName);
   return learnedSlots.find((s) => cleanAbilityName(s.name) === target || cleanAbilityName(s.base_name) === target);
 };
+
+export const isGearPowerLearned = isExoticPowerLearned;
+export const getLearnedGearPower = getLearnedExoticPower;
 
 export const calculateSpentAp = (logOrSheet?: any): number => {
   if (!logOrSheet) return 0;
@@ -1196,7 +1219,10 @@ export interface VaultItem {
   timestamp: string;
 }
 
-export interface MagicItem {
+/**
+ * Canonical S-Tier Interface for Artifacts (Unique priceless loot items) & Exotics Vault records.
+ */
+export interface ArtifactItem {
   id: number;
   name: string;
   genres?: string[];
@@ -1214,36 +1240,40 @@ export interface MagicItem {
   bundle?: string;
   table_group?: string;
   discipline?: string;
-  tier?: HardwareTier;
+  tier?: ExoticTier;
   source?: string;
   version?: number;
   base_name?: string;
   slot_weight?: 0 | 1 | 2 | 3 | 4;
   rarity?: string;
   checked_state?: boolean[];
-  cost?: string; // Optional cost for Hardware items
-  is_hardware?: boolean; // True if purchased hardware item
-  is_exotic?: boolean; // True if exotic/hardware item
+  cost?: string;
+  is_hardware?: boolean;
+  is_exotic?: boolean;
   source_gear?: string;
   source_mod?: string;
 }
 
-/** Canonical S-Tier type aliases for Artifact, Exotic, Relic, Hardware, and Loadout */
-export type Artifact = MagicItem;
-export type Relic = Artifact;
+export type Artifact = ArtifactItem;
+/** @deprecated Use ArtifactItem or ExoticPowerItem instead. */
+export type MagicItem = ArtifactItem;
+/** @deprecated Use ArtifactItem instead. */
+export type Relic = ArtifactItem;
 
-export interface ExoticItem extends MagicItem {
+export interface ExoticItem extends ArtifactItem {
   cost: string; // Required cost (e.g. "150s", "2g")
   is_exotic?: boolean;
   is_hardware?: boolean;
 }
 
+/** @deprecated Use ExoticItem or ExoticPowerItem instead. */
 export type HardwareItem = ExoticItem;
 
-export type LoadoutItem = MagicItem | ExoticItem | HardwareItem;
+/** @deprecated Use ExoticPowerItem or ArtifactItem instead. */
+export type LoadoutItem = ArtifactItem | ExoticItem;
 
-/** Canonical S-Tier Interface for Exotics (Actionable abilities derived from Equipment/Mods/Artifacts) */
-export interface GearPowerItem {
+/** Canonical S-Tier Interface for Exotic Powers (Actionable abilities derived from Equipment/Mods/Artifacts) */
+export interface ExoticPowerItem {
   id: number;
   name: string;
   action: 'AM' | 'A' | 'M' | 'P' | 'F';
@@ -1259,8 +1289,9 @@ export interface GearPowerItem {
   created_at?: string;
 }
 
-/** Backward-compatible alias for GearPowerItem */
-export type FunctionItem = GearPowerItem;
+export type GearPowerItem = ExoticPowerItem;
+/** @deprecated Use ExoticPowerItem instead. */
+export type FunctionItem = ExoticPowerItem;
 
 /** Canonical helper to derive numeric slot weight (0 or 1) from tier or rarity string */
 export const getTierSlotWeight = (tier: string | number | undefined | null): 0 | 1 | 2 | 3 | 4 => {

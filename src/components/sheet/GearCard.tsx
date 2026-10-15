@@ -34,7 +34,7 @@ import {
   splitBelongsToTargets,
   getFunctionsForGearItem,
   getFunctionsForMod,
-} from '../../utils/gearFunctionSync';
+} from '../../utils/gearExoticPowerSync';
 import { ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
 
 export type EquipmentCategoryTab = 'all' | 'supplies' | 'weapons' | 'armor' | 'shields' | 'kits';

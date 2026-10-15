@@ -21,7 +21,7 @@ import {
   getFunctionsForGearItem,
   isModCompatibleWithItem,
   reconcileCharacterVaultWithGear,
-} from '../../utils/gearFunctionSync';
+} from '../../utils/gearExoticPowerSync';
 import {
   getCharacterKnownPaths,
   getCharacterKnownSets,

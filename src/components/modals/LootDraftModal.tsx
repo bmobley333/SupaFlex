@@ -7,7 +7,7 @@ import { supabase } from '../../lib/supabase';
 import { Sparkles, Gem, RefreshCw } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
-import { GearModFunctionTree } from '../common/GearModFunctionTree';
+import { GearModExoticTree } from '../common/GearModExoticTree';
 import { resolveLootAbilities, ACTION_BADGE_COLORS } from '../../utils/lootAbilityResolver';
 
 interface LootDraftModalProps {
@@ -301,7 +301,7 @@ export const LootDraftModal: React.FC<LootDraftModalProps> = ({
                       )}
 
                       {/* Collapsible 2-Level Tree Hierarchy Drawer */}
-                      <GearModFunctionTree
+                      <GearModExoticTree
                         hostItem={s.item}
                         modsCatalog={modsCatalog || []}
                         functionsCatalog={functionsCatalog || []}

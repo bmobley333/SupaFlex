@@ -1,15 +1,17 @@
-// src/utils/functionSourceHelper.ts
-// Universal resolution engine to determine host Equipment & composite name for Functions
+// src/utils/exoticPowerSourceHelper.ts
+// Universal resolution engine to determine host Equipment & composite name for Exotic Powers
 
 import { AbilitySlot, MagicItem, FunctionItem, ModItem, Character, parseAbilityVersion } from '../types/game';
 import { compareMsoOptions } from './kitUtils';
 import { getItemSlotWeight } from './loadoutCapacitySchedule';
 
-export interface FunctionSourceResult {
+export interface ExoticPowerSourceResult {
   gearName: string;
   modName?: string;
   badgeText: string;
 }
+
+export type FunctionSourceResult = ExoticPowerSourceResult;
 
 /**
  * Strips noise such as (mso), {Free}, and table prefixes from item/mod names
@@ -596,3 +598,11 @@ export const groupFunctionsByParent = <T extends { name?: string; effect?: strin
 
   return sections;
 };
+
+// Canonical S-Tier export names for Exotic Powers
+export const resolveExoticPowerSource = resolveFunctionSource;
+export const formatCompositeExoticPowerName = formatCompositeFunctionName;
+export const matchExoticPowerSourceSearch = matchFunctionSourceSearch;
+export const resolveExoticPowerItemInfo = resolveFunctionItemInfo;
+export const groupExoticPowersByParent = groupFunctionsByParent;
+

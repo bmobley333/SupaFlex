@@ -3,7 +3,7 @@ import { BookOpen, Loader2, ChevronDown, ChevronUp, Crown } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseKey } from './lib/supabase';
 import { gameApi } from './services/api';
 import { Character, TreasureItem, SimpleGearItem, CustomCreationItem } from './types/game';
-import { reconcileCharacterVaultWithGear } from './utils/gearFunctionSync';
+import { reconcileCharacterVaultWithGear } from './utils/gearExoticPowerSync';
 import { useCharacterStore } from './store/useCharacterStore';
 import { useAdventureStore } from './store/useAdventureStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';

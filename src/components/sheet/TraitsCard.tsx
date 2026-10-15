@@ -13,12 +13,14 @@ const ManageTraitsModal = React.lazy(() =>
   import('../modals/ManageTraitsModal').then((m) => ({ default: m.ManageTraitsModal }))
 );
 
-export interface TraitsQuirksCardProps {
+export interface TraitsCardProps {
   onTogglePosition?: () => void;
   isAtBottom?: boolean;
 }
 
-export const TraitsQuirksCard: React.FC<TraitsQuirksCardProps> = ({ onTogglePosition, isAtBottom }) => {
+export type TraitsQuirksCardProps = TraitsCardProps;
+
+export const TraitsCard: React.FC<TraitsCardProps> = ({ onTogglePosition, isAtBottom }) => {
   const { activeCharacter } = useCharacterStore();
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
@@ -33,7 +35,7 @@ export const TraitsQuirksCard: React.FC<TraitsQuirksCardProps> = ({ onTogglePosi
     return () => window.removeEventListener('supaflex:open-manager' as any, handleOpen);
   }, []);
 
-  // Sync Traits & Quirks from active character data
+  // Sync Traits from active character data
   const rawTraits = useMemo(() => {
     const list = activeCharacter?.sheet_data?.traits_quirks;
     return Array.isArray(list) ? list : [];
@@ -224,3 +226,6 @@ export const TraitsQuirksCard: React.FC<TraitsQuirksCardProps> = ({ onTogglePosi
     </div>
   );
 };
+
+export const TraitsQuirksCard = TraitsCard;
+

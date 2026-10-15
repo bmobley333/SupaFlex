@@ -53,9 +53,9 @@ const HEROIC_CAPSTONES: HeroicCapstone[] = [
   },
   {
     id: 'capstone-loadout-burn',
-    name: 'Loadout Burn',
+    name: 'Exotic Overburn',
     ap_cost: 5,
-    effect: 'As a Free Action [F], push any active slotted Relic or Hardware to output maximum/Epic effect for 1 round before melting into inert slag, instantly freeing its Loadout Slots. (Excludes flat 1, 2, 3 consumables).',
+    effect: 'As a Free Action [F], push any active learned Exotic or Artifact to output maximum/Epic effect for 1 round before melting into inert slag. (Excludes flat 1, 2, 3 consumables).',
   },
   {
     id: 'capstone-second-reaction',
