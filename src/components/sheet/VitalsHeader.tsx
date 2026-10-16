@@ -3,6 +3,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useCharacterStore } from '../../store/useCharacterStore';
+import { getPendingVitalityRollLevels } from '../../types/game';
 import { CardHelpButton } from '../common/CardHelpButton';
 
 interface VitalsHeaderProps {
@@ -32,6 +33,8 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
   const maxVit = sheet.vitality_max || activeCharacter?.hp || 10;
   const currentVit = sheet.current_vitality ?? maxVit;
   const vitPercent = maxVit > 0 ? Math.min(100, Math.max(0, (currentVit / maxVit) * 100)) : 100;
+  const pendingVitLevels = getPendingVitalityRollLevels(sheet, activeCharacter?.hp);
+  const hasPendingVitRoll = pendingVitLevels.length > 0;
 
   // Allow negative numbers by removing Math.max(0, ...), clamp only upper bound to maxVit
   const handleVitChange = (delta: number) => {
@@ -141,10 +144,16 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
   };
 
   return (
-    <div className="bg-gradient-to-b from-emerald-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-emerald-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-emerald-950/20">
+    <div
+      className={`bg-gradient-to-b from-emerald-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-t-2 p-4 flex flex-col gap-3 shadow-lg transition-all ${
+        hasPendingVitRoll
+          ? 'border-amber-500/70 border-t-amber-400 shadow-amber-950/30 ring-1 ring-amber-500/30'
+          : 'border-slate-800 border-t-emerald-500/90 shadow-emerald-950/20'
+      }`}
+    >
       {/* Header: Title & Manage Vitality Button */}
       <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2.5">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
             type="button"
             onClick={onOpenVitalityManager}
@@ -159,6 +168,20 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
             </h3>
           </button>
           <CardHelpButton ruleKey="vitality.death_checks" />
+          {hasPendingVitRoll && (
+            <button
+              type="button"
+              onClick={onOpenVitalityManager}
+              className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 border border-amber-400/50 hover:border-amber-300 rounded-md font-outfit font-extrabold text-[10px] uppercase tracking-wider animate-pulse flex items-center gap-1 cursor-pointer transition-all shadow-sm"
+              title={
+                pendingVitLevels.length > 1
+                  ? `Click to roll ${pendingVitLevels.length} pending Free Per Level Vitality Rolls (Levels ${pendingVitLevels.join(', ')})`
+                  : `Click to roll your Level ${pendingVitLevels[0]} Free Per Level Vitality Roll (0 AP)`
+              }
+            >
+              ⚠️ Roll Vit{pendingVitLevels.length > 1 ? ` (×${pendingVitLevels.length})` : ''}
+            </button>
+          )}
           {currentVit <= 0 && (
             <span
               className="text-[10px] font-mono px-2 py-0.5 bg-rose-950 text-rose-300 rounded-full border border-rose-500/40 font-bold animate-pulse"

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useMemo, lazy, Suspense } from 'react';
 import { BookOpen, Loader2, ChevronDown, ChevronUp, Crown } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseKey } from './lib/supabase';
 import { gameApi } from './services/api';
-import { Character, TreasureItem, SimpleGearItem, CustomCreationItem } from './types/game';
+import { Character, TreasureItem, SimpleGearItem, CustomCreationItem, isStartingAttributesUnassigned } from './types/game';
 import { reconcileCharacterVaultWithGear } from './utils/gearExoticPowerSync';
 import { useCharacterStore } from './store/useCharacterStore';
 import { useAdventureStore } from './store/useAdventureStore';
@@ -861,6 +861,8 @@ export default function App() {
                     onRoomCodeReady={(code) => setActiveRoomCode(code)}
                   />
                 </Suspense>
+              ) : activeCharacter && isStartingAttributesUnassigned(activeCharacter.sheet_data?.attribute_dice) ? (
+                <div className="flex-1 min-h-[300px]" aria-label="Unassigned Attributes Blank Canvas" />
               ) : (
                 <CharacterSheetView
                   onOpenVitalityManager={() => setShowVitalityManagerModal(true)}

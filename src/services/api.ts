@@ -87,6 +87,7 @@ export const createDefaultSheetData = (): CharacterSheetData => ({
   silver: 50,
   vitality_max: 10,
   current_vitality: 10,
+  last_vit_roll_level: 0,
   wounds: 0,
   max_wounds: 3,
   defense: 10,

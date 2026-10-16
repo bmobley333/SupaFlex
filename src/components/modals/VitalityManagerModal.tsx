@@ -10,7 +10,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { ApLogEntry, calculateAvailableAp } from '../../types/game';
+import { ApLogEntry, calculateAvailableAp, getPendingVitalityRollLevels } from '../../types/game';
 import { InfoTooltip } from '../common/InfoTooltip';
 
 interface VitalityManagerModalProps {
@@ -62,6 +62,7 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
     lucked: boolean;
     previousMax: number;
     targetLevel: number;
+    rerolledCreationOne?: boolean;
   } | null>(null);
 
   if (!isOpen || !activeCharacter) return null;
@@ -94,12 +95,14 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
   const currentMaxVit = baseMaxVit + totalApVitBonus + vitAdj;
   const currentVit = sheetData.current_vitality ?? currentMaxVit;
 
-  // Multi-Level Roll Queue Engine
-  const lastVitRollLevel = typeof sheetData.last_vit_roll_level === 'number' ? sheetData.last_vit_roll_level : 1;
-  const pendingLevels: number[] = [];
-  for (let lvl = lastVitRollLevel + 1; lvl <= level; lvl++) {
-    pendingLevels.push(lvl);
-  }
+  // Multi-Level Roll Queue Engine (shared with Vitality Card)
+  const pendingLevels = getPendingVitalityRollLevels(sheetData, activeCharacter.hp);
+  const lastVitRollLevel =
+    typeof sheetData.last_vit_roll_level === 'number'
+      ? sheetData.last_vit_roll_level
+      : baseMaxVit <= 10
+        ? 0
+        : 1;
 
   const isRollDoneThisLevel = pendingLevels.length === 0;
   const targetLevel = pendingLevels[0] || level;
@@ -166,8 +169,14 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
 
     const rolls: number[] = [];
     let sum = 0;
+    let rerolledCreationOne = false;
     for (let i = 0; i < targetDiceBracket; i++) {
-      const roll = Math.floor(Math.random() * moxieDieSides) + 1;
+      let roll = Math.floor(Math.random() * moxieDieSides) + 1;
+      // Step 4 Creation Rule: At Level 1 creation, a 1d(🫀) roll of 1 may be re-rolled one time
+      if (targetLevel === 1 && i === 0 && roll === 1) {
+        rerolledCreationOne = true;
+        roll = Math.floor(Math.random() * moxieDieSides) + 1;
+      }
       rolls.push(roll);
       sum += roll;
     }
@@ -188,6 +197,7 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
       lucked,
       previousMax: previousBaseMax + totalApVitBonus,
       targetLevel,
+      rerolledCreationOne,
     });
 
     updateActiveSheetData((prev) => ({
@@ -200,7 +210,9 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
     saveActiveCharacter();
 
     if (lucked) {
-      showToast(`🎲 Rolled ${rolls.join('+')} (${sum}) for Level ${targetLevel}! Max Vit upgraded to ${newTotalMax}!`);
+      showToast(
+        `🎲 Rolled ${rolls.join('+')} (${sum})${rerolledCreationOne ? ' [re-rolled 1]' : ''} for Level ${targetLevel}! Max Vit upgraded to ${newTotalMax}!`
+      );
     } else {
       showToast(`🎲 Level ${targetLevel} Roll: ${rolledBaseTotal} base vs previous ${previousBaseMax} base. Lucking kept higher Max Vit (${newTotalMax}).`);
     }
@@ -427,6 +439,11 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
                     <span className="flex items-center gap-1.5">
                       <Sparkles className="w-4 h-4 text-amber-400" />
                       Level {lastRollResult.targetLevel} Roll: {targetDiceBracket}{moxieDieStr} [{lastRollResult.rolls.join(', ')}] = {lastRollResult.sum}
+                      {lastRollResult.rerolledCreationOne && (
+                        <span className="text-[10px] font-mono text-amber-300 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/40">
+                          Re-rolled 1
+                        </span>
+                      )}
                     </span>
                     <span className="font-mono text-sm">Total: {lastRollResult.total}</span>
                   </div>

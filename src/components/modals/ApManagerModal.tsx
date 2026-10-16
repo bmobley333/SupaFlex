@@ -640,7 +640,14 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                         showToast(`🎉 Level ${val} Milestone: Auto-equipped ${newlyGrantedNames.join(', ')}!`);
                       }
                     } else {
-                      updateActiveSheetData((prev: any) => ({ ...prev, level: val }));
+                      updateActiveSheetData((prev: any) => ({
+                        ...prev,
+                        level: val,
+                        last_vit_roll_level:
+                          typeof prev.last_vit_roll_level === 'number'
+                            ? Math.min(prev.last_vit_roll_level, val)
+                            : prev.last_vit_roll_level,
+                      }));
                       saveActiveCharacter();
                     }
                   }}

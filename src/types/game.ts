@@ -1634,3 +1634,44 @@ export const isValidStartingAttributeAssignment = (
   const target = [...STARTING_DIE_POOL].sort();
   return sorted.length === 5 && sorted.every((d, i) => d === target[i]);
 };
+
+/**
+ * Computes the list of character levels (1..level) that still need a Free Per Level Vitality Roll.
+ * - If `last_vit_roll_level` is explicitly recorded as a number, uses that value.
+ * - If `last_vit_roll_level` is undefined, checks `baseMaxVit`:
+ *   - If `baseMaxVit <= 10` (still at the unrolled creation base of 10), treats `lastVitRollLevel` as `0`
+ *     so Level 1 (`10 + 1d🫀`) is included in the pending roll queue.
+ *   - If `baseMaxVit > 10` (legacy character who already rolled Level 1 above 10), treats `lastVitRollLevel` as `1`.
+ */
+export const getPendingVitalityRollLevels = (
+  sheetData?: Partial<CharacterSheetData> | null,
+  fallbackHp?: number | null
+): number[] => {
+  if (!sheetData) return [];
+  const level = Math.max(1, sheetData.level || 1);
+  const apLog: ApLogEntry[] = Array.isArray(sheetData.ap_log) ? sheetData.ap_log : [];
+  const vitalityApSpent = apLog.reduce(
+    (sum: number, entry: ApLogEntry) => (entry && entry.category === 'Vitality' ? sum + (entry.cost || 0) : sum),
+    0
+  );
+  const totalApVitBonus = vitalityApSpent * 2;
+  const vitAdj = typeof sheetData.vit_adj === 'number' ? sheetData.vit_adj : 0;
+  const baseMaxVit =
+    typeof sheetData.vitality_base_max === 'number'
+      ? sheetData.vitality_base_max
+      : Math.max(0, (sheetData.vitality_max || fallbackHp || 10) - totalApVitBonus - vitAdj);
+
+  const lastVitRollLevel =
+    typeof sheetData.last_vit_roll_level === 'number'
+      ? sheetData.last_vit_roll_level
+      : baseMaxVit <= 10
+        ? 0
+        : 1;
+
+  const pending: number[] = [];
+  for (let lvl = lastVitRollLevel + 1; lvl <= level; lvl++) {
+    pending.push(lvl);
+  }
+  return pending;
+};
+
