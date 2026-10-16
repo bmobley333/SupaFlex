@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { ArrowDown, Zap, ChevronDown, ChevronUp, Sparkles, X, Plus, Minus, RotateCcw } from 'lucide-react';
+import { ArrowDown, Zap, ChevronDown, ChevronUp, X, Plus, Minus, RotateCcw } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
-import { AttributeKey, DieRating } from '../../types/game';
+import {
+  AttributeKey,
+  DEFAULT_UNASSIGNED_ATTRIBUTES,
+  isStartingAttributesUnassigned,
+} from '../../types/game';
 import { stepDownDie } from '../../lib/dice';
 import { CardHelpButton } from '../common/CardHelpButton';
 import { UniversalLinksDropdown } from '../hud/UniversalLinksDropdown';
@@ -23,8 +27,6 @@ const ATTRIBUTES: AttributeConfig[] = [
   { key: 'motion', name: 'Motion', abbr: 'Motion', emoji: '🏃' },
   { key: 'moxie', name: 'Moxie', abbr: 'Moxie', emoji: '🫀' },
 ];
-
-const DIE_OPTIONS: DieRating[] = ['d4', 'd6', 'd8', 'd10', 'd12'];
 
 const dieToNum = (die?: string): string => {
   if (!die) return '4';
@@ -56,7 +58,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
     deleteCharacterLink,
     reorderCharacterLinkByIndex,
   } = useCharacterStore();
-  const [activeDrawer, setActiveDrawer] = useState<'none' | 'attributes' | 'focus' | 'spark' | 'luck'>('none');
+  const [activeDrawer, setActiveDrawer] = useState<'none' | 'focus' | 'spark' | 'luck'>('none');
   const [showDossierModal, setShowDossierModal] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -77,13 +79,8 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
   if (!activeCharacter) return null;
 
   const sheet = activeCharacter.sheet_data;
-  const dice = sheet?.attribute_dice || {
-    might: 'd4',
-    motion: 'd4',
-    mind: 'd4',
-    magic: 'd6',
-    moxie: 'd8',
-  };
+  const dice = sheet?.attribute_dice || DEFAULT_UNASSIGNED_ATTRIBUTES;
+  const isUnassigned = isStartingAttributesUnassigned(dice);
 
   const focusCurrentDie = sheet?.focus_die_current || 'd4';
   const focusCurrent = dieToNum(focusCurrentDie);
@@ -96,17 +93,6 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
     updateActiveSheetData((prev) => ({
       ...prev,
       focus_die_current: stepDownDie(prev.focus_die_current || 'd4'),
-    }));
-    saveActiveCharacter();
-  };
-
-  const handleAttributeDieChange = (attrKey: AttributeKey, newDie: DieRating) => {
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      attribute_dice: {
-        ...prev.attribute_dice,
-        [attrKey]: newDie,
-      },
     }));
     saveActiveCharacter();
   };
@@ -142,7 +128,7 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
     saveActiveCharacter();
   };
 
-  const toggleDrawer = (target: 'attributes' | 'focus' | 'spark' | 'luck') => {
+  const toggleDrawer = (target: 'focus' | 'spark' | 'luck') => {
     setActiveDrawer((prev) => (prev === target ? 'none' : target));
   };
 
@@ -151,16 +137,15 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
       {/* Left Zone: Prominent Attributes Engine Ribbon */}
       <div className="relative">
         <div
-          onClick={() => {
-            if (onOpenAttributeManager) {
-              onOpenAttributeManager();
-            } else {
-              toggleDrawer('attributes');
-            }
-          }}
+          onClick={() => onOpenAttributeManager?.()}
+          title={
+            isUnassigned
+              ? 'Click to assign your starting (4, 4, 6, 6, 8) Attribute Dice (0 AP)'
+              : 'Open Attribute Manager'
+          }
           className={`flex items-center gap-2.5 bg-slate-950/95 px-3 py-1 rounded-xl border transition-all cursor-pointer shadow-lg ${
-            activeDrawer === 'attributes'
-              ? 'border-indigo-400 shadow-indigo-500/30 bg-slate-900'
+            isUnassigned
+              ? 'border-amber-500/70 hover:border-amber-400 shadow-amber-950/50 ring-1 ring-amber-500/30'
               : 'border-slate-800 hover:border-indigo-500/50 shadow-indigo-950/40'
           }`}
         >
@@ -174,7 +159,11 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
                     <span className="text-xl leading-none drop-shadow-md select-none group-hover:scale-110 transition-transform">
                       {attr.emoji}
                     </span>
-                    <span className="font-mono font-black text-lg text-cyan-300 tabular-nums select-none tracking-tight leading-none">
+                    <span
+                      className={`font-mono font-black text-lg tabular-nums select-none tracking-tight leading-none ${
+                        isUnassigned ? 'text-amber-300/80' : 'text-cyan-300'
+                      }`}
+                    >
                       {dieVal}
                     </span>
                   </div>
@@ -185,68 +174,13 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
               </React.Fragment>
             );
           })}
+          {isUnassigned && (
+            <span className="ml-1 px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-400/50 rounded-md font-outfit font-extrabold text-[10px] uppercase tracking-wider animate-pulse">
+              ⚠️ Assign Dice
+            </span>
+          )}
           <ChevronDown className="w-3.5 h-3.5 text-indigo-400 shrink-0 ml-0.5" />
         </div>
-
-        {/* 🔮 Attributes Die Rating Configuration Popover */}
-        {activeDrawer === 'attributes' && (
-          <div className="absolute top-full left-0 mt-2 z-50 w-80 p-3.5 bg-slate-900/95 border border-indigo-500/40 rounded-xl shadow-2xl shadow-indigo-950/60 backdrop-blur-xl animate-fadeIn flex flex-col gap-2.5 text-xs">
-            <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
-              <h4 className="font-outfit font-bold text-xs tracking-wider text-indigo-300 uppercase flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                Attribute Die Ratings
-              </h4>
-              <button
-                onClick={() => setActiveDrawer('none')}
-                className="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors"
-                title="Close popover"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              {ATTRIBUTES.map((attr) => {
-                const currentDie = dice[attr.key] || 'd4';
-                return (
-                  <div
-                    key={attr.key}
-                    className="flex items-center justify-between px-2.5 py-1.5 bg-slate-950/80 rounded-lg border border-slate-800 hover:border-indigo-500/30 transition-all"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-base">{attr.emoji}</span>
-                      <span className="font-outfit font-bold text-xs text-slate-100">{attr.name}</span>
-                    </div>
-
-                    <select
-                      value={currentDie}
-                      onChange={(e) => handleAttributeDieChange(attr.key, e.target.value as DieRating)}
-                      className="bg-slate-900 text-indigo-300 font-mono font-extrabold text-xs px-2.5 py-1 rounded-md border border-indigo-500/30 outline-none cursor-pointer focus:border-indigo-400"
-                    >
-                      {DIE_OPTIONS.map((die) => (
-                        <option key={die} value={die} className="bg-slate-900 text-slate-100">
-                          {dieToNum(die)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                );
-              })}
-            </div>
-
-            {onOpenAttributeManager && (
-              <button
-                onClick={() => {
-                  setActiveDrawer('none');
-                  onOpenAttributeManager();
-                }}
-                className="w-full mt-1 py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg font-outfit font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                ✨ Launch Full Attribute Manager
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Center Zone: Centered Split-Pill Control Deck (Nish, Focus, Luck, Spark) */}

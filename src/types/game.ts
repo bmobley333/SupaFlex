@@ -1588,5 +1588,47 @@ export interface EntityPointerInstance {
   is_archived?: boolean; // True if master row was removed from database
 }
 
+export const STARTING_DIE_POOL: DieRating[] = ['d4', 'd4', 'd6', 'd6', 'd8'];
 
+export const DEFAULT_UNASSIGNED_ATTRIBUTES: Record<AttributeKey, DieRating> = {
+  magic: 'd4',
+  might: 'd4',
+  mind: 'd4',
+  motion: 'd4',
+  moxie: 'd4',
+};
 
+/**
+ * Returns true if the character's attributes are still in the unassigned all-4s default state
+ * (all five attributes are 'd4' or missing).
+ */
+export const isStartingAttributesUnassigned = (
+  attributeDice?: Partial<Record<AttributeKey, DieRating | string | null>> | null
+): boolean => {
+  if (!attributeDice) return true;
+  const keys: AttributeKey[] = ['magic', 'might', 'mind', 'motion', 'moxie'];
+  return keys.every((k) => {
+    const raw = (attributeDice[k] || 'd4').toString().trim().toLowerCase();
+    return raw === 'd4' || raw === '4';
+  });
+};
+
+/**
+ * Verifies that all 5 attributes have been assigned and match the exact Level 1 starting pool (4, 4, 6, 6, 8).
+ */
+export const isValidStartingAttributeAssignment = (
+  attributeDice?: Partial<Record<AttributeKey, DieRating | string | null>> | null
+): boolean => {
+  if (!attributeDice) return false;
+  const keys: AttributeKey[] = ['magic', 'might', 'mind', 'motion', 'moxie'];
+  const normalized: string[] = [];
+  for (const k of keys) {
+    const val = attributeDice[k];
+    if (!val) return false;
+    const clean = val.toString().trim().toLowerCase();
+    normalized.push(clean.startsWith('d') ? clean : `d${clean}`);
+  }
+  const sorted = [...normalized].sort();
+  const target = [...STARTING_DIE_POOL].sort();
+  return sorted.length === 5 && sorted.every((d, i) => d === target[i]);
+};
