@@ -5,7 +5,7 @@
 
 import { Character, CharacterSheetData, AbilitySlot, WeaponSlot, ArmorData, ShieldData, TraitQuirkItem, AttributeKey, DieRating, SupabaseTrait, SupabaseSet, SupabasePath } from '../types/game';
 import { cleanPathName, parseKit } from './kitUtils';
-import { getCharacterKnownPaths, getCharacterKnownSets, getCharacterFreeSets, getCharacterFreeElementNames, evaluateItemAp, parseItemPaths, getCharacterMatchingPath, isPathStringMatch, normalizePathForComparison } from './pathApUtils';
+import { getCharacterKnownPaths, getCharacterKnownSets, getCharacterFreeSets, getCharacterFreeElementNames, evaluateItemAp, parseItemPaths, extractPathEntriesWithTags, getCharacterMatchingPath, isPathStringMatch, normalizePathForComparison } from './pathApUtils';
 
 export interface PathReconciliationResult {
   updatedSheetData: CharacterSheetData;
@@ -733,16 +733,13 @@ export const reconcileCharacterFreeTraits = (
       const rawPath = trait.path || trait.kit || trait.table_group || '';
       if (!rawPath) continue;
 
-      const itemPaths = parseItemPaths(rawPath);
-      const isFree = itemPaths.some((p) => {
-        const lower = p.toLowerCase();
-        return lower.includes('{free}') || lower.includes('{perk}') || lower.includes('{trait}');
-      });
-      if (!isFree) continue;
+      const entries = extractPathEntriesWithTags(rawPath);
+      const freeEntries = entries.filter((e) => e.isFree);
+      if (freeEntries.length === 0) continue;
 
-      const matchesKnown = itemPaths.some((p) => {
+      const matchesKnown = freeEntries.some((e) => {
         for (const kp of knownPaths) {
-          if (isPathStringMatch(p, kp)) {
+          if (isPathStringMatch(e.cleanPath, kp)) {
             return true;
           }
         }
@@ -750,7 +747,7 @@ export const reconcileCharacterFreeTraits = (
       });
 
       if (matchesKnown && !existingNames.has((trait.name || '').toLowerCase().trim())) {
-        const resolvedMatchingPath = getCharacterMatchingPath(rawPath, character);
+        const resolvedMatchingPath = cleanPathName(getCharacterMatchingPath(rawPath, character));
         prunedTraits.push({
           name: trait.name,
           effect: trait.effect || '',

@@ -159,9 +159,12 @@ export const VitalsHeader: React.FC<VitalsHeaderProps> = ({ onOpenVitalityManage
             </h3>
           </button>
           <CardHelpButton ruleKey="vitality.death_checks" />
-          {currentVit < 0 && (
-            <span className="text-[10px] font-mono px-2 py-0.5 bg-rose-950 text-rose-300 rounded-full border border-rose-500/40 font-bold animate-pulse">
-              Death Check / Negative
+          {currentVit <= 0 && (
+            <span
+              className="text-[10px] font-mono px-2 py-0.5 bg-rose-950 text-rose-300 rounded-full border border-rose-500/40 font-bold animate-pulse"
+              title={`Vit <= 0 Affliction Order: 1. Bleed (-1 Vit on Nish) -> 2. Resist Death (🫀^${-currentVit + 5}) -> 3. Resist Unconsciousness (🫀^${-currentVit + 10})`}
+            >
+              💀 🫀^{-currentVit + 5} | 💫 🫀^{-currentVit + 10}
             </span>
           )}
         </div>

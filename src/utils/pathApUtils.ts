@@ -128,11 +128,10 @@ export const getCharacterFreeElementNames = (
   for (const item of itemsCatalog) {
     if (!item) continue;
     const pathVal = item.path || item.kit || item.table_group;
-    const pathsList = parseItemPaths(pathVal);
-    for (const p of pathsList) {
-      const lower = p.toLowerCase();
-      if (lower.includes('{free}') || lower.includes('{free1}') || lower.includes('{trait}')) {
-        const clean = cleanPathName(p).toLowerCase().trim();
+    const entries = extractPathEntriesWithTags(pathVal);
+    for (const entry of entries) {
+      if (entry.isFree) {
+        const clean = entry.cleanPath.toLowerCase().trim();
         if (knownPaths.has(clean) && item.name) {
           freeElements.add(cleanPathName(item.name).toLowerCase().trim());
           break;
@@ -360,12 +359,11 @@ export const evaluateItemAp = (
     }
   }
   if (!isFree && inPath && rawPath) {
-    const paths = parseItemPaths(rawPath);
-    for (const p of paths) {
-      const pLower = p.toLowerCase();
-      if (pLower.includes('{free}') || pLower.includes('{free1}') || pLower.includes('{perk}') || pLower.includes('{trait}')) {
+    const entries = extractPathEntriesWithTags(rawPath);
+    for (const entry of entries) {
+      if (entry.isFree) {
         for (const kp of knownPaths) {
-          if (isPathStringMatch(p, kp)) {
+          if (isPathStringMatch(entry.cleanPath, kp)) {
             isFree = true;
             break;
           }

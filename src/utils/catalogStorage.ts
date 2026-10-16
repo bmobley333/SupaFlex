@@ -3,7 +3,7 @@
 // Eliminates the 5 MB LocalStorage quota bottleneck, prevents cold fetch egress storms,
 // and enforces strict Beacon Equality for 100% clock-skew immunity.
 
-export const CATALOG_CACHE_VERSION = 7;
+export const CATALOG_CACHE_VERSION = 8;
 export const CATALOGS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days (sliding with beacon check)
 
 export interface RawCatalogsData {

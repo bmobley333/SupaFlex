@@ -324,18 +324,23 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
               </button>
             </div>
 
-            {/* Secondary Zone: Chevron Popover Trigger */}
-            <button
-              onClick={() => toggleDrawer('luck')}
-              className="p-0.5 text-emerald-400 hover:text-emerald-200 transition-colors ml-0.5"
-              title="Click to view Luck rules & controls"
-            >
-              {activeDrawer === 'luck' ? (
-                <ChevronUp className="w-3.5 h-3.5" />
-              ) : (
-                <ChevronDown className="w-3.5 h-3.5" />
-              )}
-            </button>
+            <div className="h-3.5 w-[1px] bg-emerald-500/30 mx-0.5 shrink-0" />
+
+            {/* Secondary Zone: Help Popover & Chevron Popover Trigger */}
+            <div className="flex items-center gap-0.5">
+              <CardHelpButton ruleKey="luck.basics" />
+              <button
+                onClick={() => toggleDrawer('luck')}
+                className="p-0.5 text-emerald-400 hover:text-emerald-200 transition-colors"
+                title="Click to view Luck rules & controls"
+              >
+                {activeDrawer === 'luck' ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
           </div>
 
           {/* 🍀 Luck Absolute Floating Glass Popover Card */}
@@ -360,11 +365,27 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
               </div>
 
               <p className="text-[11px] text-slate-300 leading-relaxed">
-                Spend Luck to re-roll tests, avoid critical fumbles, or boost active skill rolls. Default: 3, Max: 5.
+                Spend 1 🍀 to reroll any roll (1/roll), apply a Luck Twist (+1 Target, +1d, +1 Range, +1 sq), or once per encounter activate any known Power 🔥 (including Exotic 🧿 Powers 🔥) regardless of Usage.
               </p>
 
               <div className="flex items-center justify-between gap-2 pt-1 border-t border-emerald-500/20">
-                <span className="text-[10px] text-slate-400 font-mono">Adjust Pool:</span>
+                <button
+                  onClick={() => {
+                    const res = spendLuckForBolt();
+                    if (res.success) {
+                      saveActiveCharacter();
+                    }
+                  }}
+                  disabled={luck <= 0 || Boolean(sheet?.luck_bolt_sub_used_in_encounter)}
+                  className="px-2 py-0.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 rounded border border-emerald-500/30 text-[11px] font-bold disabled:opacity-40 flex items-center gap-1"
+                  title={
+                    sheet?.luck_bolt_sub_used_in_encounter
+                      ? "1/Enc Luck Power activation already used this encounter"
+                      : "Spend 1 Luck to activate any known Power (including Exotic Powers) regardless of Usage (1/Enc)"
+                  }
+                >
+                  <span>🔥</span> Power (1/Enc)
+                </button>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleLuckChange(-1)}
@@ -447,18 +468,23 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
 
-            {/* Secondary Zone: Chevron Popover Trigger */}
-            <button
-              onClick={() => toggleDrawer('spark')}
-              className="p-0.5 text-amber-400 hover:text-amber-200 transition-colors ml-0.5"
-              title="Click to configure Bolt Engine & Spend Bolt"
-            >
-              {activeDrawer === 'spark' ? (
-                <ChevronUp className="w-3.5 h-3.5" />
-              ) : (
-                <ChevronDown className="w-3.5 h-3.5" />
-              )}
-            </button>
+            <div className="h-3.5 w-[1px] bg-amber-500/30 mx-0.5 shrink-0" />
+
+            {/* Secondary Zone: Help Popover & Chevron Popover Trigger */}
+            <div className="flex items-center gap-0.5">
+              <CardHelpButton ruleKey="sparks.basics" />
+              <button
+                onClick={() => toggleDrawer('spark')}
+                className="p-0.5 text-amber-400 hover:text-amber-200 transition-colors"
+                title="Click to configure Bolt Engine & Spend Bolt"
+              >
+                {activeDrawer === 'spark' ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
           </div>
 
           {/* ⚡ Spark Absolute Floating Glass Popover Card */}
@@ -503,6 +529,10 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
                 ))}
               </div>
 
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                If an encounter ends at full Bolt (5 Sparks), the Bolt and all Sparks are lost; otherwise, current Sparks persist into the next encounter.
+              </p>
+
               <div className="flex items-center justify-between gap-2 pt-0.5">
                 <div className="flex items-center gap-1.5">
                   <button
@@ -528,8 +558,8 @@ export const PersistentHeaderHUD: React.FC<PersistentHeaderHUDProps> = ({
                       className="px-2 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-semibold rounded border border-emerald-500/30 transition-all disabled:opacity-40 flex items-center gap-1"
                       title={
                         sheet?.luck_bolt_sub_used_in_encounter
-                          ? "Luck-for-Bolt already used this encounter (1/Enc)"
-                          : "Spend 1 Luck chit in place of a Bolt (1 per encounter)"
+                          ? "1/Enc Luck Power activation already used this encounter"
+                          : "Spend 1 Luck to activate any known Power (including Exotic Powers) regardless of Usage (1/Enc)"
                       }
                     >
                       <span>🍀</span> Spend Luck

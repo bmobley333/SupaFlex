@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { matchesGenre } from '../../store/useGenreStore';
+import { CardHelpButton } from '../common/CardHelpButton';
 import {
   SimpleGearItem,
   SupabaseGear,
@@ -1080,7 +1081,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   return (
     <>
       <div className={`bg-gradient-to-b from-teal-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-teal-500/90 p-3.5 flex items-center justify-between transition-all gap-3 flex-wrap shadow-lg shadow-teal-950/20 ${className}`}>
-        {/* Left: Title */}
+        {/* Left: Title & Help Button */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
@@ -1095,6 +1096,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
               Gear
             </span>
           </button>
+          <CardHelpButton ruleKey="gear" />
         </div>
 
         {/* Right: Manage Gear Action Button */}

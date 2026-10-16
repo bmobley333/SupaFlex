@@ -3,6 +3,7 @@ import React, { useState, useMemo, Suspense } from 'react';
 import { RotateCcw, Zap, ChevronDown, Sparkles, Search, X } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { CardHelpButton } from '../common/CardHelpButton';
 
 const ManageExoticsModal = React.lazy(() =>
   import('../modals/ManageExoticsModal').then((m) => ({ default: m.ManageExoticsModal }))
@@ -277,8 +278,8 @@ export const ExoticsCard: React.FC<ExoticsCardProps> = ({ className = '' }) => {
         <div className="flex flex-col gap-2 pb-2.5 border-b border-slate-800/80">
           {/* Row 1: Title, Centered Clear Uses, Edit Pencil */}
           <div className="relative flex items-center justify-between gap-3">
-            {/* Interactive Clickable Title & Emoji */}
-            <div className="flex items-center gap-2.5">
+            {/* Interactive Clickable Title, Emoji & Help Button */}
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setExoticGearManagerModalOpen(true)}
@@ -292,6 +293,7 @@ export const ExoticsCard: React.FC<ExoticsCardProps> = ({ className = '' }) => {
                   Exotics
                 </h3>
               </button>
+              <CardHelpButton ruleKey="magic_items.basics" />
             </div>
 
             {/* Centered Clear Uses Button */}
