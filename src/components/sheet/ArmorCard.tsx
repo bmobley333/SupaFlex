@@ -12,9 +12,7 @@ import {
   SupabaseArmor,
   calculateAvailableAp,
   calculateMovementRate,
-  SimpleGearItem,
 } from '../../types/game';
-import { parseCostToSilver, deductFundsWithChange } from '../../utils/moneyUtils';
 import {
   getFunctionsForGearItem,
   isModCompatibleWithItem,
@@ -59,7 +57,6 @@ export const ArmorCard: React.FC = () => {
 
   const gold = activeCharacter?.sheet_data?.gold || 0;
   const silver = activeCharacter?.sheet_data?.silver || 0;
-  const totalAvailableSilver = gold * 100 + silver;
 
   const isArmorExotic = useCallback(
     (item: { name: string; notes?: string }) => {
@@ -214,51 +211,9 @@ export const ArmorCard: React.FC = () => {
       numericAr = Math.max(2, numericAr - 2);
     }
 
-    const currentGear = activeCharacter?.sheet_data?.simple_gear || [];
-    const isOwnedInGear = currentGear.some(
-      (g) => g.name.trim().toLowerCase() === item.name.trim().toLowerCase()
-    );
-
-    const costStr = item.cost || '0s';
-    const costInSilver = parseCostToSilver(costStr);
-    const canAffordMoney = totalAvailableSilver >= costInSilver;
-
     const apCost = evalResult.apCost;
     const canAfford = availableAp >= apCost;
     const isSkilled = canAfford;
-
-    let proceedWithoutBuying = false;
-    if (!isOwnedInGear && costInSilver > 0 && !canAffordMoney) {
-      let shortageMsg = `⚠️ Insufficient Funds to Buy "${item.name}"!\n\n` +
-        `• Purchase Cost: ${costStr} (${costInSilver}s)\n` +
-        `• Your Wallet: ${gold}g ${silver}s (${totalAvailableSilver}s)\n` +
-        `• Shortfall: ${costInSilver - totalAvailableSilver}s\n\n`;
-      if (!canAfford) {
-        shortageMsg += `• Note: You also only have ${availableAp} AP (requires ${apCost} AP), so this armor will be learned as Unskilled.\n\n`;
-      }
-      shortageMsg += `Would you like to learn the armor proficiency anyway WITHOUT purchasing the physical copy?`;
-
-      const userAgrees = window.confirm(shortageMsg);
-      if (!userAgrees) return;
-      proceedWithoutBuying = true;
-    }
-
-    const shouldBuyGear = !isOwnedInGear && costInSilver > 0 && canAffordMoney && !proceedWithoutBuying;
-    const deduction = shouldBuyGear ? deductFundsWithChange(gold, silver, costInSilver) : null;
-
-    const newGearItem: SimpleGearItem | null = shouldBuyGear
-      ? {
-          id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-          name: item.name,
-          category: 'Armor',
-          cost: costStr,
-          qty: 1,
-          notes: item.notes || '',
-          item_type: 'armor',
-          genres: item.genres,
-          pic: item.pic,
-        }
-      : null;
 
     const newArmorItem: ArmorData = {
       id: `arm_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -295,22 +250,12 @@ export const ArmorCard: React.FC = () => {
         armor_slot: newArmorItem,
         armor: numericAr,
         wardrobe: updatedWardrobe,
-        ...(shouldBuyGear && deduction && newGearItem
-          ? {
-              gold: deduction.newGold,
-              silver: deduction.newSilver,
-              simple_gear: [...(prev.simple_gear || []), newGearItem],
-            }
-          : {}),
       };
       const finalSheet = {
         ...updatedSheet,
         movement_rate: calculateMovementRate(updatedSheet),
       };
-      if (shouldBuyGear) {
-        return reconcileCharacterVaultWithGear(finalSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
-      }
-      return finalSheet;
+      return reconcileCharacterVaultWithGear(finalSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
     });
     saveActiveCharacter();
 
@@ -426,10 +371,11 @@ export const ArmorCard: React.FC = () => {
         armor: nextActiveArmor ? nextActiveArmor.ar : 0,
         wardrobe: updatedWardrobe,
       };
-      return {
+      const finalSheet = {
         ...updatedSheet,
         movement_rate: calculateMovementRate(updatedSheet),
       };
+      return reconcileCharacterVaultWithGear(finalSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
     });
     saveActiveCharacter();
   };

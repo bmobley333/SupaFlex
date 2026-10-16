@@ -7,6 +7,8 @@ import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { CardHelpButton } from '../common/CardHelpButton';
 import {
   calculateAvailableAp,
+  calculateMovementRate,
+  calculateTotalPowerRefundAp,
   isGearPowerLearned,
   getLearnedGearPower,
   cleanAbilityName,
@@ -21,6 +23,8 @@ import {
 } from '../../types/game';
 import {
   cleanBelongsToName,
+  collectOwnedHostGearItems,
+  normalizeWeaponSlotBaseName,
   getFunctionsForGearItem,
   getFunctionsForMod,
   isModCompatibleWithItem,
@@ -201,9 +205,9 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
     [weaponsCatalog, armorCatalog, shieldsCatalog]
   );
 
-  // Drop gear item with AP refund for any learned powers on it
+  // Drop gear item (from simple_gear and/or character sheet weapons/wardrobe/armory) with full AP refund
   const handleDropGearItem = (item: SimpleGearItem) => {
-    const cleanHost = cleanBelongsToName(item.name);
+    const cleanHost = cleanBelongsToName(normalizeWeaponSlotBaseName(item.name));
     const directFns = getFunctionsForGearItem(item.name, effectiveFunctions);
     const directFnNames = new Set(directFns.map((f) => cleanAbilityName(f.name)));
 
@@ -222,7 +226,7 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
     spellSlots.forEach((slot) => {
       const slotTargetName = cleanAbilityName(slot.name);
       const slotBaseTarget = cleanAbilityName(slot.base_name);
-      const slotSourceGearClean = cleanBelongsToName(slot.source_gear);
+      const slotSourceGearClean = cleanBelongsToName(normalizeWeaponSlotBaseName(slot.source_gear));
 
       const belongsToItem =
         slotSourceGearClean === cleanHost ||
@@ -239,7 +243,11 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
       }
     });
 
-    const refundAp = droppedSlots.length;
+    const refundAp = droppedSlots.reduce((sum, slot) => {
+      const ver = (slot as any).version || parseAbilityVersion(slot.name || '').version || 1;
+      return sum + calculateTotalPowerRefundAp(ver, 1);
+    }, 0);
+
     const refundEntry: ApLogEntry | null =
       refundAp > 0
         ? {
@@ -255,23 +263,122 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
 
     const remainingGear = simpleGear.filter((g) => {
       if (g.id && item.id && g.id === item.id) return false;
-      if (cleanBelongsToName(g.name) === cleanHost) return false;
+      if (cleanBelongsToName(normalizeWeaponSlotBaseName(g.name)) === cleanHost) return false;
       if (g.name && g.name.endsWith(`(${item.name})`)) return false;
       if (isBelongsToMatch(g.belongs_to, item.name, true)) return false;
       return true;
     });
 
     updateActiveSheetData((prev) => {
+      const extraRefundEntries: ApLogEntry[] = [];
+
+      // 1. Check and remove from sheet.weapons if present
+      const currentWeapons = Array.isArray(prev.weapons) ? prev.weapons : [];
+      const matchingWeapons = currentWeapons.filter(
+        (w) => cleanBelongsToName(normalizeWeaponSlotBaseName(w.name)) === cleanHost
+      );
+      const remainingWeapons = currentWeapons.filter(
+        (w) => cleanBelongsToName(normalizeWeaponSlotBaseName(w.name)) !== cleanHost
+      );
+      if (matchingWeapons.some((w) => w.sk)) {
+        const wepApRefund = matchingWeapons.find((w) => typeof w.ap_cost === 'number')?.ap_cost ?? 1;
+        if (wepApRefund > 0) {
+          extraRefundEntries.push({
+            id: `refund_wep_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            cost: -wepApRefund,
+            category: 'Weapons',
+            description: `Unlearned Weapon: ${item.name} (-${wepApRefund} AP Refunded)`,
+            tier: 1,
+            source: 'Exotics Manager',
+            timestamp: new Date().toISOString(),
+          });
+        }
+      }
+
+      // 2. Check and remove from sheet.wardrobe if present
+      const currentWardrobe = Array.isArray(prev.wardrobe) ? prev.wardrobe : [];
+      const matchingArmor = currentWardrobe.filter((a) => cleanBelongsToName(a.name) === cleanHost);
+      const remainingWardrobe = currentWardrobe.filter((a) => cleanBelongsToName(a.name) !== cleanHost);
+      let nextArmorSlot = prev.armor_slot;
+      if (matchingArmor.length > 0) {
+        if (nextArmorSlot && cleanBelongsToName(nextArmorSlot.name) === cleanHost) {
+          nextArmorSlot =
+            remainingWardrobe.length > 0
+              ? remainingWardrobe[0]
+              : {
+                  id: 'arm_none',
+                  name: 'Unarmored',
+                  sk: true,
+                  ar: 0,
+                  requirement: '💪 4',
+                  mr: '👣8',
+                };
+        }
+        if (matchingArmor.some((a) => a.sk !== false)) {
+          const armApRefund = matchingArmor.find((a) => typeof a.ap_cost === 'number')?.ap_cost ?? 1;
+          if (armApRefund > 0) {
+            extraRefundEntries.push({
+              id: `refund_arm_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+              cost: -armApRefund,
+              category: 'Armor',
+              description: `Unlearned Armor: ${item.name} (-${armApRefund} AP Refunded)`,
+              tier: 1,
+              source: 'Exotics Manager',
+              timestamp: new Date().toISOString(),
+            });
+          }
+        }
+      }
+
+      // 3. Check and remove from sheet.armory if present
+      const currentArmory = Array.isArray(prev.armory) ? prev.armory : [];
+      const matchingShields = currentArmory.filter((s) => cleanBelongsToName(s.name) === cleanHost);
+      const remainingArmory = currentArmory.filter((s) => cleanBelongsToName(s.name) !== cleanHost);
+      let nextShieldSlot = prev.shield_slot;
+      if (matchingShields.length > 0) {
+        if (nextShieldSlot && cleanBelongsToName(nextShieldSlot.name) === cleanHost) {
+          nextShieldSlot =
+            remainingArmory.length > 0
+              ? { ...remainingArmory[0], equipped: true }
+              : { id: 'shd_none', equipped: false, name: 'None', sk: true, max_block: 0 };
+        }
+        if (matchingShields.some((s) => s.sk !== false)) {
+          const shdApRefund = matchingShields.find((s) => typeof s.ap_cost === 'number')?.ap_cost ?? 1;
+          if (shdApRefund > 0) {
+            extraRefundEntries.push({
+              id: `refund_shd_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+              cost: -shdApRefund,
+              category: 'Shields',
+              description: `Unlearned Shield: ${item.name} (-${shdApRefund} AP Refunded)`,
+              tier: 1,
+              source: 'Exotics Manager',
+              timestamp: new Date().toISOString(),
+            });
+          }
+        }
+      }
+
       const intermediateSheet = {
         ...prev,
         simple_gear: remainingGear,
+        weapons: remainingWeapons,
+        wardrobe: remainingWardrobe,
+        armor_slot: nextArmorSlot,
+        armor: nextArmorSlot ? nextArmorSlot.ar : prev.armor,
+        armory: remainingArmory,
+        shield_slot: nextShieldSlot,
         spell_slots: remainingSlots,
         ap_log: [
           ...(Array.isArray(prev.ap_log) ? prev.ap_log : []),
           ...(refundEntry ? [refundEntry] : []),
+          ...extraRefundEntries,
         ],
       };
-      return reconcileCharacterVaultWithGear(intermediateSheet, effectiveFunctions, effectiveMods).updatedSheet;
+      const withMr = {
+        ...intermediateSheet,
+        movement_rate: calculateMovementRate(intermediateSheet),
+      };
+      return reconcileCharacterVaultWithGear(withMr, effectiveFunctions, effectiveMods).updatedSheet;
     });
     saveActiveCharacter();
   };
@@ -454,98 +561,11 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
     setIsVersionEditorOpen(false);
   };
 
-  // Candidate host items aggregated from simple_gear + learned weapons + learned armor + learned shields
-  const candidateItems = useMemo(() => {
-    interface ExoticHostItem extends SimpleGearItem {
-      isHostOwned: boolean;
-    }
-
-    const pool: ExoticHostItem[] = [];
-    const seen = new Set<string>();
-
-    // 1. Physically owned gear in simple_gear
-    simpleGear.forEach((g) => {
-      if (!g || !g.name) return;
-      const cleanBase = cleanBelongsToName(g.name.replace(/\s*\[[MHS]\]$/i, '').trim());
-      seen.add(cleanBase);
-      pool.push({
-        ...g,
-        isHostOwned: true,
-      });
-    });
-
-    // 2. Learned weapons in sheet.weapons
-    const learnedWeapons = Array.isArray(sheet?.weapons) ? sheet.weapons : [];
-    learnedWeapons.forEach((w) => {
-      if (!w || !w.name) return;
-      const baseName = w.name.replace(/\s*\[[MHS]\]$/i, '').trim();
-      const cleanBase = cleanBelongsToName(baseName);
-      if (seen.has(cleanBase)) return;
-      seen.add(cleanBase);
-
-      const stock = (weaponsCatalog || []).find(
-        (sw) => cleanBelongsToName(sw.name) === cleanBase
-      );
-      pool.push({
-        id: `learned_weapon_${w.id || baseName}`,
-        name: baseName,
-        cost: w.cost || stock?.cost || '1g',
-        notes: w.notes || stock?.notes,
-        item_type: 'weapon',
-        category: 'Weapons',
-        qty: 0,
-        isHostOwned: false,
-      });
-    });
-
-    // 3. Learned armor in sheet.wardrobe
-    const learnedArmor = Array.isArray(sheet?.wardrobe) ? sheet.wardrobe : [];
-    learnedArmor.forEach((a) => {
-      if (!a || !a.name) return;
-      const cleanBase = cleanBelongsToName(a.name);
-      if (seen.has(cleanBase)) return;
-      seen.add(cleanBase);
-
-      const stock = (armorCatalog || []).find(
-        (sa) => cleanBelongsToName(sa.name) === cleanBase
-      );
-      pool.push({
-        id: `learned_armor_${a.id || a.name}`,
-        name: a.name,
-        cost: a.cost || stock?.cost || '1g',
-        notes: a.notes || stock?.notes,
-        item_type: 'armor',
-        category: 'Armor',
-        qty: 0,
-        isHostOwned: false,
-      });
-    });
-
-    // 4. Learned shields in sheet.armory
-    const learnedShields = Array.isArray(sheet?.armory) ? sheet.armory : [];
-    learnedShields.forEach((s) => {
-      if (!s || !s.name) return;
-      const cleanBase = cleanBelongsToName(s.name);
-      if (seen.has(cleanBase)) return;
-      seen.add(cleanBase);
-
-      const stock = (shieldsCatalog || []).find(
-        (ss) => cleanBelongsToName(ss.name) === cleanBase
-      );
-      pool.push({
-        id: `learned_shield_${s.id || s.name}`,
-        name: s.name,
-        cost: s.cost || stock?.cost || '1g',
-        notes: s.notes || stock?.notes,
-        item_type: 'shield',
-        category: 'Shields',
-        qty: 0,
-        isHostOwned: false,
-      });
-    });
-
-    return pool;
-  }, [simpleGear, sheet?.weapons, sheet?.wardrobe, sheet?.armory, weaponsCatalog, armorCatalog, shieldsCatalog]);
+  // Candidate host items aggregated from simple_gear + character sheet weapons + armor + shields (all treated as owned)
+  const candidateItems = useMemo(
+    () => collectOwnedHostGearItems(sheet, { weaponsCatalog, armorCatalog, shieldsCatalog }),
+    [sheet?.simple_gear, sheet?.weapons, sheet?.wardrobe, sheet?.armory, weaponsCatalog, armorCatalog, shieldsCatalog]
+  );
 
   // Filter candidate gear to all exotic gear (gear with direct functions, compatible mods, or installed mods)
   const exoticGearItems = useMemo(() => {

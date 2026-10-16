@@ -17,6 +17,7 @@ import {
 } from '../../types/game';
 import {
   cleanBelongsToName,
+  collectOwnedHostGearItems,
   getFunctionsForGearItem,
   getFunctionsForMod,
   isModCompatibleWithItem,
@@ -59,6 +60,9 @@ export const ExoticsCard: React.FC<ExoticsCardProps> = ({ className = '' }) => {
     activeCharacter,
     modsCatalog,
     functionsCatalog,
+    weaponsCatalog,
+    armorCatalog,
+    shieldsCatalog,
     toggleGearPowerUsage,
     clearAllGearPowerUses,
     isExoticGearManagerModalOpen,
@@ -68,14 +72,23 @@ export const ExoticsCard: React.FC<ExoticsCardProps> = ({ className = '' }) => {
 
   const sheet = activeCharacter?.sheet_data;
   const spellSlots = useMemo(() => (Array.isArray(sheet?.spell_slots) ? sheet.spell_slots : []), [sheet?.spell_slots]);
-  const simpleGear = useMemo(() => (Array.isArray(sheet?.simple_gear) ? sheet.simple_gear : []), [sheet?.simple_gear]);
+  const ownedHostGear = useMemo(
+    () =>
+      collectOwnedHostGearItems(sheet, {
+        weaponsCatalog,
+        armorCatalog,
+        shieldsCatalog,
+      }),
+    [sheet, weaponsCatalog, armorCatalog, shieldsCatalog]
+  );
 
-  // Filter owned gear to only those with inherent powers, installed mods, or learned powers (alphabetical A-Z)
+  // Filter owned gear (Gear Manager + Character Sheet Weapons, Armor, Shields) to only those with inherent powers, installed mods, or learned powers (alphabetical A-Z)
   const activeGearItems = useMemo(() => {
-    return simpleGear
+    return ownedHostGear
       .filter((item: SimpleGearItem) => {
         const hostName = item.name || '';
         const cleanHost = cleanBelongsToName(hostName);
+        const removedModsSet = new Set((item.removed_mods || []).map(cleanBelongsToName));
 
         // 1. Any learned slot explicitly rooted in this host gear
         if (spellSlots.some((s) => cleanBelongsToName(s.source_gear) === cleanHost)) {
@@ -86,21 +99,26 @@ export const ExoticsCard: React.FC<ExoticsCardProps> = ({ className = '' }) => {
         const directFns = getFunctionsForGearItem(hostName, functionsCatalog);
         if (directFns.some((fn) => isGearPowerLearned(fn.name, spellSlots))) return true;
 
-        // 3. Installed aftermarket mods
-        if (Array.isArray(item.installed_mods) && item.installed_mods.length > 0) return true;
+        // 3. Installed aftermarket mods (not removed)
+        const activeInstalledMods = (item.installed_mods || []).filter(
+          (m) => !removedModsSet.has(cleanBelongsToName(m))
+        );
+        if (activeInstalledMods.length > 0) return true;
 
-        // 4. Compatible mods with inherent free status or installed mods with learned powers
+        // 4. Compatible mods with inherent free status (not removed) or installed mods with learned powers
         const compMods = modsCatalog.filter((m) => isModCompatibleWithItem(m, item));
-        if (compMods.some((m) => isModFreeForHost(m, hostName))) return true;
+        if (compMods.some((m) => !removedModsSet.has(cleanBelongsToName(m.name)) && isModFreeForHost(m, hostName))) {
+          return true;
+        }
 
-        const installedSet = new Set((item.installed_mods || []).map(cleanBelongsToName));
+        const installedSet = new Set(activeInstalledMods.map(cleanBelongsToName));
         return compMods.some((m) => {
           if (!installedSet.has(cleanBelongsToName(m.name))) return false;
           return getFunctionsForMod(m.name, functionsCatalog).some((fn) => isGearPowerLearned(fn.name, spellSlots));
         });
       })
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-  }, [simpleGear, functionsCatalog, modsCatalog, spellSlots]);
+  }, [ownedHostGear, functionsCatalog, modsCatalog, spellSlots]);
 
   // Visible exotic gear items filtered by search query and exotic filter mode
   const visibleGearItems = useMemo(() => {
@@ -125,6 +143,9 @@ export const ExoticsCard: React.FC<ExoticsCardProps> = ({ className = '' }) => {
       });
       if (Array.isArray(item.installed_mods)) {
         item.installed_mods.forEach((mName) => installedModsSet.add(cleanBelongsToName(mName)));
+      }
+      if (Array.isArray(item.removed_mods)) {
+        item.removed_mods.forEach((mName) => installedModsSet.delete(cleanBelongsToName(mName)));
       }
       const hasModLearned = compMods.some((m) => {
         if (!installedModsSet.has(cleanBelongsToName(m.name))) return false;
@@ -424,6 +445,11 @@ export const ExoticsCard: React.FC<ExoticsCardProps> = ({ className = '' }) => {
               if (Array.isArray(item.installed_mods)) {
                 item.installed_mods.forEach((modName: string) => {
                   installedModsSet.add(cleanBelongsToName(modName));
+                });
+              }
+              if (Array.isArray(item.removed_mods)) {
+                item.removed_mods.forEach((modName: string) => {
+                  installedModsSet.delete(cleanBelongsToName(modName));
                 });
               }
 

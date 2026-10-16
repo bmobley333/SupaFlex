@@ -131,7 +131,7 @@
   },
   "magic_items.basics": {
     "title": "Exotics, Mods & Artifacts",
-    "summary": "Equipment & Mod Lineage:\n• Exotics (🧿) — Any purchasable Gear ⚙️ chassis that has at least one Mod 🔌 (such as the free factory Inherent mod or a purchased aftermarket Mod).\n• Artifacts (🔮) — Legendary or unique Exotic treasures (Cost = \"Artifact\") found through adventuring, loot drops, or Essence crafting.\n• Physical Ownership Gate — To learn or use an Exotic Power 🔥, you must physically own and wield or wear the host Gear chassis and have its parent Mod installed.\n\nLearning & AP Refunds:\n• 1 AP Learning Cost — Every Exotic Power 🔥 costs 1 AP to learn.\n• Full AP Refund — Unlearning an Exotic Power, removing a Mod, or dropping/selling the host Gear immediately refunds 100% of invested AP.",
+    "summary": "Equipment & Mod Lineage:\n• Exotics (🧿) — Any purchasable Gear ⚙️ chassis that has at least one Mod 🔌 (such as the free factory Inherent mod or a purchased aftermarket Mod).\n• Artifacts (🔮) — Legendary or unique Exotic treasures (Cost = \"Artifact\") found through adventuring, loot drops, or Essence crafting.\n• Physical Ownership Gate — To learn or use an Exotic Power 🔥, you must physically own the host Gear chassis (meaning it is either owned in your Gear ⚙️ Manager or selected and listed on your character sheet in the Weapons ⚔️, Armor 🧥, or Shields 🛡️ cards, regardless of whether Skilled or Unskilled) and have its parent Mod installed.\n\nLearning & AP Refunds:\n• 1 AP Learning Cost — Every Exotic Power 🔥 costs 1 AP to learn.\n• Full AP Refund — Unlearning an Exotic Power, removing a Mod, or dropping/selling the host Gear immediately refunds 100% of invested AP.",
     "anchor": "#63-exotics-mods-artifacts"
   },
   "gear": {

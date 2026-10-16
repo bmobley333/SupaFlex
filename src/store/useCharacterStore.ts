@@ -4,7 +4,7 @@ import { gameApi, createDefaultSheetData, CatalogScope } from '../services/api';
 import { migrateCharacterMagicItemsToVault } from '../utils/magicSlotSchedule';
 import { migrateCharacterPowersToCodex } from '../utils/readyMatrixSchedule';
 import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
-import { reconcileCharacterVaultWithGear, cleanBelongsToName, getFunctionsForMod } from '../utils/gearExoticPowerSync';
+import { reconcileCharacterVaultWithGear, cleanBelongsToName, getFunctionsForMod, normalizeWeaponSlotBaseName } from '../utils/gearExoticPowerSync';
 import { parseCostToSilver, deductFundsWithChange } from '../utils/moneyUtils';
 import { reconcileCharacterFreeTraits } from '../utils/pathReconciliationUtils';
 import { reconcileCanonicalSnapshots, updateCharacterSheetCanonicalItem, removeCharacterSheetCanonicalItem, CanonicalEntityType } from '../utils/canonicalPropagation';
@@ -2367,37 +2367,97 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       return { success: false, error: 'Not enough money' };
     }
 
-    const currentGear = [...(currentSheet.simple_gear || [])];
-    const hostIdx = currentGear.findIndex(
-      (g) => cleanBelongsToName(g.name) === cleanBelongsToName(hostName)
-    );
-    if (hostIdx === -1) return { success: false, error: 'Host gear item not found' };
-
-    const host = currentGear[hostIdx];
-    const installedMods = new Set<string>(host.installed_mods || []);
-    if (installedMods.has(modItem.name)) {
-      return { success: true };
-    }
-    installedMods.add(modItem.name);
-
-    // If previously marked removed, restore it
+    const targetHostClean = cleanBelongsToName(normalizeWeaponSlotBaseName(hostName));
     const cleanModName = cleanBelongsToName(modItem.name);
-    const updatedRemoved = (host.removed_mods || []).filter(
-      (m) => cleanBelongsToName(m) !== cleanModName
-    );
+    let foundHost = false;
+    let alreadyInstalled = false;
 
-    currentGear[hostIdx] = {
-      ...host,
-      installed_mods: Array.from(installedMods),
-      removed_mods: updatedRemoved,
+    const applyInstall = <T extends { installed_mods?: string[]; removed_mods?: string[] }>(item: T): T => {
+      const existingInstalled = Array.isArray(item.installed_mods) ? item.installed_mods : [];
+      if (existingInstalled.some((m) => cleanBelongsToName(m) === cleanModName)) {
+        alreadyInstalled = true;
+      }
+      const nextInstalled = existingInstalled.some((m) => cleanBelongsToName(m) === cleanModName)
+        ? existingInstalled
+        : [...existingInstalled, modItem.name];
+      const nextRemoved = (item.removed_mods || []).filter(
+        (m) => cleanBelongsToName(m) !== cleanModName
+      );
+      return {
+        ...item,
+        installed_mods: nextInstalled,
+        removed_mods: nextRemoved,
+      };
     };
 
-    get().updateActiveSheetData((sheet) => ({
-      ...sheet,
-      simple_gear: currentGear,
-      gold: deduction.newGold,
-      silver: deduction.newSilver,
-    }));
+    const nextSimpleGear = (currentSheet.simple_gear || []).map((g) => {
+      const gClean = cleanBelongsToName(normalizeWeaponSlotBaseName(g.name));
+      if (gClean === targetHostClean) {
+        foundHost = true;
+        return applyInstall(g);
+      }
+      return g;
+    });
+
+    const nextWeapons = (currentSheet.weapons || []).map((w) => {
+      const wClean = cleanBelongsToName(normalizeWeaponSlotBaseName(w.name));
+      if (wClean === targetHostClean) {
+        foundHost = true;
+        return applyInstall(w);
+      }
+      return w;
+    });
+
+    const nextWardrobe = (currentSheet.wardrobe || []).map((a) => {
+      if (cleanBelongsToName(a.name) === targetHostClean) {
+        foundHost = true;
+        return applyInstall(a);
+      }
+      return a;
+    });
+
+    const nextArmorSlot =
+      currentSheet.armor_slot && cleanBelongsToName(currentSheet.armor_slot.name) === targetHostClean
+        ? applyInstall(currentSheet.armor_slot)
+        : currentSheet.armor_slot;
+
+    const nextArmory = (currentSheet.armory || []).map((s) => {
+      if (cleanBelongsToName(s.name) === targetHostClean) {
+        foundHost = true;
+        return applyInstall(s);
+      }
+      return s;
+    });
+
+    const nextShieldSlot =
+      currentSheet.shield_slot && cleanBelongsToName(currentSheet.shield_slot.name) === targetHostClean
+        ? applyInstall(currentSheet.shield_slot)
+        : currentSheet.shield_slot;
+
+    if (!foundHost) {
+      return { success: false, error: 'Host gear item not found' };
+    }
+    if (alreadyInstalled) {
+      return { success: true };
+    }
+
+    const effectiveFunctions = get().functionsCatalog || [];
+    const effectiveMods = get().modsCatalog || [];
+
+    get().updateActiveSheetData((sheet) => {
+      const intermediate = {
+        ...sheet,
+        simple_gear: nextSimpleGear,
+        weapons: nextWeapons,
+        wardrobe: nextWardrobe,
+        armor_slot: nextArmorSlot,
+        armory: nextArmory,
+        shield_slot: nextShieldSlot,
+        gold: deduction.newGold,
+        silver: deduction.newSilver,
+      };
+      return reconcileCharacterVaultWithGear(intermediate, effectiveFunctions, effectiveMods).updatedSheet;
+    });
     get().saveActiveCharacter();
     return { success: true };
   },
@@ -2407,32 +2467,74 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     if (!active) return { success: false, error: 'No active character' };
     const currentSheet = active.sheet_data || createDefaultSheetData();
 
-    const currentGear = [...(currentSheet.simple_gear || [])];
-    const hostIdx = currentGear.findIndex(
-      (g) => cleanBelongsToName(g.name) === cleanBelongsToName(hostName)
-    );
-    if (hostIdx === -1) return { success: false, error: 'Host gear item not found' };
-
-    const host = currentGear[hostIdx];
+    const targetHostClean = cleanBelongsToName(normalizeWeaponSlotBaseName(hostName));
     const cleanTargetMod = cleanBelongsToName(modName);
+    let foundHost = false;
 
-    // 1. Remove from installed_mods
-    const updatedInstalled = (host.installed_mods || []).filter(
-      (m) => cleanBelongsToName(m) !== cleanTargetMod
-    );
-
-    // 2. Add to removed_mods (overrides inherent free mods)
-    const removedSet = new Set((host.removed_mods || []).map(cleanBelongsToName));
-    removedSet.add(cleanTargetMod);
-
-    currentGear[hostIdx] = {
-      ...host,
-      installed_mods: updatedInstalled,
-      removed_mods: Array.from(removedSet),
+    const applyUninstall = <T extends { installed_mods?: string[]; removed_mods?: string[] }>(item: T): T => {
+      const updatedInstalled = (item.installed_mods || []).filter(
+        (m) => cleanBelongsToName(m) !== cleanTargetMod
+      );
+      const removedSet = new Set((item.removed_mods || []).map(cleanBelongsToName));
+      removedSet.add(cleanTargetMod);
+      return {
+        ...item,
+        installed_mods: updatedInstalled,
+        removed_mods: Array.from(removedSet),
+      };
     };
+
+    const nextSimpleGear = (currentSheet.simple_gear || []).map((g) => {
+      const gClean = cleanBelongsToName(normalizeWeaponSlotBaseName(g.name));
+      if (gClean === targetHostClean) {
+        foundHost = true;
+        return applyUninstall(g);
+      }
+      return g;
+    });
+
+    const nextWeapons = (currentSheet.weapons || []).map((w) => {
+      const wClean = cleanBelongsToName(normalizeWeaponSlotBaseName(w.name));
+      if (wClean === targetHostClean) {
+        foundHost = true;
+        return applyUninstall(w);
+      }
+      return w;
+    });
+
+    const nextWardrobe = (currentSheet.wardrobe || []).map((a) => {
+      if (cleanBelongsToName(a.name) === targetHostClean) {
+        foundHost = true;
+        return applyUninstall(a);
+      }
+      return a;
+    });
+
+    const nextArmorSlot =
+      currentSheet.armor_slot && cleanBelongsToName(currentSheet.armor_slot.name) === targetHostClean
+        ? applyUninstall(currentSheet.armor_slot)
+        : currentSheet.armor_slot;
+
+    const nextArmory = (currentSheet.armory || []).map((s) => {
+      if (cleanBelongsToName(s.name) === targetHostClean) {
+        foundHost = true;
+        return applyUninstall(s);
+      }
+      return s;
+    });
+
+    const nextShieldSlot =
+      currentSheet.shield_slot && cleanBelongsToName(currentSheet.shield_slot.name) === targetHostClean
+        ? applyUninstall(currentSheet.shield_slot)
+        : currentSheet.shield_slot;
+
+    if (!foundHost) {
+      return { success: false, error: 'Host gear item not found' };
+    }
 
     // 3. Find powers belonging to this mod and unlearn them with AP refund
     const effectiveFunctions = get().functionsCatalog || [];
+    const effectiveMods = get().modsCatalog || [];
     const modFns = getFunctionsForMod(modName, effectiveFunctions);
     const modFnNames = new Set(modFns.map((fn) => cleanAbilityName(fn.name)));
 
@@ -2475,12 +2577,20 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
 
     const currentLog = Array.isArray(currentSheet.ap_log) ? currentSheet.ap_log : [];
 
-    get().updateActiveSheetData((sheet) => ({
-      ...sheet,
-      simple_gear: currentGear,
-      spell_slots: remainingSpellSlots,
-      ap_log: refundLogEntry ? [...currentLog, refundLogEntry] : currentLog,
-    }));
+    get().updateActiveSheetData((sheet) => {
+      const intermediate = {
+        ...sheet,
+        simple_gear: nextSimpleGear,
+        weapons: nextWeapons,
+        wardrobe: nextWardrobe,
+        armor_slot: nextArmorSlot,
+        armory: nextArmory,
+        shield_slot: nextShieldSlot,
+        spell_slots: remainingSpellSlots,
+        ap_log: refundLogEntry ? [...currentLog, refundLogEntry] : currentLog,
+      };
+      return reconcileCharacterVaultWithGear(intermediate, effectiveFunctions, effectiveMods).updatedSheet;
+    });
     get().saveActiveCharacter();
     return { success: true, refundedAp: refundAp };
   },

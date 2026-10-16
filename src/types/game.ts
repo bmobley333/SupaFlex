@@ -273,6 +273,8 @@ export interface WeaponSlot {
   ref_table?: EntityCatalogTable;
   is_archived?: boolean;
   archived_notice?: string;
+  installed_mods?: string[];
+  removed_mods?: string[];
 }
 
 export interface ArmorData {
@@ -294,6 +296,8 @@ export interface ArmorData {
   ref_table?: EntityCatalogTable;
   is_archived?: boolean;
   archived_notice?: string;
+  installed_mods?: string[];
+  removed_mods?: string[];
 }
 
 export interface SupabaseArmor {
@@ -638,6 +642,8 @@ export interface ShieldData {
   ref_table?: EntityCatalogTable;
   is_archived?: boolean;
   archived_notice?: string;
+  installed_mods?: string[];
+  removed_mods?: string[];
 }
 
 export interface MovementRateData {

@@ -9,6 +9,12 @@ import {
   MagicItem,
   AbilitySlot,
   SimpleGearItem,
+  SupabaseWeapon,
+  SupabaseArmor,
+  SupabaseShield,
+  ApLogEntry,
+  parseAbilityVersion,
+  calculateTotalPowerRefundAp,
   getCategorySlotWeight,
 } from '../types/game';
 import { hasTemplateBracket, replaceTemplateBracket } from './templateItemResolver';
@@ -375,6 +381,193 @@ export interface ReconcileResult {
  * When a gear item is dropped or removed, its inherent and installed functions are
  * immediately and deterministically evicted everywhere (Vault and Active Slots).
  */
+export interface OwnedHostGearCatalogs {
+  weaponsCatalog?: SupabaseWeapon[];
+  armorCatalog?: SupabaseArmor[];
+  shieldsCatalog?: SupabaseShield[];
+}
+
+export interface OwnedHostGearItem extends SimpleGearItem {
+  isHostOwned: boolean;
+  source_locations: ('simple_gear' | 'weapons' | 'wardrobe' | 'armory')[];
+}
+
+/**
+ * Collects all owned Exotic/Standard host gear items for a character across:
+ * 1. Gear Manager inventory (`sheetData.simple_gear`)
+ * 2. Character sheet Weapons (`sheetData.weapons`, Skilled or Unskilled)
+ * 3. Character sheet Armor (`sheetData.wardrobe`, Skilled or Unskilled)
+ * 4. Character sheet Shields (`sheetData.armory`, Skilled or Unskilled)
+ *
+ * Deduplicates by normalized base item name and merges any `installed_mods` and `removed_mods`.
+ */
+export const normalizeWeaponSlotBaseName = (rawName?: string | null): string => {
+  if (!rawName) return '';
+  return rawName
+    .replace(/\s*\[[MHS]\]$/i, '')
+    .replace(/\s*\((?:Melee|Hurled|Shot)\)$/i, '')
+    .trim();
+};
+
+export const collectOwnedHostGearItems = (
+  sheetData: CharacterSheetData | null | undefined,
+  catalogs?: OwnedHostGearCatalogs
+): OwnedHostGearItem[] => {
+  if (!sheetData) return [];
+
+  const map = new Map<string, OwnedHostGearItem>();
+
+  const mergeMods = (existing: string[] | undefined, incoming: string[] | undefined): string[] => {
+    const set = new Set<string>();
+    const result: string[] = [];
+    for (const m of [...(existing || []), ...(incoming || [])]) {
+      if (!m) continue;
+      const clean = cleanBelongsToName(m);
+      if (clean && !set.has(clean)) {
+        set.add(clean);
+        result.push(m);
+      }
+    }
+    return result;
+  };
+
+  // 1. Physically owned gear in simple_gear (excluding standalone child mod entries)
+  const simpleGear = Array.isArray(sheetData.simple_gear) ? sheetData.simple_gear : [];
+  for (const g of simpleGear) {
+    if (!g || !g.name || !g.name.trim()) continue;
+    if (g.category === '🔌 Mod' || /mod_free|mod_/i.test(g.id || '')) continue;
+
+    const baseName = normalizeWeaponSlotBaseName(g.name);
+    const cleanBase = cleanBelongsToName(baseName);
+    if (!cleanBase) continue;
+
+    const existing = map.get(cleanBase);
+    if (existing) {
+      existing.installed_mods = mergeMods(existing.installed_mods, g.installed_mods);
+      existing.removed_mods = mergeMods(existing.removed_mods, g.removed_mods);
+      if (!existing.source_locations.includes('simple_gear')) {
+        existing.source_locations.push('simple_gear');
+      }
+    } else {
+      map.set(cleanBase, {
+        ...g,
+        name: baseName,
+        installed_mods: mergeMods([], g.installed_mods),
+        removed_mods: mergeMods([], g.removed_mods),
+        isHostOwned: true,
+        source_locations: ['simple_gear'],
+      });
+    }
+  }
+
+  // 2. Selected Weapons on character sheet (sheetData.weapons — Skilled or Unskilled)
+  const sheetWeapons = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
+  for (const w of sheetWeapons) {
+    if (!w || !w.name || !w.name.trim()) continue;
+    const baseName = normalizeWeaponSlotBaseName(w.name);
+    const cleanBase = cleanBelongsToName(baseName);
+    if (!cleanBase) continue;
+
+    const stock = catalogs?.weaponsCatalog?.find((sw) => cleanBelongsToName(sw.name) === cleanBase);
+    const existing = map.get(cleanBase);
+    if (existing) {
+      existing.installed_mods = mergeMods(existing.installed_mods, w.installed_mods);
+      existing.removed_mods = mergeMods(existing.removed_mods, w.removed_mods);
+      if (!existing.cost && (w.cost || stock?.cost)) existing.cost = w.cost || stock?.cost;
+      if (!existing.notes && (w.notes || stock?.notes)) existing.notes = w.notes || stock?.notes;
+      if (!existing.source_locations.includes('weapons')) {
+        existing.source_locations.push('weapons');
+      }
+    } else {
+      map.set(cleanBase, {
+        id: `sheet_weapon_${w.id || baseName}`,
+        name: baseName,
+        cost: w.cost || stock?.cost || '1g',
+        notes: w.notes || stock?.notes,
+        item_type: 'weapon',
+        category: 'Weapons',
+        qty: 1,
+        installed_mods: mergeMods([], w.installed_mods),
+        removed_mods: mergeMods([], w.removed_mods),
+        isHostOwned: true,
+        source_locations: ['weapons'],
+      });
+    }
+  }
+
+  // 3. Selected Armor on character sheet (sheetData.wardrobe — Skilled or Unskilled)
+  const sheetArmor = Array.isArray(sheetData.wardrobe) ? sheetData.wardrobe : [];
+  for (const a of sheetArmor) {
+    if (!a || !a.name || !a.name.trim()) continue;
+    if (a.name.trim().toLowerCase() === 'unarmored' || a.id === 'arm_none') continue;
+    const cleanBase = cleanBelongsToName(a.name);
+    if (!cleanBase) continue;
+
+    const stock = catalogs?.armorCatalog?.find((sa) => cleanBelongsToName(sa.name) === cleanBase);
+    const existing = map.get(cleanBase);
+    if (existing) {
+      existing.installed_mods = mergeMods(existing.installed_mods, a.installed_mods);
+      existing.removed_mods = mergeMods(existing.removed_mods, a.removed_mods);
+      if (!existing.cost && (a.cost || stock?.cost)) existing.cost = a.cost || stock?.cost;
+      if (!existing.notes && (a.notes || stock?.notes)) existing.notes = a.notes || stock?.notes;
+      if (!existing.source_locations.includes('wardrobe')) {
+        existing.source_locations.push('wardrobe');
+      }
+    } else {
+      map.set(cleanBase, {
+        id: `sheet_armor_${a.id || a.name}`,
+        name: a.name,
+        cost: a.cost || stock?.cost || '1g',
+        notes: a.notes || stock?.notes,
+        item_type: 'armor',
+        category: 'Armor',
+        qty: 1,
+        installed_mods: mergeMods([], a.installed_mods),
+        removed_mods: mergeMods([], a.removed_mods),
+        isHostOwned: true,
+        source_locations: ['wardrobe'],
+      });
+    }
+  }
+
+  // 4. Selected Shields on character sheet (sheetData.armory — Skilled or Unskilled)
+  const sheetShields = Array.isArray(sheetData.armory) ? sheetData.armory : [];
+  for (const s of sheetShields) {
+    if (!s || !s.name || !s.name.trim()) continue;
+    if (s.name.trim().toLowerCase() === 'none' || s.id === 'shd_none') continue;
+    const cleanBase = cleanBelongsToName(s.name);
+    if (!cleanBase) continue;
+
+    const stock = catalogs?.shieldsCatalog?.find((ss) => cleanBelongsToName(ss.name) === cleanBase);
+    const existing = map.get(cleanBase);
+    if (existing) {
+      existing.installed_mods = mergeMods(existing.installed_mods, s.installed_mods);
+      existing.removed_mods = mergeMods(existing.removed_mods, s.removed_mods);
+      if (!existing.cost && (s.cost || stock?.cost)) existing.cost = s.cost || stock?.cost;
+      if (!existing.notes && (s.notes || stock?.notes)) existing.notes = s.notes || stock?.notes;
+      if (!existing.source_locations.includes('armory')) {
+        existing.source_locations.push('armory');
+      }
+    } else {
+      map.set(cleanBase, {
+        id: `sheet_shield_${s.id || s.name}`,
+        name: s.name,
+        cost: s.cost || stock?.cost || '1g',
+        notes: s.notes || stock?.notes,
+        item_type: 'shield',
+        category: 'Shields',
+        qty: 1,
+        installed_mods: mergeMods([], s.installed_mods),
+        removed_mods: mergeMods([], s.removed_mods),
+        isHostOwned: true,
+        source_locations: ['armory'],
+      });
+    }
+  }
+
+  return Array.from(map.values());
+};
+
 export const reconcileCharacterVaultWithGear = (
   sheetData: CharacterSheetData | null | undefined,
   functionsCatalog: FunctionItem[] = [],
@@ -447,7 +640,12 @@ export const reconcileCharacterVaultWithGear = (
     });
   }
 
-  // 1. Collect all valid functions granted by physically owned gear in simple_gear
+  // 1. Collect all valid functions granted by owned gear in simple_gear OR selected Weapons, Armor, and Shields on the sheet
+  const allOwnedHostItems = collectOwnedHostGearItems({
+    ...sheetData,
+    simple_gear: baseGearItems,
+  });
+
   const expectedFunctions: MagicItem[] = [];
   const expectedNamesSet = new Set<string>();
   const expectedFnMap = new Map<string, MagicItem>();
@@ -464,7 +662,7 @@ export const reconcileCharacterVaultWithGear = (
     }
   };
 
-  for (const hostItem of baseGearItems) {
+  for (const hostItem of allOwnedHostItems) {
     const hostName = hostItem.name;
     const baseTemplate = hostItem.base_template;
     const baseItemName = hostItem.base_item_name;
@@ -499,9 +697,12 @@ export const reconcileCharacterVaultWithGear = (
       registerExpected(mapFunctionToVaultItem(synFn, hostName, undefined, baseItemName));
     }
 
-    // B. Inherent {Free} mods for this host item (checking both host name and base exotic chassis)
+    // B. Inherent {Free} mods for this host item (checking both host name and base exotic chassis, excluding removed_mods)
+    const removedModsSet = new Set((hostItem.removed_mods || []).map(cleanBelongsToName));
     const freeModsForHost = modsCatalog.filter(
-      (m) => isModFreeForHost(m, hostName) || (baseItemName && isModFreeForHost(m, baseItemName))
+      (m) =>
+        !removedModsSet.has(cleanBelongsToName(m.name)) &&
+        (isModFreeForHost(m, hostName) || (baseItemName && isModFreeForHost(m, baseItemName)))
     );
     for (const fm of freeModsForHost) {
       const fns = getFunctionsForMod(fm.name, functionsCatalog);
@@ -513,6 +714,7 @@ export const reconcileCharacterVaultWithGear = (
     // C. Purchased aftermarket mods installed on this host item
     if (Array.isArray(hostItem.installed_mods)) {
       for (const modName of hostItem.installed_mods) {
+        if (removedModsSet.has(cleanBelongsToName(modName))) continue;
         const fns = getFunctionsForMod(modName, functionsCatalog);
         for (const fn of fns) {
           registerExpected(mapFunctionToVaultItem(fn, hostName, modName, baseItemName));
@@ -563,7 +765,7 @@ export const reconcileCharacterVaultWithGear = (
     const cName = cleanBelongsToName(rawName);
     const sName = cName.replace(/\(mso\)/gi, '').trim();
 
-    // 1. If it directly matches an expected function granted by simple_gear, it IS a gear function
+    // 1. If it directly matches an expected function granted by owned gear, it IS a gear function
     if (expectedNamesSet.has(cName) || expectedNamesSet.has(sName)) return true;
 
     // 2. Explicit gear link
@@ -613,7 +815,7 @@ export const reconcileCharacterVaultWithGear = (
     const gStripped = gName ? gName.replace(/\(mso\)/gi, '').trim() : '';
 
     if (isHardwareFunction(vItem)) {
-      // Must be currently valid based on simple_gear ownership
+      // Must be currently valid based on owned gear
       const isExpected =
         expectedNamesSet.has(cName) ||
         expectedNamesSet.has(sName) ||
@@ -676,6 +878,7 @@ export const reconcileCharacterVaultWithGear = (
 
   // 3. Reconcile Active Exotic Powers (spell_slots)
   const finalSlots: AbilitySlot[] = [];
+  const evictedActiveSlots: AbilitySlot[] = [];
   for (const slot of currentSlotsA) {
     if (!slot || !slot.name) continue;
     const rawName = (slot as any).base_name || slot.name;
@@ -718,6 +921,7 @@ export const reconcileCharacterVaultWithGear = (
       } else {
         // Evicted from Active Exotic Powers because host gear was dropped!
         removedFunctions.push(`${slot.name} (from Active Exotic Powers)`);
+        evictedActiveSlots.push(slot);
       }
     } else {
       finalSlots.push(slot);
@@ -759,6 +963,25 @@ export const reconcileCharacterVaultWithGear = (
     }
   }
 
+  // Automatic AP log refund if active Exotic Power slots were evicted when dropping a host item
+  const evictedRefundAp = evictedActiveSlots.reduce((sum, slot) => {
+    const ver = (slot as any).version || parseAbilityVersion(slot.name || '').version || 1;
+    return sum + calculateTotalPowerRefundAp(ver, 1);
+  }, 0);
+
+  const evictedRefundEntry: ApLogEntry | null =
+    evictedRefundAp > 0
+      ? {
+          id: `refund_evicted_exotics_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+          cost: -evictedRefundAp,
+          category: 'Exotics',
+          description: `Refund ${evictedRefundAp} AP from dropped Exotic Gear (${evictedActiveSlots.map((s) => s.name).join(', ')})`,
+          tier: 'Manual',
+          source: (evictedActiveSlots[0] as any)?.source_gear || 'Dropped Exotic Gear',
+          timestamp: new Date().toISOString(),
+        }
+      : null;
+
   const changed =
     addedFunctions.length > 0 ||
     removedFunctions.length > 0 ||
@@ -766,7 +989,8 @@ export const reconcileCharacterVaultWithGear = (
     metadataHealed ||
     finalVault.length !== currentVault.length ||
     finalSlots.length !== currentSlotsA.length ||
-    currentSlotsB.length > 0;
+    currentSlotsB.length > 0 ||
+    Boolean(evictedRefundEntry);
 
   return {
     updatedSheet: changed
@@ -776,6 +1000,9 @@ export const reconcileCharacterVaultWithGear = (
           character_vault: finalVault,
           spell_slots: finalSlots,
           stance_beta_slots: [],
+          ap_log: evictedRefundEntry
+            ? [...(Array.isArray(sheetData.ap_log) ? sheetData.ap_log : []), evictedRefundEntry]
+            : sheetData.ap_log,
         }
       : sheetData,
     addedFunctions,

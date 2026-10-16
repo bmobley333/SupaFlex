@@ -10,13 +10,11 @@ import {
   WeaponVariantOption,
   splitWeaponIntoVariants,
   calculateAvailableAp,
-  SimpleGearItem,
 } from '../../types/game';
 
 import { CardHelpButton } from '../common/CardHelpButton';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { compareMsoItems, compareMsoOptions, isMsoEntry } from '../../utils/kitUtils';
-import { parseCostToSilver, deductFundsWithChange } from '../../utils/moneyUtils';
 import {
   getFunctionsForGearItem,
   isModCompatibleWithItem,
@@ -125,7 +123,6 @@ export const WeaponsCard: React.FC = () => {
 
   const gold = activeCharacter?.sheet_data?.gold || 0;
   const silver = activeCharacter?.sheet_data?.silver || 0;
-  const totalAvailableSilver = gold * 100 + silver;
 
   const isWeaponExotic = useCallback(
     (wep: { name: string; notes?: string }) => {
@@ -261,7 +258,7 @@ export const WeaponsCard: React.FC = () => {
     [knownPaths, knownSets, freeSets, freeElementNames, attributeDice]
   );
 
-  // Acquire (learn proficiency & buy unowned physical gear) for a weapon
+  // Acquire weapon for character sheet (Skilled or Unskilled — owned by default under SupaFlex KISS rules)
   const handleEquipWeapon = (weapon: SupabaseWeapon, variantsToEquip: WeaponVariantOption[]) => {
     const evalResult = getWeaponEvalResult(weapon);
 
@@ -272,51 +269,9 @@ export const WeaponsCard: React.FC = () => {
       if (!confirmed) return;
     }
 
-    const currentGear = activeCharacter?.sheet_data?.simple_gear || [];
-    const isOwnedInGear = currentGear.some(
-      (g) => g.name.trim().toLowerCase() === weapon.name.trim().toLowerCase()
-    );
-
-    const costStr = weapon.cost || '0s';
-    const costInSilver = parseCostToSilver(costStr);
-    const canAffordMoney = totalAvailableSilver >= costInSilver;
-
     const apCost = evalResult.apCost;
     const canAffordAp = availableAp >= apCost;
     const isSkilled = canAffordAp;
-
-    let proceedWithoutBuying = false;
-    if (!isOwnedInGear && costInSilver > 0 && !canAffordMoney) {
-      let shortageMsg = `⚠️ Insufficient Funds to Buy "${weapon.name}"!\n\n` +
-        `• Purchase Cost: ${costStr} (${costInSilver}s)\n` +
-        `• Your Wallet: ${gold}g ${silver}s (${totalAvailableSilver}s)\n` +
-        `• Shortfall: ${costInSilver - totalAvailableSilver}s\n\n`;
-      if (!canAffordAp) {
-        shortageMsg += `• Note: You also only have ${availableAp} AP (requires ${apCost} AP), so this skill will be learned as Unskilled.\n\n`;
-      }
-      shortageMsg += `Would you like to learn the weapon skill anyway WITHOUT purchasing the physical copy?`;
-
-      const userAgrees = window.confirm(shortageMsg);
-      if (!userAgrees) return;
-      proceedWithoutBuying = true;
-    }
-
-    const shouldBuyGear = !isOwnedInGear && costInSilver > 0 && canAffordMoney && !proceedWithoutBuying;
-    const deduction = shouldBuyGear ? deductFundsWithChange(gold, silver, costInSilver) : null;
-
-    const newGearItem: SimpleGearItem | null = shouldBuyGear
-      ? {
-          id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-          name: weapon.name,
-          category: 'Weapons',
-          cost: costStr,
-          qty: 1,
-          notes: weapon.notes || '',
-          item_type: 'weapon',
-          genres: weapon.genres,
-          pic: weapon.pic,
-        }
-      : null;
 
     const newSlots: WeaponSlot[] = variantsToEquip.map((variant) => {
       const calculatedAtk = calculateWeaponAtk(variant.name, variant.mhs, attributeDice);
@@ -336,6 +291,7 @@ export const WeaponsCard: React.FC = () => {
         max_blk: cleanBlockNum,
         effect: `${variant.variantType} Weapon (${evalResult.apCost} AP, Req ${variant.requirementStr})`,
         notes: weapon.notes,
+        cost: weapon.cost || '1g',
         path: weapon.path,
         sets: weapon.sets || [],
         ap_cost: evalResult.apCost,
@@ -361,19 +317,9 @@ export const WeaponsCard: React.FC = () => {
       const intermediateSheet = {
         ...prev,
         weapons: updatedWeapons,
-        ...(shouldBuyGear && deduction && newGearItem
-          ? {
-              gold: deduction.newGold,
-              silver: deduction.newSilver,
-              simple_gear: [...(prev.simple_gear || []), newGearItem],
-            }
-          : {}),
       };
 
-      if (shouldBuyGear) {
-        return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
-      }
-      return intermediateSheet;
+      return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
     });
     saveActiveCharacter();
 
@@ -452,12 +398,15 @@ export const WeaponsCard: React.FC = () => {
     const wasSkilled = targetGroup ? targetGroup.slots.some((s) => s.sk) : false;
     const apRefund = targetGroup ? (targetGroup.slots.find((s) => typeof s.ap_cost === 'number')?.ap_cost ?? 1) : 1;
 
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      weapons: (prev.weapons || [])
-        .filter((w) => getBaseWeaponName(w.name).toLowerCase() !== baseWeaponName.toLowerCase())
-        .sort((a, b) => compareMsoItems(a, b, isGsUnlocked)),
-    }));
+    updateActiveSheetData((prev) => {
+      const intermediateSheet = {
+        ...prev,
+        weapons: (prev.weapons || [])
+          .filter((w) => getBaseWeaponName(w.name).toLowerCase() !== baseWeaponName.toLowerCase())
+          .sort((a, b) => compareMsoItems(a, b, isGsUnlocked)),
+      };
+      return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
+    });
 
     if (wasSkilled && apRefund > 0) {
       recordApExpenditure(-apRefund, 'Weapons', `Unlearned Weapon: ${baseWeaponName} (-${apRefund} AP Refunded)`, 1, 'Manage Weapons');

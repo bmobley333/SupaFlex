@@ -12,9 +12,7 @@ import {
   SupabaseShield,
   calculateAvailableAp,
   calculateMovementRate,
-  SimpleGearItem,
 } from '../../types/game';
-import { parseCostToSilver, deductFundsWithChange } from '../../utils/moneyUtils';
 import {
   getFunctionsForGearItem,
   isModCompatibleWithItem,
@@ -51,7 +49,6 @@ export const ShieldCard: React.FC = () => {
 
   const gold = activeCharacter?.sheet_data?.gold || 0;
   const silver = activeCharacter?.sheet_data?.silver || 0;
-  const totalAvailableSilver = gold * 100 + silver;
 
   const isShieldExotic = useCallback(
     (item: { name: string; notes?: string }) => {
@@ -216,51 +213,9 @@ export const ShieldCard: React.FC = () => {
       blockVal = Math.max(4, blockVal - 4);
     }
 
-    const currentGear = activeCharacter?.sheet_data?.simple_gear || [];
-    const isOwnedInGear = currentGear.some(
-      (g) => g.name.trim().toLowerCase() === item.name.trim().toLowerCase()
-    );
-
-    const costStr = item.cost || '0s';
-    const costInSilver = parseCostToSilver(costStr);
-    const canAffordMoney = totalAvailableSilver >= costInSilver;
-
     const apCost = evalResult.apCost;
     const canAfford = availableAp >= apCost;
     const isSkilled = canAfford;
-
-    let proceedWithoutBuying = false;
-    if (!isOwnedInGear && costInSilver > 0 && !canAffordMoney) {
-      let shortageMsg = `⚠️ Insufficient Funds to Buy "${item.name}"!\n\n` +
-        `• Purchase Cost: ${costStr} (${costInSilver}s)\n` +
-        `• Your Wallet: ${gold}g ${silver}s (${totalAvailableSilver}s)\n` +
-        `• Shortfall: ${costInSilver - totalAvailableSilver}s\n\n`;
-      if (!canAfford) {
-        shortageMsg += `• Note: You also only have ${availableAp} AP (requires ${apCost} AP), so this shield will be learned as Unskilled.\n\n`;
-      }
-      shortageMsg += `Would you like to learn the shield proficiency anyway WITHOUT purchasing the physical copy?`;
-
-      const userAgrees = window.confirm(shortageMsg);
-      if (!userAgrees) return;
-      proceedWithoutBuying = true;
-    }
-
-    const shouldBuyGear = !isOwnedInGear && costInSilver > 0 && canAffordMoney && !proceedWithoutBuying;
-    const deduction = shouldBuyGear ? deductFundsWithChange(gold, silver, costInSilver) : null;
-
-    const newGearItem: SimpleGearItem | null = shouldBuyGear
-      ? {
-          id: `gear_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-          name: item.name,
-          category: 'Shields',
-          cost: costStr,
-          qty: 1,
-          notes: item.notes || '',
-          item_type: 'shield',
-          genres: item.genres,
-          pic: item.pic,
-        }
-      : null;
 
     const newShieldItem: ShieldData = {
       id: `shd_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -296,22 +251,12 @@ export const ShieldCard: React.FC = () => {
         ...prev,
         shield_slot: newShieldItem,
         armory: [...(prev.armory || armory).filter((s) => s.name.toLowerCase() !== item.name.toLowerCase()), newShieldItem],
-        ...(shouldBuyGear && deduction && newGearItem
-          ? {
-              gold: deduction.newGold,
-              silver: deduction.newSilver,
-              simple_gear: [...(prev.simple_gear || []), newGearItem],
-            }
-          : {}),
       };
       const finalSheet = {
         ...updatedSheet,
         movement_rate: calculateMovementRate(updatedSheet),
       };
-      if (shouldBuyGear) {
-        return reconcileCharacterVaultWithGear(finalSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
-      }
-      return finalSheet;
+      return reconcileCharacterVaultWithGear(finalSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
     });
     saveActiveCharacter();
 
@@ -420,10 +365,11 @@ export const ShieldCard: React.FC = () => {
         shield_slot: nextActiveShield,
         armory: updatedArmory,
       };
-      return {
+      const finalSheet = {
         ...updatedSheet,
         movement_rate: calculateMovementRate(updatedSheet),
       };
+      return reconcileCharacterVaultWithGear(finalSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
     });
     saveActiveCharacter();
   };
