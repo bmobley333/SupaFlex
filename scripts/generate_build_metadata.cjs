@@ -89,3 +89,16 @@ if (!fs.existsSync(publicDir)) {
 
 fs.writeFileSync(versionJsonPath, JSON.stringify(metadata, null, 2), 'utf-8');
 console.log(`[BuildMetadata] Generated ${versionJsonPath} -> App: ${appVersion}, Vercel Build: ${vercelBuild} (${gitCommit})`);
+
+// Touch vite.config.ts so any running `localhost:3000` Vite dev server automatically restarts
+// in-place (<200ms), flushing stale React Fast Refresh / Zustand store boundaries and reloading the browser.
+const viteConfigPath = path.join(rootDir, 'vite.config.ts');
+if (fs.existsSync(viteConfigPath)) {
+  try {
+    const now = new Date();
+    fs.utimesSync(viteConfigPath, now, now);
+    console.log('[BuildMetadata] Touched vite.config.ts to auto-restart active localhost:3000 Vite dev server.');
+  } catch (err) {
+    // Ignore touch errors in read-only CI environments
+  }
+}
