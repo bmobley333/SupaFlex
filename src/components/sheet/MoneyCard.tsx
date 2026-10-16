@@ -279,23 +279,52 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
             className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden text-left"
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3 flex-wrap">
-              <div className="flex items-center gap-2.5 shrink-0">
-                <div className="p-2 rounded-xl bg-amber-950/80 border border-amber-500/30 text-amber-300 flex items-center justify-center">
-                  <span className="text-lg leading-none">💰</span>
+            <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex flex-col gap-2.5 shrink-0">
+              {/* Top Row: Title/Subtitle on Left, GO TO: GEAR MANAGER + X in Upper Right */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-2 rounded-xl bg-amber-950/80 border border-amber-500/30 text-amber-300 flex items-center justify-center shrink-0">
+                    <span className="text-lg leading-none">💰</span>
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
+                      Money & Valuables Manager
+                    </h3>
+                    <p className="text-xs text-slate-400 hidden sm:block">
+                      Manage currency, trade goods, precious gems, and treasure valuables.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
-                    Money & Valuables Manager
-                  </h3>
-                  <p className="text-xs text-slate-400 hidden sm:block">
-                    Manage currency, trade goods, precious gems, and treasure valuables.
-                  </p>
+
+                {/* Upper Right: GO TO: GEAR MANAGER adjacent to Close X */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoneyValuablesModalOpen(false);
+                      setGearManagerModalOpen(true);
+                    }}
+                    className="px-2.5 py-1.5 bg-teal-950/90 hover:bg-teal-900/90 border border-teal-500/50 hover:border-teal-400 text-teal-200 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 group"
+                    title="Jump directly to Gear Manager"
+                  >
+                    <span className="text-teal-300/90 font-outfit uppercase tracking-wider text-[10px] font-extrabold">Go to:</span>
+                    <span className="text-sm leading-none group-hover:scale-110 transition-transform">⚙️</span>
+                    <span className="font-outfit uppercase tracking-wider text-[11px] font-extrabold">Gear Manager</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMoneyValuablesModalOpen(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
+                    title="Close Money & Valuables Manager"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
 
-              {/* Coin Totals Pill & Go To Gear Manager Shortcut in Header */}
-              <div className="flex items-center gap-2 flex-wrap">
+              {/* Row 2: Coin Totals Pill */}
+              <div className="flex items-center">
                 <div className="flex items-center gap-3 px-3 py-1 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs font-bold">
                   <div className="flex items-center gap-1.5">
                     <span className="text-amber-300">Gold 🪙:</span>
@@ -327,30 +356,7 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
                     />
                   </div>
                 </div>
-
-                {/* Shortcut to Gear Manager */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMoneyValuablesModalOpen(false);
-                    setGearManagerModalOpen(true);
-                  }}
-                  className="px-2.5 py-1.5 bg-teal-950/90 hover:bg-teal-900/90 border border-teal-500/50 hover:border-teal-400 text-teal-200 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 group"
-                  title="Jump directly to Gear Manager"
-                >
-                  <span className="text-teal-300/90 font-outfit uppercase tracking-wider text-[10px] font-extrabold">Go to:</span>
-                  <span className="text-sm leading-none group-hover:scale-110 transition-transform">⚙️</span>
-                  <span className="font-outfit uppercase tracking-wider text-[11px] font-extrabold">Gear Manager</span>
-                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setMoneyValuablesModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
             {/* 2-Column Split-Pane Body */}
@@ -464,6 +470,18 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
                     })
                   )}
                 </div>
+
+                {/* Pinned Valuables Total Value Footer inside Left-Pane Card */}
+                <div className="mt-2 pt-2.5 border-t border-slate-800/80 flex items-center justify-between shrink-0">
+                  <div className="flex items-center justify-between gap-2 text-xs font-mono font-bold text-amber-300 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800 w-full">
+                    <span className="text-slate-400 font-sans font-semibold text-[11px]">Valuables Total Value:</span>
+                    <div className="flex items-center gap-2">
+                      <span>🪙 {treasureTotalValue.gold}g</span>
+                      <span>•</span>
+                      <span>🥈 {treasureTotalValue.silver}s</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Right Pane: Custom Treasure Creator Form */}
@@ -542,14 +560,7 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2 text-xs font-mono font-bold text-amber-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
-                <span className="text-slate-400 font-sans font-semibold text-[11px]">Treasure Total Value:</span>
-                <span>🪙 {treasureTotalValue.gold}g</span>
-                <span>•</span>
-                <span>🥈 {treasureTotalValue.silver}s</span>
-              </div>
-
+            <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setMoneyValuablesModalOpen(false)}
