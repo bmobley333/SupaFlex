@@ -123,7 +123,7 @@ export const ChaosGauntletSocketModal: React.FC<ChaosGauntletSocketModalProps> =
         className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
       >
         {/* Modal Top Bar */}
-        <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0">
+        <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/90 flex items-start justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-violet-950/80 border border-violet-500/40 text-violet-300 flex items-center justify-center shadow-inner">
               <span className="text-xl leading-none">💎</span>

@@ -1521,7 +1521,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
               >
                 {/* Modal Top Bar */}
                 <div className="px-4 py-2.5 border-b border-slate-800 bg-slate-950/80 flex flex-col gap-2 shrink-0">
-                  <div className="flex items-center justify-between gap-3 w-full">
+                  <div className="flex items-start justify-between gap-3 w-full">
                     <div className="flex items-center gap-2.5 shrink-0">
                       <div className={`p-2 rounded-xl border flex items-center justify-center shrink-0 ${
                         type === 'powers' ? 'bg-amber-950/80 border-amber-500/30 text-amber-300' : 'bg-cyan-950/80 border-cyan-500/30 text-cyan-300'

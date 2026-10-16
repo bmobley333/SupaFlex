@@ -263,7 +263,7 @@ export const VitalityManagerModal: React.FC<VitalityManagerModalProps> = ({ isOp
         )}
 
         {/* 1. Header Standard */}
-        <div className="bg-slate-900/90 border-b border-slate-800 px-6 py-4 flex items-center justify-between shrink-0 backdrop-blur-md">
+        <div className="bg-slate-900/90 border-b border-slate-800 px-6 py-4 flex items-start justify-between shrink-0 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-rose-950/60 border border-rose-500/40 rounded-xl text-rose-400 text-2xl shadow-inner">
               ❤️

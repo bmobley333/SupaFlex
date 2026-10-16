@@ -534,7 +534,7 @@ export const MonsterManagerModal: React.FC<MonsterManagerModalProps> = ({
     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-6xl w-full flex flex-col max-h-[90vh] shadow-2xl overflow-hidden font-outfit">
         {/* Header Bar */}
-        <div className="px-6 py-4 bg-slate-900/90 border-b border-slate-800 backdrop-blur-md flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 bg-slate-900/90 border-b border-slate-800 backdrop-blur-md flex items-start justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-amber-500/10 rounded-xl border border-amber-500/30 text-amber-400">
               <Skull className="w-5 h-5" />

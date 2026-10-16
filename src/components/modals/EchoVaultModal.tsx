@@ -28,7 +28,7 @@ export const EchoVaultModal: React.FC<EchoVaultModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-fadeIn">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden text-slate-100">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/80 flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300">
               <Archive className="w-6 h-6" />

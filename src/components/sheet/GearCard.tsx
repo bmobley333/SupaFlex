@@ -1119,12 +1119,12 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
             className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[88vh] max-h-[720px] flex flex-col shadow-2xl overflow-hidden text-left"
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
-              <div className="flex items-center gap-2.5 shrink-0">
-                <div className="p-2 rounded-xl bg-teal-950/80 border border-teal-500/30 text-teal-300 flex items-center justify-center shadow-[0_0_12px_rgba(20,184,166,0.25)]">
+            <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-start justify-between shrink-0 gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="p-2 rounded-xl bg-teal-950/80 border border-teal-500/30 text-teal-300 flex items-center justify-center shadow-[0_0_12px_rgba(20,184,166,0.25)] shrink-0">
                   <span className="text-lg leading-none">⚙️</span>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-outfit font-bold text-base text-slate-100 uppercase tracking-wide flex items-center gap-2">
                     Gear Manager
                   </h3>
@@ -1134,16 +1134,15 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                 </div>
               </div>
 
-              {/* Currency Funds Shortcut Button & Total Value in Header */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Character Wallet Funds Shortcut Button */}
+              {/* Upper Right: GO TO: Funds Shortcut Button adjacent to Close X */}
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     setGearManagerModalOpen(false);
                     setMoneyValuablesModalOpen(true);
                   }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-900/80 hover:bg-amber-800/90 border border-amber-400/70 hover:border-amber-300 rounded-xl font-mono text-xs font-extrabold text-amber-300 hover:text-white shadow-md shadow-amber-950/40 hover:shadow-amber-500/20 active:scale-95 transition-all cursor-pointer group"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-900/80 hover:bg-amber-800/90 border border-amber-400/70 hover:border-amber-300 rounded-xl font-mono text-xs font-extrabold text-amber-300 hover:text-white shadow-md shadow-amber-950/40 hover:shadow-amber-500/20 active:scale-95 transition-all cursor-pointer group shrink-0"
                   title="Open Money & Valuables Manager to adjust currency or sell valuables"
                 >
                   <span className="font-outfit uppercase tracking-wider text-[10px] text-amber-300/90 group-hover:text-amber-100 font-black">Go to:</span>
@@ -1153,21 +1152,15 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                   <span className="text-white">🥈 {silver}s</span>
                 </button>
 
-                {/* Inventory Total Value Pill in Header */}
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs font-bold text-teal-300 shadow-inner hidden sm:flex">
-                  <span className="text-slate-400 font-sans font-semibold text-[11px]">Gear Value:</span>
-                  <span>🪙 {inventoryValue.gold}g 🥈 {inventoryValue.silver}s</span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setGearManagerModalOpen(false)}
+                  className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
+                  title="Close Gear Manager"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setGearManagerModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
-                title="Close Gear Manager"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
             {/* 2-Column Split-Pane Body */}
@@ -1443,6 +1436,16 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                       );
                     })
                   )}
+                </div>
+
+                {/* Pinned Bottom Summary: Gear Value */}
+                <div className="mt-2 pt-2.5 border-t border-slate-800/80 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-900/90 border border-slate-800 rounded-lg font-mono text-xs font-bold text-teal-300 shadow-inner">
+                    <span className="text-slate-400 font-sans font-semibold text-[11px]">Gear Value:</span>
+                    <span>🪙 {inventoryValue.gold}g</span>
+                    <span className="text-slate-600">•</span>
+                    <span>🥈 {inventoryValue.silver}s</span>
+                  </div>
                 </div>
               </div>
 
@@ -1923,19 +1926,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0 flex-wrap gap-2">
-              <div className="flex items-center gap-2.5 text-xs font-mono font-bold flex-wrap">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-950/60 border border-amber-500/40 rounded-lg text-amber-300">
-                  <span className="text-slate-400 font-sans font-semibold text-[11px]">Available Funds:</span>
-                  <span className="text-white">🪙 {gold}g</span>
-                  <span className="text-white">🥈 {silver}s</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg text-teal-300">
-                  <span className="text-slate-400 font-sans font-semibold text-[11px]">Total Gear Value:</span>
-                  <span>🪙 {inventoryValue.gold}g 🥈 {inventoryValue.silver}s</span>
-                </div>
-              </div>
-
+            <div className="px-4 py-2.5 border-t border-slate-800 bg-slate-950/90 flex items-center justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setGearManagerModalOpen(false)}

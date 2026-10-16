@@ -446,7 +446,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
         className="bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 border border-slate-800 rounded-3xl w-full max-w-5xl h-[88vh] max-h-[850px] shadow-2xl flex flex-col overflow-hidden relative"
       >
         {/* ================= 1. MODAL HEADER ================= */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/60 backdrop-blur-md shrink-0">
+        <div className="flex items-start justify-between p-4 border-b border-slate-800 bg-slate-950/60 backdrop-blur-md shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-2xl bg-purple-950/80 border border-purple-500/50 text-purple-300 flex items-center justify-center shadow-[0_0_15px_rgba(168,85,247,0.3)]">
               <span className="text-xl leading-none">🎭</span>

@@ -391,7 +391,7 @@ export const ManageTraitsModal: React.FC<ManageTraitsModalProps> = ({ isOpen, on
         className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[88vh] max-h-[720px] flex flex-col shadow-2xl overflow-hidden text-left"
       >
         {/* ================= 1. MODAL TOP BAR ================= */}
-        <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0 gap-3">
+        <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950/90 flex items-start justify-between shrink-0 gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-purple-950/90 border border-purple-500/40 text-purple-300 flex items-center justify-center shadow-[0_0_12px_rgba(168,85,247,0.25)]">
               <span className="text-xl leading-none">🧬</span>

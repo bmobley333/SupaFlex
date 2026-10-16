@@ -408,7 +408,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         className="w-full max-w-6xl h-[88vh] bg-slate-900 border border-indigo-500/40 rounded-2xl shadow-2xl shadow-indigo-950/80 flex flex-col overflow-hidden text-slate-100"
       >
         {/* Header Bar */}
-        <div className="px-6 py-4 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 bg-slate-950/90 border-b border-slate-800 flex items-start justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div>
               <h2 className="font-outfit font-black text-xl text-slate-100 tracking-wide flex items-center gap-2">

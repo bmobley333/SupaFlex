@@ -569,7 +569,7 @@ export const UniversalLootModal: React.FC<UniversalLootModalProps> = ({
         )}
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90 shrink-0">
+        <div className="flex items-start justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400">
               <Coins className="w-6 h-6" />

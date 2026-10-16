@@ -5829,7 +5829,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md animate-fadeIn font-outfit">
       <div className={`bg-slate-900 border ${isPathViewer ? 'border-purple-500/60 shadow-purple-950/50' : workshopMode === 'designer' ? 'border-amber-500/80 shadow-amber-950/70' : 'border-amber-500/40 shadow-amber-950/50'} rounded-2xl w-full max-w-5xl lg:max-w-6xl shadow-2xl flex flex-col h-[90vh] max-h-[92vh] overflow-hidden`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950/70 shrink-0">
+        <div className="flex items-start justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950/70 shrink-0">
           <div className="flex items-center gap-3">
             <div className={`p-2.5 rounded-xl border flex items-center justify-center text-xl ${
               isPathViewer

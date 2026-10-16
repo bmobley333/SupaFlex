@@ -992,7 +992,7 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                 className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[88vh] max-h-[720px] flex flex-col shadow-2xl overflow-hidden text-left"
               >
                 {/* Header */}
-                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
+                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-start justify-between shrink-0 gap-3">
                   <div className="flex items-center gap-2.5 shrink-0">
                     <div className="p-2 rounded-xl bg-indigo-900/80 border border-indigo-500/50 text-indigo-300 flex items-center justify-center shadow-[0_0_12px_rgba(99,102,241,0.25)]">
                       <span className="text-lg leading-none">🎓</span>

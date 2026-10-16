@@ -246,7 +246,7 @@ export const ChaosGauntletCard: React.FC = () => {
               className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-5xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden relative"
             >
               {/* Modal Top Bar */}
-              <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0 gap-3">
+              <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/90 flex items-start justify-between shrink-0 gap-3">
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="p-2.5 rounded-2xl bg-purple-950/80 border border-purple-500/30 text-purple-300 text-base shadow-sm">
                     💎

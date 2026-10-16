@@ -778,7 +778,7 @@ export const UniversalLinksModal: React.FC<UniversalLinksModalProps> = ({
         )}
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-950/90 shrink-0 gap-4">
+        <div className="flex items-start justify-between px-5 py-3 border-b border-slate-800 bg-slate-950/90 shrink-0 gap-4">
           {/* Left Zone: Icon + Title + Count Badge */}
           <div className="flex items-center gap-3 shrink-0">
             <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 shadow-inner">

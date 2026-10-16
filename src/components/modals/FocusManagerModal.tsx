@@ -178,7 +178,7 @@ export const FocusManagerModal: React.FC<FocusManagerModalProps> = ({ isOpen, on
         )}
 
         {/* 🖼️ HEADER STANDARD */}
-        <div className="px-6 py-4 bg-slate-900/90 border-b border-slate-800 backdrop-blur-md flex items-center justify-between shrink-0">
+        <div className="px-6 py-4 bg-slate-900/90 border-b border-slate-800 backdrop-blur-md flex items-start justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-purple-500/20 border border-purple-500/40 text-purple-300 text-2xl shrink-0">
               🎯

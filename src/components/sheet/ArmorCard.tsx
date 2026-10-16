@@ -576,7 +576,7 @@ export const ArmorCard: React.FC = () => {
           {showManageModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
               <div ref={modalRef} className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl h-[88vh] max-h-[720px] flex flex-col shadow-2xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
+                <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-start justify-between shrink-0 gap-3">
                   <div className="flex items-center gap-2.5 shrink-0">
                     <div className="p-2 rounded-xl bg-amber-950/80 border border-amber-500/30 text-amber-300">🧥</div>
                     <div>

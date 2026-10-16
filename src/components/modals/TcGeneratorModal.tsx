@@ -182,7 +182,7 @@ export const TcGeneratorModal: React.FC<TcGeneratorModalProps> = ({
       <div className="relative w-full max-w-5xl max-h-[90vh] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         {/* Modal Fixed Glass Header */}
         <div className="px-6 py-4 bg-slate-900/90 border-b border-slate-800 backdrop-blur-md flex flex-col gap-3 shrink-0">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <span className="text-2xl select-none">🎲</span>
               <div>

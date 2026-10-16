@@ -336,7 +336,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
         className="w-full max-w-5xl h-[88vh] bg-slate-900 border border-purple-500/40 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100"
       >
         {/* Header */}
-        <div className="px-5 py-3.5 bg-slate-950 border-b border-purple-500/30 flex items-center justify-between gap-3 shrink-0">
+        <div className="px-5 py-3.5 bg-slate-950 border-b border-purple-500/30 flex items-start justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 rounded-xl bg-purple-950/90 border border-purple-500/50 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.3)] flex items-center justify-center">
               <span className="text-base leading-none">🧭</span>

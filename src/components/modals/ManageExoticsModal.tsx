@@ -113,6 +113,7 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
     updateActiveSheetData,
     saveActiveCharacter,
     setGearManagerModalOpen,
+    setMoneyValuablesModalOpen,
     exoticGearManagerTargetItem,
   } = useCharacterStore();
 
@@ -166,8 +167,8 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
   };
 
   const sheet = activeCharacter?.sheet_data;
-  const gold = sheet?.gold || 0;
-  const silver = sheet?.silver || 0;
+  const gold = typeof sheet?.gold === 'number' ? sheet.gold : 5;
+  const silver = typeof sheet?.silver === 'number' ? sheet.silver : 50;
   const totalSilver = gold * 100 + silver;
   const availableAp = sheet ? calculateAvailableAp(sheet.level || 1, sheet) : 0;
   const spellSlots = useMemo(() => (Array.isArray(sheet?.spell_slots) ? sheet.spell_slots : []), [sheet?.spell_slots]);
@@ -867,12 +868,12 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
         className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl h-[90vh] max-h-[820px] flex flex-col shadow-2xl overflow-hidden text-left relative"
       >
         {/* ================= 1. MODAL TOP BAR ================= */}
-        <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950/90 flex items-center justify-between shrink-0 gap-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-cyan-950/90 border border-cyan-500/40 text-cyan-300 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.25)]">
+        <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950/90 flex items-start justify-between shrink-0 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 rounded-xl bg-cyan-950/90 border border-cyan-500/40 text-cyan-300 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.25)] shrink-0">
               <span className="text-xl leading-none">🧿</span>
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="font-outfit font-black text-base text-slate-100 uppercase tracking-wide">
                 Exotics Manager
               </h3>
@@ -882,16 +883,28 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 shrink-0">
             {/* AP Available Pill */}
-            <div className="px-3 py-1 bg-amber-950/60 border border-amber-500/50 rounded-xl font-mono font-black text-xs text-amber-300 shadow-sm flex items-center justify-center shrink-0">
+            <div className="px-3 py-1.5 bg-amber-950/60 border border-amber-500/50 rounded-xl font-mono font-black text-xs text-amber-300 shadow-sm flex items-center justify-center shrink-0">
               ⚡ AP {availableAp}
             </div>
 
-            {/* Funds Pill */}
-            <div className="px-3 py-1 bg-teal-950/60 border border-teal-500/40 rounded-xl font-mono font-bold text-xs text-teal-300 shadow-sm flex items-center justify-center shrink-0">
-              💰 {gold}g {silver}s
-            </div>
+            {/* GO TO: Funds Shortcut Button */}
+            <button
+              type="button"
+              onClick={() => {
+                handleCloseModal();
+                setMoneyValuablesModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-900/80 hover:bg-amber-800/90 border border-amber-400/70 hover:border-amber-300 rounded-xl font-mono text-xs font-extrabold text-amber-300 hover:text-white shadow-md shadow-amber-950/40 hover:shadow-amber-500/20 active:scale-95 transition-all cursor-pointer group shrink-0"
+              title="Open Money & Valuables Manager to adjust currency or sell valuables"
+            >
+              <span className="font-outfit uppercase tracking-wider text-[10px] text-amber-300/90 group-hover:text-amber-100 font-black">Go to:</span>
+              <span className="text-sm leading-none group-hover:scale-110 transition-transform">💰</span>
+              <span className="text-amber-200 group-hover:text-white">Funds:</span>
+              <span className="text-white">🪙 {gold}g</span>
+              <span className="text-white">🥈 {silver}s</span>
+            </button>
 
             {/* Close X */}
             <button

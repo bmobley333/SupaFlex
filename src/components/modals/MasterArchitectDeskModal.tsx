@@ -98,7 +98,7 @@ export const MasterArchitectDeskModal: React.FC<MasterArchitectDeskModalProps> =
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
       <div className="bg-slate-900 border border-amber-500/50 rounded-2xl w-full max-w-5xl shadow-2xl shadow-amber-950/60 flex flex-col h-[88vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-amber-500/30 bg-slate-950/80 shrink-0">
+        <div className="flex items-start justify-between px-6 py-4 border-b border-amber-500/30 bg-slate-950/80 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300">
               <Award className="w-6 h-6" />

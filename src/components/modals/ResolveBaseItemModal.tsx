@@ -124,7 +124,7 @@ export const ResolveBaseItemModal: React.FC<ResolveBaseItemModalProps> = ({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-fadeIn">
       <div className="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden text-slate-100">
         {/* Header */}
-        <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between gap-3">
+        <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950/80 flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="p-2 rounded-xl bg-slate-800/80 border border-slate-700/80 shrink-0">
               {headerIcon}

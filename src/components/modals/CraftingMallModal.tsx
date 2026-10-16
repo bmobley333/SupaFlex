@@ -506,7 +506,7 @@ export const CraftingMallModal: React.FC<CraftingMallModalProps> = ({
         {/* ========================================================================= */}
         {/* TOP MODAL HEADER                                                          */}
         {/* ========================================================================= */}
-        <div className="px-6 py-3.5 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between gap-4 shrink-0">
+        <div className="px-6 py-3.5 bg-slate-950/80 border-b border-slate-800 flex items-start justify-between gap-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-black shrink-0 text-lg">
               🛠️
