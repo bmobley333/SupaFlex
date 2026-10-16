@@ -10,6 +10,7 @@ import {
   WeaponVariantOption,
   splitWeaponIntoVariants,
   calculateAvailableAp,
+  getCanonicalWeaponBaseName,
 } from '../../types/game';
 
 import { CardHelpButton } from '../common/CardHelpButton';
@@ -156,9 +157,9 @@ export const WeaponsCard: React.FC = () => {
   const [isLoadingCatalog, setIsLoadingCatalog] = useState<boolean>(false);
 
 
-  // Helper to extract base name from slot name like "Hand Axe (Melee)" -> "Hand Axe"
+  // Helper to extract base name from slot name like "Hand Axe (Melee)" -> "Hand Axe" while preserving "(mso)" / "(set)"
   const getBaseWeaponName = (slotName: string): string => {
-    return (slotName || '').replace(/\s*\([^)]+\)$/, '').trim();
+    return getCanonicalWeaponBaseName(slotName);
   };
 
   // Fetch weapons catalog from Supabase on modal opening or consume instant cache
@@ -294,22 +295,19 @@ export const WeaponsCard: React.FC = () => {
         cost: weapon.cost || '1g',
         path: weapon.path,
         sets: weapon.sets || [],
+        requirement: variant.requirementStr,
+        variantType: variant.variantType,
         ap_cost: evalResult.apCost,
       };
     });
 
+    const currentWeapons = activeCharacter?.sheet_data?.weapons || [];
+    const existingNames = new Set(currentWeapons.map((w) => w.name.toLowerCase()));
+    const willAddSlots = newSlots.some((s) => !existingNames.has(s.name.toLowerCase()));
+
     updateActiveSheetData((prev) => {
-      const existingNames = new Set((prev.weapons || []).map((w) => w.name.toLowerCase()));
-      const filteredNewSlots = newSlots.filter((s) => !existingNames.has(s.name.toLowerCase()));
-      if (filteredNewSlots.length > 0 && isSkilled) {
-        recordApExpenditure(
-          evalResult.apCost,
-          'Weapons',
-          `Learned Weapon: ${weapon.name} (${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' • 👑 GM Approval' : ''})`,
-          1,
-          'Manage Weapons'
-        );
-      }
+      const prevExistingNames = new Set((prev.weapons || []).map((w) => w.name.toLowerCase()));
+      const filteredNewSlots = newSlots.filter((s) => !prevExistingNames.has(s.name.toLowerCase()));
       const updatedWeapons = [...(prev.weapons || []), ...filteredNewSlots].sort((a, b) =>
         compareMsoItems(a, b, isGsUnlocked)
       );
@@ -321,6 +319,17 @@ export const WeaponsCard: React.FC = () => {
 
       return reconcileCharacterVaultWithGear(intermediateSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
     });
+
+    if (willAddSlots && isSkilled && evalResult.apCost > 0) {
+      recordApExpenditure(
+        evalResult.apCost,
+        'Weapons',
+        `Learned Weapon: ${weapon.name} (${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' • 👑 GM Approval' : ''})`,
+        1,
+        'Manage Weapons'
+      );
+    }
+
     saveActiveCharacter();
 
     if (!isSkilled) {
@@ -842,9 +851,11 @@ export const WeaponsCard: React.FC = () => {
                                   const calculatedAtk = calculateWeaponAtk(item.name, item.mhs, attributeDice);
                                   const isSpecialDmg = item.dmg === '❌';
                                   const calculatedDmg = isSpecialDmg ? '❌' : `d${calculateWeaponDmg(item.name, item.mhs, attributeDice)}`;
-                                  const variantLabel = item.name.includes('(')
-                                    ? item.name.substring(item.name.indexOf('(') + 1, item.name.indexOf(')'))
-                                    : item.mhs === 'H' ? 'Hurled' : item.mhs === 'S' ? 'Shot' : 'Melee';
+                                  const trailingVariantMatch = /\((Melee|Hurled|Shot)\)$/i.exec(item.name || '');
+                                  const variantLabel =
+                                    trailingVariantMatch?.[1] ||
+                                    item.variantType ||
+                                    (item.mhs === 'H' ? 'Hurled' : item.mhs === 'S' ? 'Shot' : 'Melee');
 
                                   return (
                                     <div

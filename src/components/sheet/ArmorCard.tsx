@@ -230,20 +230,14 @@ export const ArmorCard: React.FC = () => {
       effect: `${evalResult.apCost} AP`,
     };
 
+    const currentWardrobe = activeCharacter?.sheet_data?.wardrobe || wardrobe;
+    const willAddArmor = !currentWardrobe.some((w) => w.name.toLowerCase() === item.name.toLowerCase());
+
     updateActiveSheetData((prev) => {
       const existingWardrobe = prev.wardrobe || wardrobe;
       const isAlreadyInWardrobe = existingWardrobe.some(
         (w) => w.name.toLowerCase() === item.name.toLowerCase()
       );
-      if (!isAlreadyInWardrobe && isSkilled && evalResult.apCost > 0) {
-        recordApExpenditure(
-          evalResult.apCost,
-          'Armor',
-          `Learned Armor: ${item.name} (${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' • 👑 GM Approval' : ''})`,
-          1,
-          'Manage Armor'
-        );
-      }
       const updatedWardrobe = isAlreadyInWardrobe ? existingWardrobe : [...existingWardrobe, newArmorItem];
       const updatedSheet = {
         ...prev,
@@ -257,6 +251,17 @@ export const ArmorCard: React.FC = () => {
       };
       return reconcileCharacterVaultWithGear(finalSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
     });
+
+    if (willAddArmor && isSkilled && evalResult.apCost > 0) {
+      recordApExpenditure(
+        evalResult.apCost,
+        'Armor',
+        `Learned Armor: ${item.name} (${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' • 👑 GM Approval' : ''})`,
+        1,
+        'Manage Armor'
+      );
+    }
+
     saveActiveCharacter();
 
     if (!isSkilled) {

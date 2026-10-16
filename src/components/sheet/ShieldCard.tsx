@@ -233,20 +233,10 @@ export const ShieldCard: React.FC = () => {
       effect: `${evalResult.apCost} AP`,
     };
 
+    const currentArmory = activeCharacter?.sheet_data?.armory || armory;
+    const willAddShield = !currentArmory.some((s) => s.name.toLowerCase() === item.name.toLowerCase());
+
     updateActiveSheetData((prev) => {
-      const existingArmory = prev.armory || armory;
-      const isAlreadyInArmory = existingArmory.some(
-        (s) => s.name.toLowerCase() === item.name.toLowerCase()
-      );
-      if (!isAlreadyInArmory && isSkilled && evalResult.apCost > 0) {
-        recordApExpenditure(
-          evalResult.apCost,
-          'Shields',
-          `Learned Shield: ${item.name} (${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' • 👑 GM Approval' : ''})`,
-          1,
-          'Manage Shields'
-        );
-      }
       const updatedSheet = {
         ...prev,
         shield_slot: newShieldItem,
@@ -258,6 +248,17 @@ export const ShieldCard: React.FC = () => {
       };
       return reconcileCharacterVaultWithGear(finalSheet, functionsCatalog || [], modsCatalog || []).updatedSheet;
     });
+
+    if (willAddShield && isSkilled && evalResult.apCost > 0) {
+      recordApExpenditure(
+        evalResult.apCost,
+        'Shields',
+        `Learned Shield: ${item.name} (${evalResult.apCost} AP${evalResult.requiresGmApproval ? ' • 👑 GM Approval' : ''})`,
+        1,
+        'Manage Shields'
+      );
+    }
+
     saveActiveCharacter();
 
     if (!isSkilled) {

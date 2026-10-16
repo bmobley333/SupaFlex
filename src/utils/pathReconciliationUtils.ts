@@ -3,7 +3,7 @@
 // Implements the Path Mastery Auto-Credit Mandate, SkillSet Bundle Deduplication Mandate,
 // Requirement Surcharge Auto-Refund Engine, and {Free} 0-AP Path Grant Reconciler.
 
-import { Character, CharacterSheetData, AbilitySlot, WeaponSlot, ArmorData, ShieldData, TraitQuirkItem, AttributeKey, DieRating, SupabaseTrait, SupabaseSet, SupabasePath } from '../types/game';
+import { Character, CharacterSheetData, AbilitySlot, WeaponSlot, ArmorData, ShieldData, TraitQuirkItem, AttributeKey, DieRating, SupabaseTrait, SupabaseSet, SupabasePath, getCanonicalWeaponBaseName } from '../types/game';
 import { cleanPathName, parseKit } from './kitUtils';
 import { getCharacterKnownPaths, getCharacterKnownSets, getCharacterFreeSets, getCharacterFreeElementNames, evaluateItemAp, parseItemPaths, extractPathEntriesWithTags, getCharacterMatchingPath, isPathStringMatch, normalizePathForComparison } from './pathApUtils';
 
@@ -228,41 +228,60 @@ export const reconcileAbilitiesOnPathAdded = (
       })
     : [];
 
-  // 3. Reconcile Weapons (weapons)
-  const weapons: WeaponSlot[] = Array.isArray(sheetData.weapons)
-    ? sheetData.weapons.map((w) => {
-        if (!w || !w.sk || typeof w.ap_cost !== 'number' || w.ap_cost <= 0) return w;
+  // 3. Reconcile Weapons (weapons) — grouped by canonical base name so multi-variant weapons refund once
+  const rawWeapons: WeaponSlot[] = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
+  const weaponGroupTargetCost = new Map<string, { targetCost: number; isFree: boolean; baseName: string; oldCost: number }>();
 
-        const evalResult = evaluateItemAp(
-          w.path,
-          w.requirement,
-          attributeDice,
-          knownPaths,
-          w.variantType,
-          (w as any).sets,
-          knownSets,
-          freeSets,
-          freeElementNames,
-          w.name
+  for (const w of rawWeapons) {
+    if (!w || !w.sk || typeof w.ap_cost !== 'number' || w.ap_cost <= 0) continue;
+    const baseName = getCanonicalWeaponBaseName(w.name);
+    const baseKey = baseName.toLowerCase();
+    const evalResult = evaluateItemAp(
+      w.path,
+      w.requirement,
+      attributeDice,
+      knownPaths,
+      w.variantType,
+      (w as any).sets,
+      knownSets,
+      freeSets,
+      freeElementNames,
+      baseName
+    );
+    const isFree = Boolean(evalResult.isFree || isFreeGrant(w.path, undefined, baseName, (w as any).sets));
+    const candidateCost = isFree ? 0 : evalResult.inPath && evalResult.apCost < w.ap_cost ? evalResult.apCost : w.ap_cost;
+    const existing = weaponGroupTargetCost.get(baseKey);
+    if (!existing || candidateCost < existing.targetCost) {
+      weaponGroupTargetCost.set(baseKey, {
+        targetCost: candidateCost,
+        isFree: isFree || Boolean(existing?.isFree),
+        baseName,
+        oldCost: Math.max(w.ap_cost, existing?.oldCost ?? 0),
+      });
+    }
+  }
+
+  const refundedWeaponGroups = new Set<string>();
+  const weapons: WeaponSlot[] = rawWeapons.map((w) => {
+    if (!w || !w.sk || typeof w.ap_cost !== 'number' || w.ap_cost <= 0) return w;
+    const baseKey = getCanonicalWeaponBaseName(w.name).toLowerCase();
+    const groupTarget = weaponGroupTargetCost.get(baseKey);
+    if (!groupTarget || groupTarget.targetCost >= w.ap_cost) return w;
+
+    if (!refundedWeaponGroups.has(baseKey)) {
+      refundedWeaponGroups.add(baseKey);
+      const diff = groupTarget.oldCost - groupTarget.targetCost;
+      if (diff > 0) {
+        totalRefund += diff;
+        refundLogDetails.push(
+          groupTarget.isFree
+            ? `${groupTarget.baseName} (-${diff} AP Free Grant)`
+            : `${groupTarget.baseName} (-${diff} AP In-Path Discount)`
         );
-
-        if (evalResult.isFree || isFreeGrant(w.path, undefined, w.name, (w as any).sets)) {
-          const diff = w.ap_cost;
-          totalRefund += diff;
-          refundLogDetails.push(`${w.name} (-${diff} AP Free Grant)`);
-          return { ...w, ap_cost: 0 };
-        }
-
-        if (w.ap_cost <= 1) return w;
-        if (evalResult.inPath && evalResult.apCost < w.ap_cost) {
-          const diff = w.ap_cost - evalResult.apCost;
-          totalRefund += diff;
-          refundLogDetails.push(`${w.name} (-${diff} AP In-Path Discount)`);
-          return { ...w, ap_cost: evalResult.apCost };
-        }
-        return w;
-      })
-    : [];
+      }
+    }
+    return { ...w, ap_cost: groupTarget.targetCost };
+  });
 
   // 4. Reconcile Wardrobe (Armor)
   let nextArmorSlot = sheetData.armor_slot;
@@ -445,51 +464,76 @@ export const reconcileEquipmentOnAttributesChanged = (
   let totalRefund = 0;
   const refundLogDetails: string[] = [];
 
-  // 1. Reconcile Weapons
-  const weapons: WeaponSlot[] = Array.isArray(sheetData.weapons)
-    ? sheetData.weapons.map((w) => {
-        if (!w || !w.sk || typeof w.ap_cost !== 'number') return w;
-        const evalResult = evaluateItemAp(
-          w.path,
-          w.requirement,
-          attributeDice,
-          knownPaths,
-          w.variantType
-        );
+  // 1. Reconcile Weapons — grouped by canonical base name so multi-variant weapons refund once
+  const rawWeapons: WeaponSlot[] = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
+  const weaponGroupTargetCost = new Map<string, { targetCost: number; baseName: string; oldCost: number }>();
 
-        let updatedApCost = w.ap_cost;
-        if (evalResult.meetsReq) {
-          // If was previously burdened by unmet requirement surcharge (2 AP In-Path or 4 AP Out-of-Path)
-          if (evalResult.inPath && w.ap_cost > 1) {
-            const diff = w.ap_cost - 1;
-            totalRefund += diff;
-            refundLogDetails.push(`${w.name} (-${diff} AP, Requirement Met)`);
-            updatedApCost = 1;
-          } else if (!evalResult.inPath && w.ap_cost > 3) {
-            const diff = w.ap_cost - 3;
-            totalRefund += diff;
-            refundLogDetails.push(`${w.name} (-${diff} AP, Requirement Met)`);
-            updatedApCost = 3;
-          }
+  for (const w of rawWeapons) {
+    if (!w || !w.sk || typeof w.ap_cost !== 'number') continue;
+    const baseName = getCanonicalWeaponBaseName(w.name);
+    const baseKey = baseName.toLowerCase();
+    const evalResult = evaluateItemAp(
+      w.path,
+      w.requirement,
+      attributeDice,
+      knownPaths,
+      w.variantType
+    );
+
+    let candidateCost = w.ap_cost;
+    if (evalResult.meetsReq) {
+      if (evalResult.inPath && w.ap_cost > 1) {
+        candidateCost = 1;
+      } else if (!evalResult.inPath && w.ap_cost > 3) {
+        candidateCost = 3;
+      }
+    }
+
+    const existing = weaponGroupTargetCost.get(baseKey);
+    if (!existing || candidateCost < existing.targetCost) {
+      weaponGroupTargetCost.set(baseKey, {
+        targetCost: candidateCost,
+        baseName,
+        oldCost: Math.max(w.ap_cost, existing?.oldCost ?? 0),
+      });
+    }
+  }
+
+  const refundedWeaponGroups = new Set<string>();
+  const weapons: WeaponSlot[] = rawWeapons.map((w) => {
+    if (!w || !w.sk || typeof w.ap_cost !== 'number') return w;
+    const baseKey = getCanonicalWeaponBaseName(w.name).toLowerCase();
+    const groupTarget = weaponGroupTargetCost.get(baseKey);
+    let updatedApCost = w.ap_cost;
+
+    if (groupTarget && groupTarget.targetCost < w.ap_cost) {
+      updatedApCost = groupTarget.targetCost;
+      if (!refundedWeaponGroups.has(baseKey)) {
+        refundedWeaponGroups.add(baseKey);
+        const diff = groupTarget.oldCost - groupTarget.targetCost;
+        if (diff > 0) {
+          totalRefund += diff;
+          refundLogDetails.push(`${groupTarget.baseName} (-${diff} AP, Requirement Met)`);
         }
+      }
+    }
 
-        // Always calculate Attack and Damage at current attribute ratings (no -1 die step down)
-        const nativeAtk = calculateWeaponAtk(w.name, w.mhs, attributeDice);
-        const nativeDmg = w.dmg === '❌' ? '❌' : String(calculateWeaponDmg(w.name, w.mhs, attributeDice));
-        const cleanEffect = (w.effect || '')
-          .replace(/,\s*Downscaled/gi, '')
-          .replace(/\s*\(Downscaled\)/gi, '')
-          .trim();
+    // Always calculate Attack and Damage at current attribute ratings (no -1 die step down)
+    const nativeAtk = calculateWeaponAtk(w.name, w.mhs, attributeDice);
+    const nativeDmg = w.dmg === '❌' ? '❌' : String(calculateWeaponDmg(w.name, w.mhs, attributeDice));
+    const cleanEffect = (w.effect || '')
+      .replace(/,\s*Downscaled/gi, '')
+      .replace(/\s*\(Downscaled\)/gi, '')
+      .trim();
 
-        return {
-          ...w,
-          ap_cost: updatedApCost,
-          atk: String(nativeAtk),
-          dmg: nativeDmg,
-          effect: cleanEffect,
-        };
-      })
-    : [];
+    return {
+      ...w,
+      ap_cost: updatedApCost,
+      atk: String(nativeAtk),
+      dmg: nativeDmg,
+      effect: cleanEffect,
+    };
+  });
 
   // 2. Reconcile Armor
   let nextArmorSlot = sheetData.armor_slot;

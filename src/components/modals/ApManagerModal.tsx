@@ -18,6 +18,7 @@ import {
   calculateLiveSheetSpentAp,
   calculateAvailableAp,
   calculateCumulativeVersionAp,
+  calculateSkilledWeaponsAp,
 } from '../../types/game';
 import {
   calculateTotalLoadoutCapacity,
@@ -170,17 +171,15 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
     const indivCost = knownIndivSkills.length * 1;
     const skillsNet = skillsetCost + indivCost;
 
-    const weapons = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
-    const skilledWeapons = weapons.filter((w: any) => w && w.sk);
-    const weaponsNet = skilledWeapons.reduce((sum: number, w: any) => sum + (typeof w.ap_cost === 'number' && w.ap_cost > 0 ? w.ap_cost : 1), 0);
+    const { weaponsNet, skilledWeaponGroupsCount } = calculateSkilledWeaponsAp(sheetData.weapons);
 
     const wardrobe = Array.isArray(sheetData.wardrobe) ? sheetData.wardrobe : [];
     const skilledArmor = wardrobe.filter((a: any) => a && a.sk);
-    const armorNet = skilledArmor.reduce((sum: number, a: any) => sum + (typeof a.ap_cost === 'number' && a.ap_cost > 0 ? a.ap_cost : 1), 0);
+    const armorNet = skilledArmor.reduce((sum: number, a: any) => sum + (typeof a.ap_cost === 'number' ? a.ap_cost : 1), 0);
 
     const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
     const skilledShields = armory.filter((s: any) => s && s.sk);
-    const shieldsNet = skilledShields.reduce((sum: number, s: any) => sum + (typeof s.ap_cost === 'number' && s.ap_cost > 0 ? s.ap_cost : 1), 0);
+    const shieldsNet = skilledShields.reduce((sum: number, s: any) => sum + (typeof s.ap_cost === 'number' ? s.ap_cost : 1), 0);
 
     const rawPowerSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots.filter(Boolean) : [];
     const rawCodexPowers: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex.filter(Boolean) : [];
@@ -371,7 +370,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: weaponsNet,
         badgeColor: 'text-purple-300 bg-purple-950/60 border-purple-500/30',
         details: [
-          { label: `Skilled Weapons Equipped (${skilledWeapons.length})`, value: `${weaponsNet} AP` },
+          { label: `Skilled Weapons Equipped (${skilledWeaponGroupsCount})`, value: `${weaponsNet} AP` },
         ],
       },
     ];

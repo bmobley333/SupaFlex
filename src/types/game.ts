@@ -904,6 +904,45 @@ export const parseAbilityVersion = (name: string): { baseName: string; version: 
   return { baseName: name.trim(), version: 1 };
 };
 
+export const getCanonicalWeaponBaseName = (slotName?: string | null): string => {
+  if (!slotName) return '';
+  return slotName
+    .replace(/\s*\((?:Melee|Hurled|Shot)\)$/i, '')
+    .replace(/\s*\[[MHS]\]$/i, '')
+    .trim();
+};
+
+export const calculateSkilledWeaponsAp = (weapons?: WeaponSlot[] | null): {
+  weaponsNet: number;
+  skilledWeaponGroupsCount: number;
+} => {
+  if (!Array.isArray(weapons) || weapons.length === 0) {
+    return { weaponsNet: 0, skilledWeaponGroupsCount: 0 };
+  }
+
+  const groupCostMap = new Map<string, number>();
+  for (const w of weapons) {
+    if (!w || !w.sk || !w.name) continue;
+    const baseKey = getCanonicalWeaponBaseName(w.name).toLowerCase();
+    if (!baseKey) continue;
+    const slotCost = typeof w.ap_cost === 'number' ? w.ap_cost : 1;
+    const existing = groupCostMap.get(baseKey);
+    if (existing === undefined || slotCost > existing) {
+      groupCostMap.set(baseKey, slotCost);
+    }
+  }
+
+  let weaponsNet = 0;
+  for (const cost of groupCostMap.values()) {
+    weaponsNet += cost;
+  }
+
+  return {
+    weaponsNet,
+    skilledWeaponGroupsCount: groupCostMap.size,
+  };
+};
+
 export const calculateLifetimeAp = (level: number): number => {
   const numLevel = typeof level === 'number' && !isNaN(level) && level > 0 ? level : 1;
   return 8 + (numLevel - 1) * 2;
@@ -1008,9 +1047,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
 
   const vitalityNet = Math.max(0, sumLogCategory('Vitality'));
 
-  const weapons = Array.isArray(sheetData.weapons) ? sheetData.weapons : [];
-  const skilledWeapons = weapons.filter((w: any) => w && w.sk);
-  const weaponsNet = skilledWeapons.reduce((sum: number, w: any) => sum + (typeof w.ap_cost === 'number' ? w.ap_cost : 1), 0);
+  const { weaponsNet } = calculateSkilledWeaponsAp(sheetData.weapons);
 
   const traits = Array.isArray(sheetData.traits_quirks) ? sheetData.traits_quirks : [];
   const traitsNet = traits.reduce((sum: number, t: any) => sum + (typeof t.ap_cost === 'number' ? t.ap_cost : 0), 0);
