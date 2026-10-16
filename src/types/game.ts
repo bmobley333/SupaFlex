@@ -654,8 +654,10 @@ export interface MovementRateData {
 export interface TreasureItem {
   id: string;
   name: string;
-  value: number;
-  currency: 'gp' | 'sp' | 'g' | 's';
+  gold?: number;
+  silver?: number;
+  value?: number;
+  currency?: 'gp' | 'sp' | 'g' | 's';
   qty?: number;
   category?: string;
 }

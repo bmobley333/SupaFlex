@@ -6,7 +6,7 @@
   },
   "leveling.creation_steps": {
     "title": "Character Creation Steps",
-    "summary": "1. Concept — Any hero idea works.\n2. Paths (🧭) — Choose a Race Path and Class Path (plus automatic Innate & Universal Paths).\n3. Attributes (✅) — Assign one 4, two 6, and two 8 across ✨💪👁️🏃🫀.\n4. Vitality (❤️) — 10 + 1d(🫀) (reroll a 1 once at creation).\n5. Focus (🎯) — Starts at d4.\n6. Spend 8 Starting AP (🧩) — Unlock In-Path skills, weapons, armor, powers, and boons.\n7. Dossier — Appearance, traits, flair, and quest.\n8. Money & Gear — 2d4 Gold (g) + 1d20 Silver (s) after starting gear.\n9. Starting Loot — 1 random Artifact 🔮 + 2 random Chaos Gems 💎.\n10. Luck (🍀) — Begin each session with 3 Luck (max 5).",
+    "summary": "1. Concept — Any hero idea works.\n2. Paths (🧭) — Choose a Race Path and Class Path (plus automatic Innate & Universal Paths).\n3. Attributes (✅) — Assign two 4, two 6, and one 8 across ✨💪👁️🏃🫀.\n4. Vitality (❤️) — 10 + 1d(🫀) (reroll a 1 once at creation).\n5. Focus (🎯) — Starts at d4.\n6. Spend 8 Starting AP (🧩) — Unlock In-Path skills, weapons, armor, powers, and boons.\n7. Dossier — Appearance, traits, flair, and quest.\n8. Money & Gear — 5 Gold (g) + 50 Silver (s) after starting gear.\n9. Starting Loot — 1 random Artifact 🔮 + 2 random Chaos Gems 💎.\n10. Luck (🍀) — Begin each session with 3 Luck (max 5).",
     "anchor": "#25-creating-your-hero-step-by-step"
   },
   "col.weapons.dmg": {
@@ -136,7 +136,7 @@
   },
   "gear": {
     "title": "Standard Gear & Equipment Kits",
-    "summary": "Gear & Kits Overview:\n• Master Gear Category (⚙️) — Universal category for all physical items (Supplies 🎒, Weapons ⚔️, Armor 🧥, Shields 🛡️, Kits 📦, and Artifacts 🔮).\n• Standard Gear (⚙️) — Mundane or tech equipment with no Exotic 🧿 mods, purchased with Gold and Silver (1g = 100s).\n• Equipment Kits (📦) — Pre-assembled bundles of adventuring gear (Survival Kit, Trauma Kit, etc.) purchased for a flat Gold/Silver price.\n• Zero Weight Math — SupaFlex uses no weight tracking or encumbrance movement penalties for carried gear.",
+    "summary": "Gear & Kits Overview:\n• Master Gear Category (⚙️) — Universal category for all physical items (Supplies 🎒, Weapons ⚔️, Armor 🧥, Shields 🛡️, Kits 📦, and Artifacts 🔮).\n• Standard Gear (⚙️) — Mundane or tech equipment with no Exotic 🧿 mods, purchased with Gold and Silver (1g = 100s; new heroes start with 5g and 50s).\n• Equipment Kits (📦) — Pre-assembled bundles of adventuring gear (Survival Kit, Trauma Kit, etc.) purchased for a flat Gold/Silver price.\n• Zero Weight Math — SupaFlex uses no weight tracking or encumbrance movement penalties for carried gear.",
     "anchor": "#24-gear"
   },
   "chaos_gauntlet.basics": {

@@ -83,6 +83,8 @@ const DEFAULT_UNARMORED_SLOT = {
 export const createDefaultSheetData = (): CharacterSheetData => ({
   level: 1,
   ap: 0,
+  gold: 5,
+  silver: 50,
   vitality_max: 10,
   current_vitality: 10,
   wounds: 0,
@@ -141,6 +143,8 @@ export function ensureLatestSheetSchema(rawSheet: any): CharacterSheetData {
   return {
     ...defaultSheet,
     ...rawSheet,
+    gold: rawSheet.gold ?? defaultSheet.gold ?? 5,
+    silver: rawSheet.silver ?? defaultSheet.silver ?? 50,
     essence_core: rawSheet.essence_core ?? defaultSheet.essence_core ?? 0,
     attribute_dice: {
       ...defaultSheet.attribute_dice,

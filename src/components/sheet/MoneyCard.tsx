@@ -13,15 +13,48 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { TreasureItem } from '../../types/game';
 
 /**
- * Parses treasure item value into total silver.
+ * Extracts unit Gold, unit Silver, and total unit Silver (1g = 100s) for a single TreasureItem.
+ * Supports both dual gold/silver fields and legacy value/currency fields.
+ */
+export const getTreasureUnitGoldSilver = (item: TreasureItem) => {
+  if (item.gold !== undefined || item.silver !== undefined) {
+    const rawGold = Math.max(0, item.gold || 0);
+    const rawSilver = Math.max(0, item.silver || 0);
+    const unitSilver = rawGold * 100 + rawSilver;
+    return {
+      gold: Math.floor(unitSilver / 100),
+      silver: unitSilver % 100,
+      unitSilver,
+    };
+  }
+  const val = Math.max(0, item.value || 0);
+  const isGold = item.currency === 'gp' || item.currency === 'g' || !item.currency;
+  const unitSilver = isGold ? val * 100 : val;
+  return {
+    gold: Math.floor(unitSilver / 100),
+    silver: unitSilver % 100,
+    unitSilver,
+  };
+};
+
+export const formatGoldSilverLabel = (goldAmt: number, silverAmt: number): string => {
+  if (goldAmt > 0 && silverAmt > 0) {
+    return `🪙 ${goldAmt}g 🥈 ${silverAmt}s`;
+  }
+  if (goldAmt > 0) {
+    return `🪙 ${goldAmt}g`;
+  }
+  return `🥈 ${silverAmt}s`;
+};
+
+/**
+ * Parses treasure item stack value into total silver.
  * Gold (gp/g) = 100 silver. Silver (sp/s) = 1 silver.
  */
 export const parseTreasureToSilver = (item: TreasureItem): number => {
   const qty = Math.max(1, item.qty || 1);
-  const val = Math.max(0, item.value || 0);
-  const isGold = item.currency === 'gp' || item.currency === 'g';
-  const itemSilver = isGold ? val * 100 : val;
-  return qty * itemSilver;
+  const { unitSilver } = getTreasureUnitGoldSilver(item);
+  return qty * unitSilver;
 };
 
 /**
@@ -43,23 +76,29 @@ interface MoneyCardProps {
 }
 
 export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
-  const { activeCharacter, updateActiveSheetData, saveActiveCharacter } = useCharacterStore();
+  const {
+    activeCharacter,
+    updateActiveSheetData,
+    saveActiveCharacter,
+    isMoneyValuablesModalOpen,
+    setMoneyValuablesModalOpen,
+    setGearManagerModalOpen,
+  } = useCharacterStore();
   const sheet = activeCharacter?.sheet_data;
 
-  const gold = sheet?.gold ?? 0;
-  const silver = sheet?.silver ?? 0;
+  const gold = sheet?.gold ?? 5;
+  const silver = sheet?.silver ?? 50;
   const treasure: TreasureItem[] = sheet?.other_treasure || [];
 
-  const [showManageModal, setShowManageModal] = useState<boolean>(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Search & Filter State
   const [treasureSearchQuery, setTreasureSearchQuery] = useState<string>('');
 
-  // Custom Treasure Form State
+  // Custom Treasure Form State (Dual Gold & Silver starting at 0 in each)
   const [customName, setCustomName] = useState<string>('');
-  const [customValue, setCustomValue] = useState<number>(10);
-  const [customCurrency, setCustomCurrency] = useState<'gp' | 'sp'>('gp');
+  const [customGold, setCustomGold] = useState<number>(0);
+  const [customSilver, setCustomSilver] = useState<number>(0);
   const [customQty, setCustomQty] = useState<number>(1);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -70,16 +109,16 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-        setShowManageModal(false);
+        setMoneyValuablesModalOpen(false);
       }
     };
-    if (showManageModal) {
+    if (isMoneyValuablesModalOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showManageModal]);
+  }, [isMoneyValuablesModalOpen, setMoneyValuablesModalOpen]);
 
   // Filtered active character treasure inventory
   const filteredTreasure = useMemo(() => {
@@ -99,14 +138,23 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
       return;
     }
 
-    const valInt = Math.max(1, customValue);
-    const qtyInt = Math.max(1, customQty);
+    const goldInt = Math.max(0, customGold || 0);
+    const silverInt = Math.max(0, customSilver || 0);
+    if (goldInt <= 0 && silverInt <= 0) {
+      setFormError('Enter at least 1 Gold or 1 Silver value.');
+      return;
+    }
+
+    const qtyInt = Math.max(1, customQty || 1);
+    const normalizedUnitSilver = goldInt * 100 + silverInt;
 
     const newItem: TreasureItem = {
       id: `tr_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       name: trimmedName,
-      value: valInt,
-      currency: customCurrency,
+      gold: Math.floor(normalizedUnitSilver / 100),
+      silver: normalizedUnitSilver % 100,
+      value: silverInt === 0 ? goldInt : normalizedUnitSilver,
+      currency: silverInt === 0 ? 'gp' : 'sp',
       qty: qtyInt,
     };
 
@@ -116,10 +164,10 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
     }));
     saveActiveCharacter();
 
-    // Reset form
+    // Reset form back to 0 Gold & 0 Silver
     setCustomName('');
-    setCustomValue(10);
-    setCustomCurrency('gp');
+    setCustomGold(0);
+    setCustomSilver(0);
     setCustomQty(1);
     setFormError(null);
   };
@@ -146,6 +194,39 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
     saveActiveCharacter();
   };
 
+  const handleSellTreasure = (item: TreasureItem, sellQty: number) => {
+    const currentQty = Math.max(1, item.qty || 1);
+    const actualSellQty = Math.min(currentQty, Math.max(1, sellQty));
+    const { unitSilver } = getTreasureUnitGoldSilver(item);
+    const saleSilver = unitSilver * actualSellQty;
+
+    updateActiveSheetData((prev) => {
+      const prevGold = prev.gold ?? 5;
+      const prevSilver = prev.silver ?? 50;
+      const addedGold = Math.floor(saleSilver / 100);
+      const addedSilver = saleSilver % 100;
+      const totalSilverPool = prevSilver + addedSilver;
+      const newGold = prevGold + addedGold + Math.floor(totalSilverPool / 100);
+      const newSilver = totalSilverPool % 100;
+
+      const currentList = prev.other_treasure || [];
+      const updatedTreasure =
+        actualSellQty >= currentQty
+          ? currentList.filter((t) => t.id !== item.id)
+          : currentList.map((t) =>
+              t.id === item.id ? { ...t, qty: currentQty - actualSellQty } : t
+            );
+
+      return {
+        ...prev,
+        gold: newGold,
+        silver: newSilver,
+        other_treasure: updatedTreasure,
+      };
+    });
+    saveActiveCharacter();
+  };
+
   return (
     <>
       <div className={`bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-amber-400/90 p-3 flex items-center justify-between transition-all gap-2.5 flex-wrap shadow-lg shadow-amber-950/20 ${className}`}>
@@ -153,7 +234,7 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={() => setShowManageModal(true)}
+            onClick={() => setMoneyValuablesModalOpen(true)}
             className="flex items-center gap-2 group cursor-pointer focus:outline-none select-none text-left"
             title="Click to open Money & Valuables Manager"
           >
@@ -182,7 +263,7 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
         {/* Right: Treasure / Valuables Action Button */}
         <button
           type="button"
-          onClick={() => setShowManageModal(true)}
+          onClick={() => setMoneyValuablesModalOpen(true)}
           className="p-1.5 px-2.5 rounded-xl text-xs font-bold border transition-all flex items-center justify-center shadow-sm bg-amber-950/80 hover:bg-amber-900/90 border-amber-500/40 hover:border-amber-400 text-amber-200 hover:text-white cursor-pointer shrink-0 group"
           title="Open Money & Valuables Manager"
         >
@@ -191,14 +272,14 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
       </div>
 
       {/* 💰 MONEY & TREASURE VALUABLES MODAL */}
-      {showManageModal && (
+      {isMoneyValuablesModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
           <div
             ref={modalRef}
             className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl h-[85vh] max-h-[640px] flex flex-col shadow-2xl overflow-hidden text-left"
           >
             {/* Header */}
-            <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3">
+            <div className="px-4 py-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between shrink-0 gap-3 flex-wrap">
               <div className="flex items-center gap-2.5 shrink-0">
                 <div className="p-2 rounded-xl bg-amber-950/80 border border-amber-500/30 text-amber-300 flex items-center justify-center">
                   <span className="text-lg leading-none">💰</span>
@@ -213,42 +294,60 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
                 </div>
               </div>
 
-              {/* Coin Totals Pill in Header */}
-              <div className="flex items-center gap-3 px-3 py-1 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs font-bold">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-amber-300">Gold 🪙:</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={gold}
-                    onChange={(e) => {
-                      const val = Math.max(0, parseInt(e.target.value) || 0);
-                      updateActiveSheetData((prev) => ({ ...prev, gold: val }));
-                      saveActiveCharacter();
-                    }}
-                    className="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-center text-white font-bold outline-none focus:border-amber-500"
-                  />
+              {/* Coin Totals Pill & Go To Gear Manager Shortcut in Header */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-3 px-3 py-1 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs font-bold">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-amber-300">Gold 🪙:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={gold}
+                      onChange={(e) => {
+                        const val = Math.max(0, parseInt(e.target.value) || 0);
+                        updateActiveSheetData((prev) => ({ ...prev, gold: val }));
+                        saveActiveCharacter();
+                      }}
+                      className="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-center text-white font-bold outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-300">Silver 🥈:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={silver}
+                      onChange={(e) => {
+                        const val = Math.max(0, parseInt(e.target.value) || 0);
+                        updateActiveSheetData((prev) => ({ ...prev, silver: val }));
+                        saveActiveCharacter();
+                      }}
+                      className="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-center text-white font-bold outline-none focus:border-slate-400"
+                    />
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <span className="text-slate-300">Silver 🥈:</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={silver}
-                    onChange={(e) => {
-                      const val = Math.max(0, parseInt(e.target.value) || 0);
-                      updateActiveSheetData((prev) => ({ ...prev, silver: val }));
-                      saveActiveCharacter();
-                    }}
-                    className="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-center text-white font-bold outline-none focus:border-slate-400"
-                  />
-                </div>
+                {/* Shortcut to Gear Manager */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMoneyValuablesModalOpen(false);
+                    setGearManagerModalOpen(true);
+                  }}
+                  className="px-2.5 py-1.5 bg-teal-950/90 hover:bg-teal-900/90 border border-teal-500/50 hover:border-teal-400 text-teal-200 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer shrink-0 group"
+                  title="Jump directly to Gear Manager"
+                >
+                  <span className="text-teal-300/90 font-outfit uppercase tracking-wider text-[10px] font-extrabold">Go to:</span>
+                  <span className="text-sm leading-none group-hover:scale-110 transition-transform">⚙️</span>
+                  <span className="font-outfit uppercase tracking-wider text-[11px] font-extrabold">Gear Manager</span>
+                </button>
               </div>
 
               <button
-                onClick={() => setShowManageModal(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0"
+                type="button"
+                onClick={() => setMoneyValuablesModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800 transition-all shrink-0 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -285,48 +384,84 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
                       <span>No treasure valuables found. Add items on the right.</span>
                     </div>
                   ) : (
-                    filteredTreasure.map((item) => (
-                      <div
-                        key={item.id}
-                        className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between gap-2 shadow-sm"
-                      >
-                        <div className="flex flex-col min-w-0 flex-1">
-                          <span className="font-outfit font-bold text-xs text-slate-100 truncate">
-                            {item.name}
-                          </span>
-                          <span className="text-[11px] font-mono text-amber-300/90 font-semibold">
-                            {item.value} {item.currency === 'gp' ? '🪙 gp' : '🥈 sp'} each
-                          </span>
-                        </div>
+                    filteredTreasure.map((item) => {
+                      const qty = Math.max(1, item.qty || 1);
+                      const unit = getTreasureUnitGoldSilver(item);
+                      const stackSilver = qty * unit.unitSilver;
+                      const stackGold = Math.floor(stackSilver / 100);
+                      const stackRemSilver = stackSilver % 100;
 
-                        {/* Qty & Delete */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <div className="flex items-center bg-slate-950 border border-slate-700 rounded-lg px-1 py-0.5 text-xs font-mono font-bold">
-                            <button
-                              onClick={() => handleUpdateQty(item.id, -1)}
-                              className="px-1 hover:text-amber-400 text-slate-400"
-                            >
-                              -
-                            </button>
-                            <span className="px-1 text-white">{item.qty || 1}</span>
-                            <button
-                              onClick={() => handleUpdateQty(item.id, 1)}
-                              className="px-1 hover:text-amber-400 text-slate-400"
-                            >
-                              +
-                            </button>
+                      return (
+                        <div
+                          key={item.id}
+                          className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 flex items-center justify-between gap-2 shadow-sm flex-wrap"
+                        >
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="font-outfit font-bold text-xs text-slate-100 truncate">
+                              {item.name}
+                            </span>
+                            <div className="flex items-center gap-1.5 text-[11px] font-mono text-amber-300/90 font-semibold flex-wrap">
+                              <span>{formatGoldSilverLabel(unit.gold, unit.silver)} each</span>
+                              {qty > 1 && (
+                                <span className="text-emerald-300/90">
+                                  • Total: {formatGoldSilverLabel(stackGold, stackRemSilver)}
+                                </span>
+                              )}
+                            </div>
                           </div>
 
-                          <button
-                            onClick={() => handleDeleteTreasure(item.id)}
-                            className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
-                            title="Delete treasure item"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {/* Sell Buttons, Qty & Delete */}
+                          <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                            {qty > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleSellTreasure(item, 1)}
+                                className="px-2 py-1 rounded-lg bg-amber-950/90 hover:bg-amber-800/90 border border-amber-500/50 hover:border-amber-400 text-amber-200 hover:text-white text-[11px] font-outfit font-extrabold tracking-wide transition-all cursor-pointer shadow-sm"
+                                title={`Sell 1 ${item.name} for ${formatGoldSilverLabel(unit.gold, unit.silver)}`}
+                              >
+                                🪙 Sell 1
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleSellTreasure(item, qty)}
+                              className="px-2 py-1 rounded-lg bg-emerald-950/90 hover:bg-emerald-800/90 border border-emerald-500/50 hover:border-emerald-400 text-emerald-200 hover:text-white text-[11px] font-outfit font-extrabold tracking-wide transition-all cursor-pointer shadow-sm"
+                              title={`Sell all (${qty}× ${item.name}) for ${formatGoldSilverLabel(stackGold, stackRemSilver)}`}
+                            >
+                              🪙 Sell All
+                            </button>
+
+                            <div className="flex items-center bg-slate-950 border border-slate-700 rounded-lg px-1 py-0.5 text-xs font-mono font-bold">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQty(item.id, -1)}
+                                className="px-1 hover:text-amber-400 text-slate-400 cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="px-1 text-white">{qty}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateQty(item.id, 1)}
+                                className="px-1 hover:text-amber-400 text-slate-400 cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteTreasure(item.id)}
+                              className="p-1 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
+                              title="Delete treasure item"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -351,42 +486,45 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
                     />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-slate-300">Value</label>
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        value={customValue}
-                        onChange={(e) => setCustomValue(parseInt(e.target.value) || 1)}
-                        className="px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white text-center focus:outline-none focus:border-amber-500 font-mono font-bold"
-                      />
-                    </div>
+                  {/* Dual Gold & Silver Card (Matching Top Header UI, Scoped to New Valuable) */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-bold text-slate-300">Unit Value (Each)</label>
+                    <div className="flex items-center justify-between gap-3 px-3 py-2 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs font-bold shadow-inner">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-amber-300">Gold 🪙:</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={customGold}
+                          onChange={(e) => setCustomGold(Math.max(0, parseInt(e.target.value) || 0))}
+                          className="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-center text-white font-bold outline-none focus:border-amber-500"
+                        />
+                      </div>
 
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-slate-300">Currency</label>
-                      <select
-                        value={customCurrency}
-                        onChange={(e) => setCustomCurrency(e.target.value as 'gp' | 'sp')}
-                        className="px-2 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500 cursor-pointer"
-                      >
-                        <option value="gp">🪙 Gold (gp)</option>
-                        <option value="sp">🥈 Silver (sp)</option>
-                      </select>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-300">Silver 🥈:</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={customSilver}
+                          onChange={(e) => setCustomSilver(Math.max(0, parseInt(e.target.value) || 0))}
+                          className="w-16 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-center text-white font-bold outline-none focus:border-slate-400"
+                        />
+                      </div>
                     </div>
+                  </div>
 
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-slate-300">Qty</label>
-                      <input
-                        type="number"
-                        min="1"
-                        required
-                        value={customQty}
-                        onChange={(e) => setCustomQty(parseInt(e.target.value) || 1)}
-                        className="px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white text-center focus:outline-none focus:border-amber-500 font-mono font-bold"
-                      />
-                    </div>
+                  {/* Inline Quantity Input */}
+                  <div className="flex items-center justify-between px-3 py-2 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs font-bold shadow-inner">
+                    <label className="text-xs font-sans font-bold text-slate-300">Quantity (Qty):</label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={customQty}
+                      onChange={(e) => setCustomQty(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-20 px-2 py-0.5 bg-slate-900 border border-slate-700 rounded text-center text-white font-bold outline-none focus:border-amber-500"
+                    />
                   </div>
 
                   {formError && (
@@ -395,7 +533,7 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
 
                   <button
                     type="submit"
-                    className="mt-2 py-2 px-4 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-xs transition shadow-md cursor-pointer font-outfit"
+                    className="mt-1 py-2 px-4 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-xs transition shadow-md cursor-pointer font-outfit"
                   >
                     + Add Treasure Valuables
                   </button>
@@ -413,7 +551,8 @@ export const MoneyCard: React.FC<MoneyCardProps> = ({ className = '' }) => {
               </div>
 
               <button
-                onClick={() => setShowManageModal(false)}
+                type="button"
+                onClick={() => setMoneyValuablesModalOpen(false)}
                 className="bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold px-5 py-1.5 rounded-xl border border-slate-700 transition shadow-sm cursor-pointer text-xs"
               >
                 Done

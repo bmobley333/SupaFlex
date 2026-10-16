@@ -204,6 +204,8 @@ interface CharacterStore {
   // Modal Navigation State
   isGearManagerModalOpen: boolean;
   setGearManagerModalOpen: (open: boolean) => void;
+  isMoneyValuablesModalOpen: boolean;
+  setMoneyValuablesModalOpen: (open: boolean) => void;
   isExoticGearManagerModalOpen: boolean;
   setExoticGearManagerModalOpen: (open: boolean, targetItem?: string | null) => void;
   exoticGearManagerTargetItem: string | null;
@@ -350,6 +352,8 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
   // Modal Navigation State
   isGearManagerModalOpen: false,
   setGearManagerModalOpen: (open: boolean) => set({ isGearManagerModalOpen: open }),
+  isMoneyValuablesModalOpen: false,
+  setMoneyValuablesModalOpen: (open: boolean) => set({ isMoneyValuablesModalOpen: open }),
   isExoticGearManagerModalOpen: false,
   setExoticGearManagerModalOpen: (open: boolean, targetItem: string | null = null) =>
     set({ isExoticGearManagerModalOpen: open, exoticGearManagerTargetItem: targetItem }),

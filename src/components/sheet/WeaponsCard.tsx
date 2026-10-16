@@ -122,9 +122,6 @@ export const WeaponsCard: React.FC = () => {
     moxie: 'd4',
   }) as Record<string, string>;
 
-  const gold = activeCharacter?.sheet_data?.gold || 0;
-  const silver = activeCharacter?.sheet_data?.silver || 0;
-
   const isWeaponExotic = useCallback(
     (wep: { name: string; notes?: string }) => {
       const fns = getFunctionsForGearItem(wep.name, functionsCatalog || []);
@@ -690,9 +687,6 @@ export const WeaponsCard: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2.5">
-                    <div className="px-3 py-1 bg-teal-950/60 border border-teal-500/40 rounded-xl font-mono font-bold text-xs text-teal-300 shadow-sm flex items-center justify-center shrink-0">
-                      💰 {gold}g {silver}s
-                    </div>
                     <div className="px-3 py-1 bg-amber-950/60 border border-amber-500/50 rounded-xl font-mono font-black text-xs text-amber-300 shadow-sm flex items-center justify-center shrink-0">
                       AP {availableAp}
                     </div>

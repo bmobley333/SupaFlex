@@ -99,6 +99,7 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
     isGuildSpaceUnlocked: isGsUnlocked,
     isGearManagerModalOpen,
     setGearManagerModalOpen,
+    setMoneyValuablesModalOpen,
     setExoticGearManagerModalOpen,
     suppliesCatalog,
     weaponsCatalog: storeWeapons,
@@ -165,8 +166,8 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
   }, []);
 
   // Character Currency & Wallet Funds
-  const gold = sheet?.gold ?? 0;
-  const silver = sheet?.silver ?? 0;
+  const gold = sheet?.gold ?? 5;
+  const silver = sheet?.silver ?? 50;
   const totalAvailableSilver = useMemo(() => (gold * 100) + silver, [gold, silver]);
 
   // Ephemeral "Not Enough Money" Popover Target State
@@ -1133,15 +1134,24 @@ export const GearCard: React.FC<GearCardProps> = ({ className = '' }) => {
                 </div>
               </div>
 
-              {/* Currency Funds & Total Value in Header */}
+              {/* Currency Funds Shortcut Button & Total Value in Header */}
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Character Wallet Funds Pill */}
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-950/80 border border-amber-500/50 rounded-xl font-mono text-xs font-extrabold text-amber-300 shadow-md shadow-amber-950/30">
-                  <span className="text-sm leading-none">💰</span>
-                  <span className="text-amber-200">Funds:</span>
+                {/* Character Wallet Funds Shortcut Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGearManagerModalOpen(false);
+                    setMoneyValuablesModalOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-900/80 hover:bg-amber-800/90 border border-amber-400/70 hover:border-amber-300 rounded-xl font-mono text-xs font-extrabold text-amber-300 hover:text-white shadow-md shadow-amber-950/40 hover:shadow-amber-500/20 active:scale-95 transition-all cursor-pointer group"
+                  title="Open Money & Valuables Manager to adjust currency or sell valuables"
+                >
+                  <span className="font-outfit uppercase tracking-wider text-[10px] text-amber-300/90 group-hover:text-amber-100 font-black">Go to:</span>
+                  <span className="text-sm leading-none group-hover:scale-110 transition-transform">💰</span>
+                  <span className="text-amber-200 group-hover:text-white">Funds:</span>
                   <span className="text-white">🪙 {gold}g</span>
                   <span className="text-white">🥈 {silver}s</span>
-                </div>
+                </button>
 
                 {/* Inventory Total Value Pill in Header */}
                 <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs font-bold text-teal-300 shadow-inner hidden sm:flex">
