@@ -2568,12 +2568,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
             return (
               <div
                 key={(slot as any).id || `${slot.name}_${index}`}
-                className={`p-3 bg-slate-950/60 rounded-xl border border-slate-850 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm hover:border-slate-800 transition-all ${
+                className={`px-3 py-2.5 bg-slate-950/60 rounded-xl border border-slate-850 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 shadow-sm hover:border-slate-800 transition-all ${
                   isFullySpent ? 'opacity-50 grayscale-[40%]' : ''
                 }`}
               >
                 {/* 1. Name Column with Version Badge */}
-                <div className="w-56 sm:w-64 md:w-80 shrink-0 flex flex-col gap-0.5">
+                <div className="w-40 sm:w-44 md:w-48 shrink-0 flex flex-col gap-0.5">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {(() => {
                       const displayName = baseName;
@@ -2620,9 +2620,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 </div>
 
                 {/* 2. Action Badge Column */}
-                <div className="w-12 shrink-0 flex items-center justify-center">
+                <div className="w-8 shrink-0 flex items-center justify-center">
                   {actionUpper ? (
-                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${actionClass}`}>
+                    <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase ${actionClass}`}>
                       {actionUpper}
                     </span>
                   ) : (
@@ -2631,9 +2631,9 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                 </div>
 
                 {/* 3. Uses Text Column */}
-                <div className="w-20 shrink-0 flex items-center justify-start">
+                <div className="w-12 shrink-0 flex items-center justify-center">
                   {slot.usage ? (
-                    <span className="bg-slate-900 px-2 py-0.5 rounded border border-slate-800 text-[11px] font-mono text-slate-300 truncate" title={slot.usage}>
+                    <span className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 text-[11px] font-mono text-slate-300 truncate" title={slot.usage}>
                       {slot.usage}
                     </span>
                   ) : (
@@ -2641,8 +2641,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                   )}
                 </div>
 
-                {/* 4. Checkboxes Column */}
-                <div className="w-16 shrink-0 flex items-center gap-1 min-w-[64px]">
+                {/* 4. Checkboxes Column (56px = exact fit for up to 3 w-4 h-4 boxes with gap-1) */}
+                <div className="w-14 shrink-0 flex items-center justify-start gap-1">
                   {usageCount > 0 ? (
                     Array.from({ length: usageCount }).map((_, bIdx) => {
                       const isChecked = !!(slot.checked && slot.checked[bIdx]);
