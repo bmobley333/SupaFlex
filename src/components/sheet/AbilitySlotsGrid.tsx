@@ -68,7 +68,6 @@ const ACTION_ORDER: Record<string, number> = {
   F: 4,
 };
 
-const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
 const USAGE_OPTIONS: { value: string; label: string }[] = [
   { value: '1-⚡', label: '1-⚡' },
   { value: '1-🍀', label: '1-🍀' },
@@ -351,6 +350,8 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const targetEl = event.target as Element | null;
+      if (targetEl?.closest?.('[data-rules-popover="true"]')) return;
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
         handleCloseManageModal();
       }
@@ -2403,6 +2404,7 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             <span className="text-xs font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
                               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                               Version Editor: {versionEditBaseName} v{versionEditNextVersion}
+                              <CardHelpButton ruleKey="powers.versions" />
                             </span>
                             <button
                               type="button"
@@ -2434,15 +2436,13 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
                             <div className="grid grid-cols-2 gap-2">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-slate-300 shrink-0">Action:</span>
-                                <select
-                                  value={createAction}
-                                  onChange={(e) => setCreateAction(e.target.value)}
-                                  className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full"
+                                <div
+                                  className="bg-slate-900/90 border border-slate-800 text-amber-300 text-xs font-mono font-bold px-2.5 py-1 rounded-lg w-full flex items-center gap-1.5 cursor-not-allowed select-none"
+                                  title="Power Versions cannot modify a Power's Action"
                                 >
-                                  {ACTION_OPTIONS.map((opt) => (
-                                    <option key={opt} value={opt}>{opt}</option>
-                                  ))}
-                                </select>
+                                  <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                  <span>{createAction}</span>
+                                </div>
                               </div>
 
                               <div className="flex items-center gap-2">

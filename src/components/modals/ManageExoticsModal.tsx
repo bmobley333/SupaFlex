@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { X, Search, Zap, Trash2, Pencil, Sparkles, Lock, Plus, ChevronDown } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
+import { CardHelpButton } from '../common/CardHelpButton';
 import {
   calculateAvailableAp,
   isGearPowerLearned,
@@ -50,18 +51,14 @@ const parseUsageCount = (usage?: string): number => {
 const cleanName = (name: string) => (name || '').replace(/^[⭕\s]+/, '').trim();
 
 const MAIN_ABILITY_ICONS = [
+  { icon: '✨', label: 'Magic' },
   { icon: '💪', label: 'Might' },
-  { icon: '🏃', label: 'Agility' },
-  { icon: '🧠', label: 'Wit' },
-  { icon: '🫀', label: 'Spirit' },
-  { icon: '⚡', label: 'Action' },
-  { icon: '🛡️', label: 'Armor' },
-  { icon: '🎯', label: 'Range' },
-  { icon: '💥', label: 'Damage' },
-  { icon: '⏱️', label: 'Duration' },
+  { icon: '👁️', label: 'Mind' },
+  { icon: '🏃', label: 'Motion' },
+  { icon: '🫀', label: 'Moxie' },
+  { icon: '🍀', label: 'Luck' },
 ];
 
-const ACTION_OPTIONS = ['AM', 'A', 'M', 'P', 'F'];
 const USAGE_OPTIONS = [
   { value: '1-⚡', label: '1-⚡ (Bolt)' },
   { value: '1-🍀', label: '1-🍀 (Luck)' },
@@ -1200,6 +1197,7 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
                 <div className="flex items-center gap-2 text-amber-300 font-bold text-xs uppercase tracking-wider">
                   <Sparkles className="w-4 h-4 text-amber-400" />
                   <span>Version Editor: {veBaseName} v{veNextVersion}</span>
+                  <CardHelpButton ruleKey="powers.versions" />
                 </div>
                 <button
                   type="button"
@@ -1226,19 +1224,17 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
                   </div>
                 </div>
 
-                {/* Action & Usage Selectors */}
+                {/* Locked Action Badge & Usage Selector */}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-300 shrink-0">Action:</span>
-                    <select
-                      value={veAction}
-                      onChange={(e) => setVeAction(e.target.value)}
-                      className="bg-slate-950 border border-slate-700 text-amber-300 text-xs font-mono font-bold px-2 py-1 rounded-lg outline-none w-full cursor-pointer"
+                    <div
+                      className="bg-slate-950/90 border border-slate-800 text-amber-300 text-xs font-mono font-bold px-2.5 py-1 rounded-lg w-full flex items-center gap-1.5 cursor-not-allowed select-none shadow-inner"
+                      title="Power Versions cannot modify a Power's Action"
                     >
-                      {ACTION_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
+                      <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span>{veAction}</span>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -1262,7 +1258,7 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
                   <div className="flex items-center justify-between flex-wrap gap-1">
                     <span className="text-xs font-bold text-slate-300">Effect Description</span>
                     <div className="flex items-center gap-1 flex-wrap">
-                      <span className="text-[10px] text-slate-400 font-bold mr-0.5">Insert:</span>
+                      <span className="text-[10px] text-slate-400 font-bold mr-0.5">Insert Icon:</span>
                       {MAIN_ABILITY_ICONS.map((item) => (
                         <button
                           key={item.label}
@@ -1272,6 +1268,7 @@ export const ManageExoticsModal: React.FC<ManageExoticsModalProps> = ({
                           title={`Insert ${item.icon} (${item.label}) at cursor`}
                         >
                           <span>{item.icon}</span>
+                          <span className="hidden sm:inline text-[9px] text-slate-300">{item.label}</span>
                         </button>
                       ))}
                     </div>

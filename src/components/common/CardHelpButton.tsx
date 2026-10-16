@@ -69,6 +69,7 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        event.stopPropagation();
         setIsOpen(false);
       }
     };
@@ -321,6 +322,7 @@ export const CardHelpButton: React.FC<CardHelpButtonProps> = ({
   const popoverContent = isOpen && typeof document !== 'undefined' ? (
     <div
       ref={popoverRef}
+      data-rules-popover="true"
       style={{
         position: 'fixed',
         top: `${coords.top}px`,
