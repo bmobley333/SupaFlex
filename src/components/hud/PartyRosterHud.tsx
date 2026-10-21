@@ -111,8 +111,21 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
         // 1. Verify that the GM party is still active, has a valid room code, and is not stale (>90s)
         let resolvedPartyId = activePartyId;
         if (activePartyId.length === 4) {
-          const p = await gameApi.findActivePartyByRoomCode(activePartyId);
-          if (!p) {
+          const { data: p, error: codeError } = await supabase
+            .from('parties')
+            .select('id, room_code, party_code, is_active, status')
+            .or(`room_code.eq.${activePartyId.toUpperCase()},party_code.eq.${activePartyId.toUpperCase()}`)
+            .neq('status', 'expired')
+            .order('last_active_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (codeError) {
+            console.warn('[PartyRosterHud] Transient network error checking party code, preserving roster:', codeError);
+            return;
+          }
+
+          if (!p || !p.is_active || p.status === 'expired' || !p.room_code) {
             if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');
             setActivePartyId(null);
             return;
@@ -120,11 +133,16 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
           resolvedPartyId = p.id;
           setDisplayRoomCode(activePartyId.toUpperCase());
         } else {
-          const { data: p } = await supabase
+          const { data: p, error: partyError } = await supabase
             .from('parties')
             .select('room_code, party_code, is_active, status')
             .eq('id', activePartyId)
             .maybeSingle();
+
+          if (partyError) {
+            console.warn('[PartyRosterHud] Transient network error checking party status, preserving roster:', partyError);
+            return;
+          }
 
           if (!p || !p.is_active || p.status === 'expired' || !p.room_code) {
             if (typeof window !== 'undefined') sessionStorage.removeItem('supaflex_active_party_id');

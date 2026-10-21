@@ -123,6 +123,7 @@ function hydrateSetsWithCounts(
 
 
 let characterSaveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let outboxAutoRetryTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingSaveResolvers: Array<() => void> = [];
 const pendingNishChangeCharacterIds = new Set<number>();
 
@@ -1183,6 +1184,15 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
             dbConnected: false,
             pendingOutboxCount: currentCount,
           });
+          if (outboxAutoRetryTimer) {
+            clearTimeout(outboxAutoRetryTimer);
+          }
+          outboxAutoRetryTimer = setTimeout(() => {
+            outboxAutoRetryTimer = null;
+            if (typeof navigator === 'undefined' || navigator.onLine) {
+              get().flushPendingOutbox().catch(() => {});
+            }
+          }, 4000);
         } finally {
           resolversToNotify.forEach((r) => r());
         }

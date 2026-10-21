@@ -1732,7 +1732,23 @@ export const gameApi = {
 
     let targetPartyUuid = partyIdOrCode;
     if (partyIdOrCode.length === 4) {
-      const party = await this.findActivePartyByRoomCode(partyIdOrCode);
+      const sanitized = sanitizeRoomCodeInput(partyIdOrCode);
+      if (!sanitized || sanitized.length !== 4) return false;
+
+      const { data: party, error: codeErr } = await supabase
+        .from('parties')
+        .select('id')
+        .or(`room_code.eq.${sanitized},party_code.eq.${sanitized}`)
+        .neq('status', 'expired')
+        .order('last_active_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (codeErr) {
+        console.warn('[gameApi] Transient network error resolving party code in ensureTabPartySession:', codeErr);
+        return true;
+      }
+
       if (party) {
         targetPartyUuid = party.id;
       } else {
@@ -1745,11 +1761,16 @@ export const gameApi = {
 
     try {
       // 1. Verify that the GM party is still active and has a valid room code
-      const { data: partyRecord } = await supabase
+      const { data: partyRecord, error: partyErr } = await supabase
         .from('parties')
         .select('id, is_active, status, room_code')
         .eq('id', targetPartyUuid)
         .maybeSingle();
+
+      if (partyErr) {
+        console.warn('[gameApi] Transient network error querying party in ensureTabPartySession:', partyErr);
+        return true;
+      }
 
       if (!partyRecord || !partyRecord.is_active || partyRecord.status === 'expired' || !partyRecord.room_code) {
         if (typeof window !== 'undefined') {
@@ -1758,12 +1779,17 @@ export const gameApi = {
         return false;
       }
 
-      const { data } = await supabase
+      const { data, error: memberErr } = await supabase
         .from('party_session_members')
         .select('id')
         .eq('party_id', targetPartyUuid)
         .eq('tab_session_id', tabSessionId)
         .maybeSingle();
+
+      if (memberErr) {
+        console.warn('[gameApi] Transient network error querying party_session_members in ensureTabPartySession:', memberErr);
+        return true;
+      }
 
       if (!data) {
         console.log(`[gameApi] Self-healing session for tab ${tabSessionId} in party ${targetPartyUuid}...`);
@@ -1773,8 +1799,8 @@ export const gameApi = {
       }
       return true;
     } catch (e) {
-      console.warn('[gameApi] Error in ensureTabPartySession:', e);
-      return false;
+      console.warn('[gameApi] Error in ensureTabPartySession, preserving active session:', e);
+      return true;
     }
   },
 
@@ -1864,7 +1890,7 @@ export const gameApi = {
 
     if (error) {
       console.error('[gameApi] Error fetching party session members:', error);
-      return [];
+      throw error;
     }
 
     // Fetch player profiles to attach first_name for roster card display
