@@ -349,7 +349,7 @@ export const ManageKitsModal: React.FC<ManageKitsModalProps> = ({ isOpen, onClos
 
     // Record AP expenditure if cost > 0 or log free grant
     if (cost > 0) {
-      recordApExpenditure(cost, 'Manual', `Learned New Kit: ${clean}`, 'Creation', 'Kits Hub');
+      recordApExpenditure(cost, 'Paths', `Learned New Kit: ${clean}`, 'Creation', 'Kits Hub');
     } else {
       recordApExpenditure(0, 'GM Bonus', `Learned Free Kit: ${clean}`, 'Creation', 'Kits Hub');
     }

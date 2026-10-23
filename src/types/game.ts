@@ -692,7 +692,7 @@ export type SupplyItem = SimpleGearItem;
 export interface ApLogEntry {
   id: string;
   timestamp: string;
-  category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Exotics' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual';
+  category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Paths' | 'Traits' | 'Magic Items' | 'Exotics' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual';
   cost: number;
   description: string;
   tier: 1 | 2 | 3 | 'Creation' | 'Manual';
@@ -969,7 +969,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
   const attributesNet = Math.max(0, sumLogCategory('Attributes'));
   const capstonesNet = Math.max(0, sumLogCategory('Capstones'));
   const focusNet = Math.max(0, sumLogCategory('Focus Die'));
-  const gmBonus = apLog.reduce((sum, e) => (e && (e.category === 'GM Bonus' || e.category === 'Manual') ? sum + (e.cost || 0) : sum), 0);
+  const gmBonus = apLog.reduce((sum, e) => (e && (e.category === 'GM Bonus' || e.category === 'Manual') && !/^Learned New (?:Path|Kit):/i.test(e.description || '') ? sum + (e.cost || 0) : sum), 0);
 
   const rawPowerSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots.filter(Boolean) : [];
   const rawCodexPowers: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex.filter(Boolean) : [];
@@ -1015,7 +1015,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
 
   // 1 AP per learned Exotic Power in spell_slots (plus escalating version upgrades)
   const spellSlots = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
-  let gearPowersNet = spellSlots.reduce((sum: number, s: any) => sum + (typeof s?.ap_cost === 'number' ? s.ap_cost : 1), 0);
+  let gearPowersNet = spellSlots.reduce((sum: number, s: any) => sum + Math.max(1, typeof s?.ap_cost === 'number' ? s.ap_cost : 1), 0);
   for (const s of spellSlots) {
     if (!s || !s.name) continue;
     const { version } = parseAbilityVersion(s.base_name || s.name);
@@ -1054,6 +1054,15 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
   const traits = Array.isArray(sheetData.traits_quirks) ? sheetData.traits_quirks : [];
   const traitsNet = traits.reduce((sum: number, t: any) => sum + (typeof t.ap_cost === 'number' ? t.ap_cost : 0), 0);
 
+  // 4 AP per learned Bonus Path in favorite_trait_kits (excluding Innate / Universal / Base / General)
+  const rawBonusPaths: string[] = Array.isArray(sheetData.favorite_trait_kits) ? sheetData.favorite_trait_kits : [];
+  const uniqueBonusPaths = new Set(
+    rawBonusPaths
+      .map((p: string) => (p || '').replace(/\s*\(mso\)/gi, '').replace(/\s*\{[^}]*\}/gi, '').trim().toLowerCase())
+      .filter((p: string) => p && !['innate', 'base', 'universal', 'general'].includes(p))
+  );
+  const pathsNet = uniqueBonusPaths.size * 4;
+
   const categories = {
     Armor: armorNet,
     Attributes: attributesNet,
@@ -1063,6 +1072,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     'GM Bonus': gmBonus,
     'Loadout Slots': gearPowersNet,
     'Magic Items': gearPowersNet,
+    Paths: pathsNet,
     Powers: powersNet,
     Shields: shieldsNet,
     Skills: skillsNet,
@@ -1077,6 +1087,7 @@ export const calculateLiveSheetSpentAp = (sheetData: any): {
     capstonesNet +
     focusNet +
     gearPowersNet +
+    pathsNet +
     powersNet +
     shieldsNet +
     skillsNet +
@@ -1156,7 +1167,7 @@ export const calculateGmBonusAp = (logOrSheet?: any): number => {
   if (!logOrSheet) return 0;
   if (Array.isArray(logOrSheet)) {
     return logOrSheet.reduce((sum, entry) => {
-      if (!entry || (entry.category !== 'GM Bonus' && entry.category !== 'Manual')) return sum;
+      if (!entry || (entry.category !== 'GM Bonus' && entry.category !== 'Manual') || /^Learned New (?:Path|Kit):/i.test(entry.description || '')) return sum;
       const bonus = typeof entry.cost === 'number' && !isNaN(entry.cost) ? entry.cost : 0;
       return sum + bonus;
     }, 0);

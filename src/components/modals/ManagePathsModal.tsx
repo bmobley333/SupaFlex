@@ -10,8 +10,8 @@ import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
 import { calculateAvailableAp } from '../../types/game';
 import { cleanPathName, isMsoEntry, compareMsoOptions } from '../../utils/kitUtils';
-import { collectPathAndSetGrants, applyPathAndSetGrantsToSheet } from '../../utils/bundleGrants';
-import { reconcileAbilitiesOnPathAdded } from '../../utils/pathReconciliationUtils';
+import { collectPathAndSetGrants, applyPathAndSetGrantsToSheet, reconcileAllCharacterFreeGrants } from '../../utils/bundleGrants';
+import { reconcileAbilitiesOnPathAdded, reconcileCharacterFreeTraits } from '../../utils/pathReconciliationUtils';
 import { isGuildSpaceUnlocked } from '../../utils/guildspaceAuth';
 
 interface ManagePathsModalProps {
@@ -28,6 +28,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     weaponsCatalog = [],
     armorCatalog = [],
     shieldsCatalog = [],
+    suppliesCatalog = [],
     setsCatalog = [],
     kits: stockPathsCatalog = [],
     paths: pathsCatalog = [],
@@ -212,7 +213,8 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
   const executePathGrantsAndReconciliation = (
     currentSheet: any,
     targetPathName: string,
-    existingKits: string[]
+    existingKits: string[],
+    metaOverrides?: { race?: string; class?: string }
   ) => {
     const grants = collectPathAndSetGrants(
       targetPathName,
@@ -224,7 +226,8 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
       armorCatalog,
       shieldsCatalog,
       setsCatalog,
-      resolvedPathsCatalog
+      resolvedPathsCatalog,
+      suppliesCatalog
     );
 
     const freeGrantNames = new Set<string>();
@@ -240,12 +243,20 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
       favorite_trait_kits: existingKits,
     };
 
+    const effectiveChar = activeCharacter
+      ? {
+          ...activeCharacter,
+          ...(metaOverrides || {}),
+          sheet_data: intermediateSheet,
+        }
+      : null;
+
     const grantedSheet = applyPathAndSetGrantsToSheet(intermediateSheet, grants);
 
     const reconciliation = reconcileAbilitiesOnPathAdded(
       grantedSheet,
       targetPathName,
-      activeCharacter,
+      effectiveChar,
       freeGrantNames,
       setsCatalog,
       resolvedPathsCatalog
@@ -261,7 +272,25 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
       );
     }
 
-    return reconciliation.updatedSheetData;
+    const traitReconciled = reconcileCharacterFreeTraits(
+      reconciliation.updatedSheetData,
+      effectiveChar,
+      stockRulesCatalog,
+      setsCatalog,
+      resolvedPathsCatalog
+    ).updatedSheetData;
+
+    return reconcileAllCharacterFreeGrants(traitReconciled, effectiveChar, {
+      powers: stockPowersCatalog,
+      skills: stockSkillsCatalog,
+      traits: stockRulesCatalog,
+      weapons: weaponsCatalog,
+      armor: armorCatalog,
+      shields: shieldsCatalog,
+      sets: setsCatalog,
+      paths: resolvedPathsCatalog,
+      supplies: suppliesCatalog,
+    });
   };
 
   // Handle changing Race Path (GM only)
@@ -271,7 +300,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
 
     updateActiveSheetData((prev) => {
       const currentList = Array.isArray(prev.favorite_trait_kits) ? prev.favorite_trait_kits : [];
-      return executePathGrantsAndReconciliation(prev, newRace, currentList);
+      return executePathGrantsAndReconciliation(prev, newRace, currentList, { race: newRace });
     });
 
     saveActiveCharacter();
@@ -286,7 +315,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
 
     updateActiveSheetData((prev) => {
       const currentList = Array.isArray(prev.favorite_trait_kits) ? prev.favorite_trait_kits : [];
-      return executePathGrantsAndReconciliation(prev, newClass, currentList);
+      return executePathGrantsAndReconciliation(prev, newClass, currentList, { class: newClass });
     });
 
     saveActiveCharacter();
@@ -310,7 +339,7 @@ export const ManagePathsModal: React.FC<ManagePathsModalProps> = ({ isOpen, onCl
     }
 
     if (cost > 0) {
-      recordApExpenditure(cost, 'Manual', `Learned New Path: ${clean}`, 'Creation', 'Paths Hub');
+      recordApExpenditure(cost, 'Paths', `Learned New Path: ${clean}`, 'Creation', 'Paths Hub');
     } else {
       recordApExpenditure(0, 'GM Bonus', `Learned Free Path: ${clean}`, 'Creation', 'Paths Hub');
     }

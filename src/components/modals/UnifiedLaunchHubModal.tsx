@@ -250,7 +250,6 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
     if (success) {
       setPasskeyFeedback({ type: 'success', message: '✨ Private Setting Unlocked! Authentic catalogs and filters are now active.' });
       setGuildSpacePasskey('');
-      useCharacterStore.getState().fetchInitialData({ silent: true });
     } else {
       setPasskeyFeedback({ type: 'error', message: '❌ Invalid Setting Passkey. Access remained locked.' });
     }

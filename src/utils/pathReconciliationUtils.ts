@@ -4,7 +4,7 @@
 // Requirement Surcharge Auto-Refund Engine, and {Free} 0-AP Path Grant Reconciler.
 
 import { Character, CharacterSheetData, AbilitySlot, WeaponSlot, ArmorData, ShieldData, TraitQuirkItem, AttributeKey, DieRating, SupabaseTrait, SupabaseSet, SupabasePath, getCanonicalWeaponBaseName } from '../types/game';
-import { cleanPathName, parseKit } from './kitUtils';
+import { cleanPathName, parseKit, isMsoEntry } from './kitUtils';
 import { getCharacterKnownPaths, getCharacterKnownSets, getCharacterFreeSets, getCharacterFreeElementNames, evaluateItemAp, parseItemPaths, extractPathEntriesWithTags, getCharacterMatchingPath, isPathStringMatch, normalizePathForComparison } from './pathApUtils';
 
 export interface PathReconciliationResult {
@@ -713,7 +713,9 @@ export const reconcileSkillsOnSkillsetAdded = (
 export const reconcileCharacterFreeTraits = (
   sheetData: CharacterSheetData,
   character: Character | null | undefined,
-  catalogTraits: SupabaseTrait[] = []
+  catalogTraits: SupabaseTrait[] = [],
+  setsCatalog: SupabaseSet[] = [],
+  pathsCatalog: SupabasePath[] = []
 ): { updatedSheetData: CharacterSheetData; newlyGrantedCount: number; prunedCount: number } => {
   if (!character) {
     return { updatedSheetData: sheetData, newlyGrantedCount: 0, prunedCount: 0 };
@@ -724,15 +726,78 @@ export const reconcileCharacterFreeTraits = (
     return { updatedSheetData: sheetData, newlyGrantedCount: 0, prunedCount: 0 };
   }
 
+  const freeSets = getCharacterFreeSets(knownPaths, setsCatalog, pathsCatalog);
+  const freeElementNames = getCharacterFreeElementNames(knownPaths, catalogTraits);
+  const isMsoChar = Boolean(
+    isMsoEntry(character.race) ||
+      isMsoEntry(character.class) ||
+      (sheetData.favorite_trait_kits || []).some((k) => isMsoEntry(k))
+  );
+
+  const isCatalogTraitFreeForCharacter = (traitName: string, traitSets?: string[] | null, rawPath?: string | string[] | null): boolean => {
+    const entries = rawPath ? extractPathEntriesWithTags(rawPath) : [];
+    const freeEntries = entries.filter((e) => e.isFree);
+    const isOnlyInnateFree =
+      freeEntries.length > 0 &&
+      freeEntries.every((e) => ['innate', 'base', 'universal'].includes(e.cleanPath.toLowerCase().trim()));
+    if (isOnlyInnateFree && isMsoEntry(traitName) !== isMsoChar) {
+      return false;
+    }
+
+    const rawLower = (traitName || '').toLowerCase().trim();
+    const cleanLower = cleanPathName(traitName).toLowerCase().trim();
+    if (freeElementNames.has(rawLower) || freeElementNames.has(cleanLower)) return true;
+
+    if (traitSets && Array.isArray(traitSets) && freeSets.size > 0) {
+      for (const s of traitSets) {
+        if (s && freeSets.has(cleanPathName(s).toLowerCase().trim())) {
+          return true;
+        }
+      }
+    }
+
+    if (rawPath) {
+      const entries = extractPathEntriesWithTags(rawPath);
+      const freeEntries = entries.filter((e) => e.isFree);
+      if (freeEntries.some((e) => {
+        for (const kp of knownPaths) {
+          if (isPathStringMatch(e.cleanPath, kp)) return true;
+        }
+        return false;
+      })) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const catalogTraitMap = new Map<string, SupabaseTrait>();
+  for (const ct of catalogTraits || []) {
+    if (ct && ct.name) {
+      catalogTraitMap.set(ct.name.toLowerCase().trim(), ct);
+      catalogTraitMap.set(cleanPathName(ct.name).toLowerCase().trim(), ct);
+    }
+  }
+
   const existingRawTraits: TraitQuirkItem[] = Array.isArray(sheetData.traits_quirks)
     ? [...sheetData.traits_quirks]
     : [];
 
-  // Step 1: Autonomous Pruning of Ghost Free Traits
+  // Step 1: Autonomous Pruning of Ghost Free Traits (and healing ap_cost = 0 on Free Traits)
   let prunedCount = 0;
   const prunedTraits: TraitQuirkItem[] = [];
 
   for (const t of existingRawTraits) {
+    const tNameLower = (t.name || '').toLowerCase().trim();
+    const catTrait = catalogTraitMap.get(tNameLower) || catalogTraitMap.get(cleanPathName(t.name).toLowerCase().trim());
+    const tSets = (t as any).sets || catTrait?.sets;
+    const tRawPath = t.path || catTrait?.path || t.kit || t.table_group || t.source || '';
+
+    if (isCatalogTraitFreeForCharacter(t.name, tSets, tRawPath)) {
+      prunedTraits.push({ ...t, ap_cost: 0 });
+      continue;
+    }
+
     // If the player paid AP (> 0), NEVER prune!
     const isPaid = typeof t.ap_cost === 'number' && t.ap_cost > 0;
     if (isPaid) {
@@ -743,10 +808,13 @@ export const reconcileCharacterFreeTraits = (
     const tPath = t.path || t.kit || t.table_group || t.source || '';
     const itemPaths = parseItemPaths(tPath);
 
-    // If no path constraint or explicitly universal/general/base, keep!
+    // If no path constraint or explicitly universal/general, keep!
     const isUniversalOrGeneral = itemPaths.length === 0 || itemPaths.some((p) => {
       const norm = normalizePathForComparison(p);
-      return norm === 'universal' || norm === 'general' || norm === 'base';
+      if (norm === 'base' || norm === 'innate') {
+        return isMsoEntry(t.name) === isMsoChar;
+      }
+      return norm === 'universal' || norm === 'general';
     });
 
     if (isUniversalOrGeneral) {
@@ -756,6 +824,7 @@ export const reconcileCharacterFreeTraits = (
 
     const matchesKnown = itemPaths.some((p) => {
       for (const kp of knownPaths) {
+        if (kp === 'innate' || kp === 'base') continue;
         if (isPathStringMatch(p, kp)) return true;
       }
       return false;
@@ -768,30 +837,17 @@ export const reconcileCharacterFreeTraits = (
     }
   }
 
-  // Step 2: Auto-Grant Missing Free Traits matching Known Paths
+  // Step 2: Auto-Grant Missing Free Traits matching Known Paths or Free Sets
   const existingNames = new Set(prunedTraits.map((t) => (t.name || '').toLowerCase().trim()));
   let newlyGrantedCount = 0;
 
   if (catalogTraits && catalogTraits.length > 0) {
     for (const trait of catalogTraits) {
       const rawPath = trait.path || trait.kit || trait.table_group || '';
-      if (!rawPath) continue;
+      const matchesFree = isCatalogTraitFreeForCharacter(trait.name, trait.sets, rawPath);
 
-      const entries = extractPathEntriesWithTags(rawPath);
-      const freeEntries = entries.filter((e) => e.isFree);
-      if (freeEntries.length === 0) continue;
-
-      const matchesKnown = freeEntries.some((e) => {
-        for (const kp of knownPaths) {
-          if (isPathStringMatch(e.cleanPath, kp)) {
-            return true;
-          }
-        }
-        return false;
-      });
-
-      if (matchesKnown && !existingNames.has((trait.name || '').toLowerCase().trim())) {
-        const resolvedMatchingPath = cleanPathName(getCharacterMatchingPath(rawPath, character));
+      if (matchesFree && !existingNames.has((trait.name || '').toLowerCase().trim())) {
+        const resolvedMatchingPath = cleanPathName(getCharacterMatchingPath(rawPath, character) || (Array.isArray(trait.sets) && trait.sets[0]) || 'Innate');
         prunedTraits.push({
           name: trait.name,
           effect: trait.effect || '',
@@ -800,7 +856,8 @@ export const reconcileCharacterFreeTraits = (
           kit: resolvedMatchingPath,
           table_group: resolvedMatchingPath,
           source: `${resolvedMatchingPath} {Free}`,
-          path: resolvedMatchingPath,
+          path: trait.path || resolvedMatchingPath,
+          sets: trait.sets,
           ap_cost: 0,
           is_hidden: false,
         });

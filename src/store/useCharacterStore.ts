@@ -7,6 +7,7 @@ import { isGuildSpaceUnlocked } from '../utils/guildspaceAuth';
 import { reconcileCharacterVaultWithGear, cleanBelongsToName, getFunctionsForMod, normalizeWeaponSlotBaseName } from '../utils/gearExoticPowerSync';
 import { parseCostToSilver, deductFundsWithChange } from '../utils/moneyUtils';
 import { reconcileCharacterFreeTraits } from '../utils/pathReconciliationUtils';
+import { reconcileAllCharacterFreeGrants } from '../utils/bundleGrants';
 import { reconcileCanonicalSnapshots, updateCharacterSheetCanonicalItem, removeCharacterSheetCanonicalItem, CanonicalEntityType } from '../utils/canonicalPropagation';
 import { applyEntityHydration } from '../utils/entityHydration';
 import { CatalogArtifact, ArtifactTier, resolveArtifactCatalog } from '../utils/artifactCatalogResolver';
@@ -246,7 +247,7 @@ interface CharacterStore {
   setActivePartyId: (partyId: string | null) => void;
   recordApExpenditure: (
     cost: number,
-    category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Magic Items' | 'Exotics' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual',
+    category: 'Skills' | 'Weapons' | 'Armor' | 'Shields' | 'Powers' | 'Paths' | 'Traits' | 'Magic Items' | 'Exotics' | 'Attributes' | 'Focus Die' | 'Capstones' | 'Vitality' | 'GM Bonus' | 'Manual',
     description: string,
     tier: 1 | 2 | 3 | 'Creation' | 'Manual',
     source: string
@@ -768,6 +769,18 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         const currentActive = get().activeCharacter;
         let selectedChar: Character | null = null;
 
+        const ownsMsoHero = myHeroes.some(
+          (c) => /\(mso\)/i.test(c.race || '') || /\(mso\)/i.test(c.class || '')
+        );
+        if (ownsMsoHero && !isGuildSpaceUnlocked() && typeof window !== 'undefined') {
+          try {
+            localStorage.setItem('supaflex_guildspace_unlocked', 'true');
+            set({ isGuildSpaceUnlocked: true });
+            window.dispatchEvent(new CustomEvent('supaflex:guildspace-unlocked'));
+            return;
+          } catch {}
+        }
+
         const reconcileSheet = (rawSheet: CharacterSheetData, char: Character | null): CharacterSheetData => {
           const cleanedSheet = sanitizeNishSkills(rawSheet);
           const migrated = migrateCharacterPowersToCodex(migrateCharacterMagicItemsToVault(cleanedSheet));
@@ -780,8 +793,30 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
             traits,
             supplies: suppliesData,
           }).updatedSheetData;
-          const pathReconciled = reconcileCharacterFreeTraits(canonicalReconciled, char, traits).updatedSheetData;
-          return applyEntityHydration(pathReconciled, {
+          const traitReconciled = reconcileCharacterFreeTraits(
+            canonicalReconciled,
+            char,
+            traits,
+            hydratedSetsCatalog,
+            pathsData
+          ).updatedSheetData;
+          const allGrantsReconciled = reconcileAllCharacterFreeGrants(traitReconciled, char, {
+            powers,
+            skills,
+            traits,
+            weapons: weaponsData,
+            armor: armorData,
+            shields: shieldsData,
+            sets: hydratedSetsCatalog,
+            paths: pathsData,
+            supplies: suppliesData,
+          });
+          const postGrantVaultReconciled = reconcileCharacterVaultWithGear(
+            allGrantsReconciled,
+            functionsData || [],
+            modsData || []
+          ).updatedSheet;
+          return applyEntityHydration(postGrantVaultReconciled, {
             powers,
             weapons: weaponsData,
             armor: armorData,
@@ -907,8 +942,30 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         traits: get().traits,
         supplies: get().suppliesCatalog,
       }).updatedSheetData;
-      const pathReconciled = reconcileCharacterFreeTraits(canonicalReconciled, char, get().traits).updatedSheetData;
-      return applyEntityHydration(pathReconciled, {
+      const traitReconciled = reconcileCharacterFreeTraits(
+        canonicalReconciled,
+        char,
+        get().traits,
+        get().setsCatalog,
+        get().paths
+      ).updatedSheetData;
+      const allGrantsReconciled = reconcileAllCharacterFreeGrants(traitReconciled, char, {
+        powers: get().powers,
+        skills: get().skills,
+        traits: get().traits,
+        weapons: get().weaponsCatalog,
+        armor: get().armorCatalog,
+        shields: get().shieldsCatalog,
+        sets: get().setsCatalog,
+        paths: get().paths,
+        supplies: get().suppliesCatalog,
+      });
+      const postGrantVaultReconciled = reconcileCharacterVaultWithGear(
+        allGrantsReconciled,
+        functionsCatalog,
+        modsCatalog
+      ).updatedSheet;
+      return applyEntityHydration(postGrantVaultReconciled, {
         powers: get().powers,
         weapons: get().weaponsCatalog,
         armor: get().armorCatalog,
@@ -937,6 +994,18 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     try {
       const updated = await gameApi.getCharacterById(id);
       if (updated) {
+        if (
+          (/\(mso\)/i.test(updated.race || '') || /\(mso\)/i.test(updated.class || '')) &&
+          !isGuildSpaceUnlocked() &&
+          typeof window !== 'undefined'
+        ) {
+          try {
+            localStorage.setItem('supaflex_guildspace_unlocked', 'true');
+            set({ isGuildSpaceUnlocked: true, activeCharacter: updated });
+            window.dispatchEvent(new CustomEvent('supaflex:guildspace-unlocked'));
+            return;
+          } catch {}
+        }
         const migratedSheet = reconcileSheet(updated.sheet_data, updated);
         const migratedChar = { ...updated, sheet_data: migratedSheet };
         set((state) => ({
@@ -954,7 +1023,33 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     set({ isSaving: true });
     try {
       const ownerEmail = get().playerEmail || undefined;
-      const newChar = await gameApi.createCharacter(name, characterClass, race, ownerEmail);
+      const rawChar = await gameApi.createCharacter(name, characterClass, race, ownerEmail);
+      const traitReconciled = reconcileCharacterFreeTraits(
+        rawChar.sheet_data,
+        rawChar,
+        get().traits,
+        get().setsCatalog,
+        get().paths
+      ).updatedSheetData;
+      const grantsReconciled = reconcileAllCharacterFreeGrants(traitReconciled, rawChar, {
+        powers: get().powers,
+        skills: get().skills,
+        traits: get().traits,
+        weapons: get().weaponsCatalog,
+        armor: get().armorCatalog,
+        shields: get().shieldsCatalog,
+        sets: get().setsCatalog,
+        paths: get().paths,
+        supplies: get().suppliesCatalog,
+      });
+      const vaultReconciled = reconcileCharacterVaultWithGear(
+        grantsReconciled,
+        get().functionsCatalog,
+        get().modsCatalog
+      ).updatedSheet;
+      const newChar = await gameApi.updateCharacter(rawChar.id, {
+        sheet_data: vaultReconciled,
+      });
       set((state) => ({
         characters: [newChar, ...state.characters],
         activeCharacter: newChar,

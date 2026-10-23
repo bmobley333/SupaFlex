@@ -3,6 +3,7 @@
 // Automatically equips starting {Trait} items across kits and collects hardware bundle modules
 
 import {
+  Character,
   Power,
   SupabaseSkill,
   SupabaseTrait,
@@ -18,11 +19,15 @@ import {
   WeaponSlot,
   ArmorData,
   ShieldData,
+  SimpleGearItem,
   SupabaseSet,
   SupabasePath,
+  splitWeaponIntoVariants,
+  getCanonicalWeaponBaseName,
 } from '../types/game';
-import { cleanKitName, parseKit, cleanPathName } from './kitUtils';
-import { parseItemPaths, isPathStringMatch, getCharacterFreeSets, getCharacterFreeElementNames } from './pathApUtils';
+import { cleanKitName, parseKit, cleanPathName, isMsoEntry } from './kitUtils';
+import { parseItemPaths, isPathStringMatch, getCharacterKnownPaths, getCharacterFreeSets, getCharacterFreeElementNames } from './pathApUtils';
+import { calculateWeaponAtk, calculateWeaponDmg } from './pathReconciliationUtils';
 
 export interface KitTraitGrants {
   kitName: string;
@@ -324,15 +329,17 @@ export const applyPathTraitGrantsToSheet = applyKitTraitGrantsToSheet;
 export interface PathAndSetGrants {
   pathName: string;
   powers: Power[];
+  skillsets: string[];
   skills: SupabaseSkill[];
   traits: SupabaseTrait[];
   weapons: SupabaseWeapon[];
   armor: SupabaseArmor[];
   shields: SupabaseShield[];
+  supplies: SupabaseGear[];
 }
 
 /**
- * Scans all game catalogs (Powers, Skills, Traits, Weapons, Armor, Shields) for abilities
+ * Scans all game catalogs (Powers, SkillSets, Skills, Traits, Weapons, Armor, Shields, Supplies) for abilities
  * belonging to Sets tagged {Free} on the given Path or linked directly with {Free} tags.
  * Collects them with 0 AP acquisition status.
  */
@@ -346,13 +353,37 @@ export const collectPathAndSetGrants = (
   catalogArmor: SupabaseArmor[] = [],
   catalogShields: SupabaseShield[] = [],
   setsCatalog: SupabaseSet[] = [],
-  pathsCatalog: SupabasePath[] = []
+  pathsCatalog: SupabasePath[] = [],
+  catalogSupplies: SupabaseGear[] = [],
+  isMsoCharacter?: boolean
 ): PathAndSetGrants => {
   const cleanPath = cleanPathName(pathName).toLowerCase().trim();
+  const isSharedInnatePath = cleanPath === 'innate' || cleanPath === 'base' || cleanPath === 'universal';
+  const effectiveIsMso = typeof isMsoCharacter === 'boolean' ? isMsoCharacter : isMsoEntry(pathName);
+  const hasMsoFlag = typeof isMsoCharacter === 'boolean' || isMsoEntry(pathName);
+  const matchesInnateGenre = (itemName: string, isSkill: boolean = false): boolean => {
+    if (!hasMsoFlag) return true;
+    const itemMso = isMsoEntry(itemName);
+    if (effectiveIsMso) {
+      if (isSharedInnatePath && isSkill) return true;
+      return itemMso;
+    }
+    return !itemMso;
+  };
   const knownPathSet = new Set<string>([cleanPath]);
 
   // 1. Identify all Sets that are {Free} on this path
   const freeSets = getCharacterFreeSets(knownPathSet, setsCatalog, pathsCatalog);
+
+  // 1b. Identify {Free} SkillSets (Sets whose category is 'Skills')
+  const matchedSkillsets: string[] = [];
+  setsCatalog.forEach((s) => {
+    if (!s || !s.name) return;
+    const setClean = cleanPathName(s.name).toLowerCase().trim();
+    if (freeSets.has(setClean) && (s.category || '').toLowerCase() === 'skills') {
+      matchedSkillsets.push(s.name);
+    }
+  });
 
   // 2. Identify all direct abilities that are {Free} on this path
   const allCatalogItems = [
@@ -362,6 +393,7 @@ export const collectPathAndSetGrants = (
     ...catalogWeapons,
     ...catalogArmor,
     ...catalogShields,
+    ...catalogSupplies,
   ];
   const freeElementNames = getCharacterFreeElementNames(knownPathSet, allCatalogItems);
 
@@ -380,10 +412,11 @@ export const collectPathAndSetGrants = (
   const matchedWeaponsMap = new Map<string, SupabaseWeapon>();
   const matchedArmorMap = new Map<string, SupabaseArmor>();
   const matchedShieldsMap = new Map<string, SupabaseShield>();
+  const matchedSuppliesMap = new Map<string, SupabaseGear>();
 
   const itemBelongsToFreeSetOrElement = (name: string, itemSets?: string[] | null) => {
-    const cleanItemName = (name || '').toLowerCase().trim();
-    if (freeElementNames.has(cleanItemName)) return true;
+    const rawItemName = (name || '').replace(/\s*\{[^}]*\}/g, '').toLowerCase().trim();
+    if (freeElementNames.has(rawItemName)) return true;
     if (itemSets && Array.isArray(itemSets) && freeSets.size > 0) {
       for (const s of itemSets) {
         if (s && freeSets.has(cleanPathName(s).toLowerCase().trim())) {
@@ -394,62 +427,72 @@ export const collectPathAndSetGrants = (
     return false;
   };
 
-  // Powers from {Free} sets
+  // Powers from {Free} sets or direct {Free} elements
   catalogPowers.forEach((p) => {
     if (itemBelongsToFreeSetOrElement(p.name, p.sets)) {
       matchedPowersMap.set(p.name.toLowerCase().trim(), p);
     }
   });
 
-  // Skills from {Free} sets
+  // Skills from {Free} sets or direct {Free} elements
   catalogSkills.forEach((s) => {
     if (itemBelongsToFreeSetOrElement(s.name, s.sets)) {
       matchedSkillsMap.set(s.name.toLowerCase().trim(), s);
     }
   });
 
-  // Traits from {Free} sets
+  // Traits from {Free} sets or direct {Free} elements
   catalogTraits.forEach((t) => {
     if (itemBelongsToFreeSetOrElement(t.name, t.sets)) {
       matchedTraitsMap.set(t.name.toLowerCase().trim(), t);
     }
   });
 
-  // Weapons from {Free} sets
+  // Weapons from {Free} sets or direct {Free} elements
   catalogWeapons.forEach((w) => {
     if (itemBelongsToFreeSetOrElement(w.name, w.sets)) {
       matchedWeaponsMap.set(w.name.toLowerCase().trim(), w);
     }
   });
 
-  // Armor from {Free} sets
+  // Armor from {Free} sets or direct {Free} elements
   catalogArmor.forEach((a) => {
     if (itemBelongsToFreeSetOrElement(a.name, a.sets)) {
       matchedArmorMap.set(a.name.toLowerCase().trim(), a);
     }
   });
 
-  // Shields from {Free} sets
+  // Shields from {Free} sets or direct {Free} elements
   catalogShields.forEach((s) => {
     if (itemBelongsToFreeSetOrElement(s.name, s.sets)) {
       matchedShieldsMap.set(s.name.toLowerCase().trim(), s);
     }
   });
 
+  // Supplies from {Free} sets or direct {Free} elements
+  catalogSupplies.forEach((sp) => {
+    if (itemBelongsToFreeSetOrElement(sp.name, (sp as any).sets)) {
+      matchedSuppliesMap.set(sp.name.toLowerCase().trim(), sp);
+    }
+  });
+
   return {
     pathName: cleanPath,
-    powers: Array.from(matchedPowersMap.values()),
-    skills: Array.from(matchedSkillsMap.values()),
-    traits: Array.from(matchedTraitsMap.values()),
-    weapons: Array.from(matchedWeaponsMap.values()),
-    armor: Array.from(matchedArmorMap.values()),
-    shields: Array.from(matchedShieldsMap.values()),
+    powers: Array.from(matchedPowersMap.values()).filter((x) => matchesInnateGenre(x.name)),
+    skillsets: matchedSkillsets,
+    skills: Array.from(matchedSkillsMap.values()).filter((x) => matchesInnateGenre(x.name, true)),
+    traits: Array.from(matchedTraitsMap.values()).filter((x) => matchesInnateGenre(x.name)),
+    weapons: Array.from(matchedWeaponsMap.values()).filter((x) => matchesInnateGenre(x.name)),
+    armor: Array.from(matchedArmorMap.values()).filter((x) => matchesInnateGenre(x.name)),
+    shields: Array.from(matchedShieldsMap.values()).filter((x) => matchesInnateGenre(x.name)),
+    supplies: Array.from(matchedSuppliesMap.values()).filter((x) => matchesInnateGenre(x.name)),
   };
 };
 
 /**
- * Equips harvested 0 AP {Free} abilities across all 6 catalogs into a character sheet.
- * Guarantees zero duplicate entries, sets ap_cost = 0, and updates free_individual_skills.
+ * Equips harvested 0 AP {Free} abilities across all catalogs into a character sheet.
+ * Guarantees zero duplicate entries, heals existing matching entries to ap_cost = 0,
+ * and updates free_skillsets and free_individual_skills.
  */
 export const applyPathAndSetGrantsToSheet = (
   currentSheet: CharacterSheetData,
@@ -457,12 +500,50 @@ export const applyPathAndSetGrantsToSheet = (
 ): CharacterSheetData => {
   const updated = { ...currentSheet };
   const pathLabel = cleanPathName(grants.pathName);
+  const attributeDice: Record<string, string> = {
+    might: updated.attribute_dice?.might || 'd4',
+    motion: updated.attribute_dice?.motion || 'd4',
+    mind: updated.attribute_dice?.mind || 'd4',
+    magic: updated.attribute_dice?.magic || 'd4',
+    moxie: updated.attribute_dice?.moxie || 'd4',
+  };
 
-  // 1. Add Powers (power_slots) with ap_cost = 0
+  // 1. Add Powers (power_slots / character_power_codex) with ap_cost = 0
   if (grants.powers.length > 0) {
-    const existingSlots: AbilitySlot[] = updated.power_slots || [];
+    const grantPowerNames = new Set(grants.powers.map((gp) => gp.name.toLowerCase().trim()));
+    const grantPowerCleanNames = new Set(grants.powers.map((gp) => cleanPathName(gp.name).toLowerCase().trim()));
+
+    const existingSlots: AbilitySlot[] = (updated.power_slots || []).map((vp) => {
+      if (!vp || !vp.name) return vp;
+      const lower = vp.name.toLowerCase().trim();
+      const clean = cleanPathName(vp.name).toLowerCase().trim();
+      if (grantPowerNames.has(lower) || grantPowerCleanNames.has(clean)) {
+        return { ...vp, ap_cost: 0 };
+      }
+      return vp;
+    });
+
+    const existingCodex: AbilitySlot[] = (updated.character_power_codex || []).map((vp) => {
+      if (!vp || !vp.name) return vp;
+      const lower = vp.name.toLowerCase().trim();
+      const clean = cleanPathName(vp.name).toLowerCase().trim();
+      if (grantPowerNames.has(lower) || grantPowerCleanNames.has(clean)) {
+        return { ...vp, ap_cost: 0 };
+      }
+      return vp;
+    });
+
+    const getBasePowerKey = (n: string) =>
+      cleanPathName(n || '').replace(/\s+v\d+$/i, '').toLowerCase().trim();
+
+    const allExistingPowerNames = new Set(
+      [...existingSlots, ...existingCodex]
+        .filter((vp) => vp && vp.name)
+        .flatMap((vp) => [vp.name.toLowerCase().trim(), getBasePowerKey(vp.name)])
+    );
+
     const newPowerSlots: AbilitySlot[] = grants.powers
-      .filter((gp) => !existingSlots.some((vp) => vp.name.toLowerCase() === gp.name.toLowerCase()))
+      .filter((gp) => !allExistingPowerNames.has(gp.name.toLowerCase().trim()) && !allExistingPowerNames.has(getBasePowerKey(gp.name)))
       .map((gp) => ({
         select: false,
         name: gp.name,
@@ -474,34 +555,75 @@ export const applyPathAndSetGrantsToSheet = (
         table_group: gp.kit || gp.table_group || `${pathLabel} {Free}`,
         discipline: gp.discipline,
         source: `${pathLabel} {Free}`,
+        path: gp.path,
+        sets: gp.sets,
         is_readied: true,
         ap_cost: 0,
       }));
 
-    if (newPowerSlots.length > 0) {
-      updated.power_slots = [...existingSlots, ...newPowerSlots];
+    updated.power_slots = [...existingSlots, ...newPowerSlots];
+    if (existingCodex.length > 0) {
+      updated.character_power_codex = existingCodex;
     }
+  }
+
+  // 1b. Add SkillSets (known_skillsets & free_skillsets) with ap_cost = 0
+  if (grants.skillsets && grants.skillsets.length > 0) {
+    const existingSetList = Array.isArray(updated.known_skillsets) ? [...updated.known_skillsets] : [];
+    const existingFreeSetList = Array.isArray(updated.free_skillsets) ? [...updated.free_skillsets] : [];
+    const skillsetApCosts = { ...(updated.skillset_ap_costs || {}) };
+
+    grants.skillsets.forEach((setName) => {
+      const lower = setName.toLowerCase().trim();
+      if (!existingSetList.some((s) => (s || '').toLowerCase().trim() === lower)) {
+        existingSetList.push(setName);
+      }
+      if (!existingFreeSetList.some((s) => (s || '').toLowerCase().trim() === lower)) {
+        existingFreeSetList.push(setName);
+      }
+      skillsetApCosts[lower] = 0;
+    });
+
+    updated.known_skillsets = existingSetList;
+    updated.free_skillsets = existingFreeSetList;
+    updated.skillset_ap_costs = skillsetApCosts;
   }
 
   // 2. Add Skills (known_individual_skills & free_individual_skills)
   if (grants.skills.length > 0) {
-    const existingSkills = updated.known_individual_skills || [];
-    const existingFree = updated.free_individual_skills || [];
-    const newSkills = grants.skills
-      .map((s) => s.name)
-      .filter((sName) => !existingSkills.some((es) => es.toLowerCase() === sName.toLowerCase()));
+    const existingSkills = Array.isArray(updated.known_individual_skills) ? [...updated.known_individual_skills] : [];
+    const existingFree = Array.isArray(updated.free_individual_skills) ? [...updated.free_individual_skills] : [];
+    const skillApCosts = { ...(updated.skill_ap_costs || {}) };
 
-    if (newSkills.length > 0) {
-      updated.known_individual_skills = [...existingSkills, ...newSkills];
-      updated.free_individual_skills = Array.from(new Set([...existingFree, ...newSkills]));
-    }
+    grants.skills.forEach((s) => {
+      const sName = s.name;
+      const lower = sName.toLowerCase().trim();
+      if (!existingSkills.some((es) => (es || '').toLowerCase().trim() === lower)) {
+        existingSkills.push(sName);
+      }
+      if (!existingFree.some((ef) => (ef || '').toLowerCase().trim() === lower)) {
+        existingFree.push(sName);
+      }
+      skillApCosts[lower] = 0;
+    });
+
+    updated.known_individual_skills = existingSkills;
+    updated.free_individual_skills = existingFree;
+    updated.skill_ap_costs = skillApCosts;
   }
 
   // 3. Add Traits (traits_quirks) with ap_cost = 0
   if (grants.traits.length > 0) {
-    const existingTraits = updated.traits_quirks || [];
+    const grantTraitNames = new Set(grants.traits.map((gt) => gt.name.toLowerCase().trim()));
+    const existingTraits = (updated.traits_quirks || []).map((et) => {
+      if (!et || !et.name) return et;
+      if (grantTraitNames.has(et.name.toLowerCase().trim())) {
+        return { ...et, ap_cost: 0 };
+      }
+      return et;
+    });
     const newTraits: TraitQuirkItem[] = grants.traits
-      .filter((gt) => !existingTraits.some((et) => et.name.toLowerCase() === gt.name.toLowerCase()))
+      .filter((gt) => !existingTraits.some((et) => et && et.name && et.name.toLowerCase().trim() === gt.name.toLowerCase().trim()))
       .map((gt) => {
         const firstPath = Array.isArray(gt.path) ? gt.path[0] : gt.path;
         const pathStr = firstPath || gt.kit || gt.table_group || `${pathLabel} {Free}`;
@@ -514,48 +636,94 @@ export const applyPathAndSetGrantsToSheet = (
           table_group: pathStr,
           source: `${cleanPathName(firstPath || pathLabel)} {Free}`,
           path: gt.path,
+          sets: gt.sets,
           ap_cost: 0,
           is_hidden: false,
         };
       });
 
-    if (newTraits.length > 0) {
-      updated.traits_quirks = [...existingTraits, ...newTraits];
-    }
+    updated.traits_quirks = [...existingTraits, ...newTraits];
   }
 
-  // 4. Add Weapons (weapons) with ap_cost = 0 and sk = true
+  // 4. Add Weapons (weapons) with ap_cost = 0 and sk = true (supporting multi-mode variants)
   if (grants.weapons.length > 0) {
-    const existingWeapons: WeaponSlot[] = updated.weapons || [];
-    const newWeapons: WeaponSlot[] = grants.weapons
-      .filter((gw) => !existingWeapons.some((ew) => ew.name.toLowerCase() === gw.name.toLowerCase()))
-      .map((gw) => {
-        const rawType = (gw.type || 'Melee').toLowerCase();
-        const mhs: 'M' | 'H' | 'S' = rawType.includes('shot') ? 'S' : rawType.includes('hurled') ? 'H' : 'M';
-        return {
-          id: gw.id ? String(gw.id) : `wpn_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-          name: gw.name,
-          atk: gw.atk || '💪4',
-          dmg: gw.dmg || 'd6',
-          max_blk: gw.max_block || '0',
-          mhs,
+    const grantWeaponBaseKeys = new Set(
+      grants.weapons.map((gw) => getCanonicalWeaponBaseName(gw.name).toLowerCase().trim())
+    );
+    const grantWeaponCleanKeys = new Set(
+      grants.weapons.map((gw) => cleanPathName(getCanonicalWeaponBaseName(gw.name)).toLowerCase().trim())
+    );
+
+    const existingWeapons: WeaponSlot[] = (updated.weapons || []).map((ew) => {
+      if (!ew || !ew.name) return ew;
+      const baseKey = getCanonicalWeaponBaseName(ew.name).toLowerCase().trim();
+      const cleanKey = cleanPathName(getCanonicalWeaponBaseName(ew.name)).toLowerCase().trim();
+      if (grantWeaponBaseKeys.has(baseKey) || grantWeaponCleanKeys.has(cleanKey)) {
+        return { ...ew, sk: true, ap_cost: 0 };
+      }
+      return ew;
+    });
+
+    const existingBaseKeys = new Set(
+      existingWeapons
+        .filter((ew) => ew && ew.name)
+        .map((ew) => getCanonicalWeaponBaseName(ew.name).toLowerCase().trim())
+    );
+
+    const newWeapons: WeaponSlot[] = [];
+    for (const gw of grants.weapons) {
+      const baseKey = getCanonicalWeaponBaseName(gw.name).toLowerCase().trim();
+      if (existingBaseKeys.has(baseKey)) continue;
+
+      const variants = splitWeaponIntoVariants(gw);
+      const isMultiMode = (gw.type || '').includes(',');
+      for (const variant of variants) {
+        const calculatedAtk = calculateWeaponAtk(variant.name, variant.mhs, attributeDice);
+        const isSpecialDmg = variant.dmg === '❌' || gw.dmg === '❌';
+        const calculatedDmg = isSpecialDmg ? '❌' : `d${calculateWeaponDmg(variant.name, variant.mhs, attributeDice)}`;
+        const cleanBlockNum = variant.max_block ? variant.max_block.replace('🛡️', '') : 'n/a';
+        const slotName = isMultiMode ? `${variant.name} (${variant.variantType})` : variant.name;
+
+        newWeapons.push({
+          id: `wep_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          name: slotName,
           sk: true,
-          ap_cost: 0,
+          mhs: variant.mhs,
+          atk: String(calculatedAtk),
+          dmg: calculatedDmg,
+          max_blk: cleanBlockNum,
           effect: `${pathLabel} {Free}`,
           notes: gw.notes || '',
-        };
-      });
-
-    if (newWeapons.length > 0) {
-      updated.weapons = [...existingWeapons, ...newWeapons];
+          cost: gw.cost || '1g',
+          path: gw.path,
+          sets: gw.sets || [],
+          requirement: variant.requirementStr,
+          variantType: variant.variantType,
+          ap_cost: 0,
+        });
+      }
     }
+
+    updated.weapons = [...existingWeapons, ...newWeapons];
   }
 
   // 5. Add Armor (wardrobe) with ap_cost = 0 and sk = true
   if (grants.armor.length > 0) {
-    const existingWardrobe: ArmorData[] = updated.wardrobe || [];
+    const grantArmorNames = new Set(grants.armor.map((ga) => ga.name.toLowerCase().trim()));
+    const grantArmorCleanNames = new Set(grants.armor.map((ga) => cleanPathName(ga.name).toLowerCase().trim()));
+
+    const existingWardrobe: ArmorData[] = (updated.wardrobe || []).map((ea) => {
+      if (!ea || !ea.name) return ea;
+      const lower = ea.name.toLowerCase().trim();
+      const clean = cleanPathName(ea.name).toLowerCase().trim();
+      if (grantArmorNames.has(lower) || grantArmorCleanNames.has(clean)) {
+        return { ...ea, sk: true, ap_cost: 0 };
+      }
+      return ea;
+    });
+
     const newArmor: ArmorData[] = grants.armor
-      .filter((ga) => !existingWardrobe.some((ea) => ea.name.toLowerCase() === ga.name.toLowerCase()))
+      .filter((ga) => !existingWardrobe.some((ea) => ea && ea.name && ea.name.toLowerCase().trim() === ga.name.toLowerCase().trim()))
       .map((ga) => ({
         id: ga.id ? String(ga.id) : `arm_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         name: ga.name,
@@ -564,20 +732,32 @@ export const applyPathAndSetGrantsToSheet = (
         mr: ga.mr || '12',
         cost: ga.cost || '10s',
         notes: ga.notes || '',
+        path: ga.path,
+        sets: ga.sets,
         sk: true,
         ap_cost: 0,
       }));
 
-    if (newArmor.length > 0) {
-      updated.wardrobe = [...existingWardrobe, ...newArmor];
-    }
+    updated.wardrobe = [...existingWardrobe, ...newArmor];
   }
 
   // 6. Add Shields (armory) with ap_cost = 0 and sk = true
   if (grants.shields.length > 0) {
-    const existingArmory: ShieldData[] = updated.armory || [];
+    const grantShieldNames = new Set(grants.shields.map((gs) => gs.name.toLowerCase().trim()));
+    const grantShieldCleanNames = new Set(grants.shields.map((gs) => cleanPathName(gs.name).toLowerCase().trim()));
+
+    const existingArmory: ShieldData[] = (updated.armory || []).map((es) => {
+      if (!es || !es.name) return es;
+      const lower = es.name.toLowerCase().trim();
+      const clean = cleanPathName(es.name).toLowerCase().trim();
+      if (grantShieldNames.has(lower) || grantShieldCleanNames.has(clean)) {
+        return { ...es, sk: true, ap_cost: 0 };
+      }
+      return es;
+    });
+
     const newShields: ShieldData[] = grants.shields
-      .filter((gs) => !existingArmory.some((es) => es.name.toLowerCase() === gs.name.toLowerCase()))
+      .filter((gs) => !existingArmory.some((es) => es && es.name && es.name.toLowerCase().trim() === gs.name.toLowerCase().trim()))
       .map((gs) => ({
         id: gs.id ? String(gs.id) : `shd_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
         equipped: false,
@@ -587,15 +767,88 @@ export const applyPathAndSetGrantsToSheet = (
         mr_adjustment: gs.mr || '0',
         cost: gs.cost || '5s',
         notes: gs.notes || '',
+        path: gs.path,
+        sets: gs.sets,
         sk: true,
         ap_cost: 0,
       }));
 
-    if (newShields.length > 0) {
-      updated.armory = [...existingArmory, ...newShields];
+    updated.armory = [...existingArmory, ...newShields];
+  }
+
+  // 7. Add {Free} Supplies (simple_gear)
+  if (grants.supplies && grants.supplies.length > 0) {
+    const existingGear: SimpleGearItem[] = Array.isArray(updated.simple_gear) ? [...updated.simple_gear] : [];
+    const newGear: SimpleGearItem[] = grants.supplies
+      .filter((sp) => !existingGear.some((eg) => eg && eg.name && eg.name.toLowerCase().trim() === sp.name.toLowerCase().trim()))
+      .map((sp) => ({
+        id: `gear_free_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        name: sp.name,
+        qty: 1,
+        cost: '0s',
+        notes: sp.notes || (sp as any).effect || `${pathLabel} {Free}`,
+        category: sp.category || 'Supplies',
+      }));
+    if (newGear.length > 0) {
+      updated.simple_gear = [...existingGear, ...newGear];
     }
   }
 
   return updated;
+};
+
+/**
+ * Reconciles all 0 AP ({Free}) Path & Set grants across every path known by the character
+ * (Innate, Universal, Race, Class, and favorite_trait_kits).
+ */
+export const reconcileAllCharacterFreeGrants = (
+  sheetData: CharacterSheetData,
+  character: Character | null | undefined,
+  catalogs: {
+    powers?: Power[];
+    skills?: SupabaseSkill[];
+    traits?: SupabaseTrait[];
+    weapons?: SupabaseWeapon[];
+    armor?: SupabaseArmor[];
+    shields?: SupabaseShield[];
+    sets?: SupabaseSet[];
+    paths?: SupabasePath[];
+    supplies?: SupabaseGear[];
+  }
+): CharacterSheetData => {
+  if (!sheetData || !character) return sheetData;
+  const knownPaths = getCharacterKnownPaths({
+    ...character,
+    sheet_data: sheetData,
+  } as Character);
+  if (knownPaths.size === 0) return sheetData;
+
+  let currentSheet = { ...sheetData };
+  const level = currentSheet.level || 1;
+  const isMsoChar = Boolean(
+    isMsoEntry(character.race) ||
+      isMsoEntry(character.class) ||
+      (currentSheet.favorite_trait_kits || []).some((k) => isMsoEntry(k))
+  );
+
+  for (const kp of knownPaths) {
+    const grants = collectPathAndSetGrants(
+      kp,
+      level,
+      catalogs.powers || [],
+      catalogs.skills || [],
+      catalogs.traits || [],
+      catalogs.weapons || [],
+      catalogs.armor || [],
+      catalogs.shields || [],
+      catalogs.sets || [],
+      catalogs.paths || [],
+      catalogs.supplies || [],
+      isMsoChar
+    );
+    currentSheet = applyPathAndSetGrantsToSheet(currentSheet, grants);
+  }
+
+  return currentSheet;
 };
 

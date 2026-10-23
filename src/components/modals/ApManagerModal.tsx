@@ -21,11 +21,6 @@ import {
   calculateSkilledWeaponsAp,
 } from '../../types/game';
 import {
-  calculateTotalLoadoutCapacity,
-  calculateSpentApOnLoadoutExpansions,
-} from '../../utils/loadoutCapacitySchedule';
-import {
-  calculatePowersKnownApCost,
   getPowersSoftTaxBracket,
 } from '../../utils/powersApTaxSchedule';
 import { checkAndAutoEquipLevelUpTraits } from '../../utils/bundleGrants';
@@ -166,20 +161,31 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
   // Compute live current sheet cost details for each category in ALPHABETICAL order
   const categoryBreakdownList = useMemo(() => {
     const knownSkillsets = Array.isArray(sheetData.known_skillsets) ? sheetData.known_skillsets : [];
+    const freeSkillsetsSet = new Set((sheetData.free_skillsets || []).map((s: string) => (s || '').toLowerCase().trim()));
+    const paidSkillsets = knownSkillsets.filter((s: string) => !freeSkillsetsSet.has((s || '').toLowerCase().trim()));
+    const skillsetCost = paidSkillsets.reduce((sum: number, s: string) => {
+      const cost = sheetData.skillset_ap_costs?.[(s || '').toLowerCase().trim()];
+      return sum + (typeof cost === 'number' ? cost : 2);
+    }, 0);
+
     const knownIndivSkills = Array.isArray(sheetData.known_individual_skills) ? sheetData.known_individual_skills : [];
-    const skillsetCost = knownSkillsets.length * 2;
-    const indivCost = knownIndivSkills.length * 1;
-    const skillsNet = skillsetCost + indivCost;
+    const freeIndivSet = new Set((sheetData.free_individual_skills || []).map((s: string) => (s || '').toLowerCase().trim()));
+    const paidIndivSkills = knownIndivSkills.filter((s: string) => !freeIndivSet.has((s || '').toLowerCase().trim()));
+    const indivCost = paidIndivSkills.reduce((sum: number, s: string) => {
+      const cost = sheetData.skill_ap_costs?.[(s || '').toLowerCase().trim()];
+      return sum + (typeof cost === 'number' ? cost : 1);
+    }, 0);
+    const skillsNet = liveApData.categories.Skills;
 
     const { weaponsNet, skilledWeaponGroupsCount } = calculateSkilledWeaponsAp(sheetData.weapons);
 
     const wardrobe = Array.isArray(sheetData.wardrobe) ? sheetData.wardrobe : [];
     const skilledArmor = wardrobe.filter((a: any) => a && a.sk);
-    const armorNet = skilledArmor.reduce((sum: number, a: any) => sum + (typeof a.ap_cost === 'number' ? a.ap_cost : 1), 0);
+    const armorNet = liveApData.categories.Armor;
 
     const armory = Array.isArray(sheetData.armory) ? sheetData.armory : [];
     const skilledShields = armory.filter((s: any) => s && s.sk);
-    const shieldsNet = skilledShields.reduce((sum: number, s: any) => sum + (typeof s.ap_cost === 'number' ? s.ap_cost : 1), 0);
+    const shieldsNet = liveApData.categories.Shields;
 
     const rawPowerSlots: AbilitySlot[] = Array.isArray(sheetData.power_slots) ? sheetData.power_slots.filter(Boolean) : [];
     const rawCodexPowers: AbilitySlot[] = Array.isArray(sheetData.character_power_codex) ? sheetData.character_power_codex.filter(Boolean) : [];
@@ -200,7 +206,6 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
       }
     }
     const allKnownPowers = Array.from(allPowersMap.values());
-    const powersBaseNet = calculatePowersKnownApCost(allKnownPowers.length);
     const powersBracket = getPowersSoftTaxBracket(allKnownPowers.length);
 
     let powerUpgradesNet = 0;
@@ -210,50 +215,39 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         powerUpgradesNet += calculateCumulativeVersionAp(ver);
       }
     }
-    const powersNet = powersBaseNet + powerUpgradesNet;
+    const powersNet = liveApData.categories.Powers;
+    const powersBaseNet = Math.max(0, powersNet - powerUpgradesNet);
 
-    const loadoutExpansions = typeof sheetData.loadout_expansions_purchased === 'number'
-      ? sheetData.loadout_expansions_purchased
-      : (typeof sheetData.unlocked_loadout_slots === 'number'
-        ? Math.max(0, sheetData.unlocked_loadout_slots - 5)
-        : (typeof sheetData.unlocked_magic_slots === 'number'
-          ? Math.max(0, sheetData.unlocked_magic_slots - 5)
-          : 0));
-    const totalLoadoutCapacity = calculateTotalLoadoutCapacity(loadoutExpansions);
-    const loadoutApSpent = calculateSpentApOnLoadoutExpansions(loadoutExpansions);
-
-    // Calculate function version upgrades across equipped slots and vault
-    const allFunctions = [
-      ...(Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : []),
-      ...(Array.isArray(sheetData.character_vault) ? sheetData.character_vault : []),
-    ];
-    const functionVersionMap = new Map<string, number>();
-    for (const f of allFunctions) {
-      if (!f || !f.name) continue;
-      const { baseName, version } = parseAbilityVersion(f.name);
-      const itemVer = typeof f.version === 'number' ? f.version : version;
-      const maxVer = Math.max(version, itemVer, 1);
-      const key = baseName.toLowerCase();
-      const existing = functionVersionMap.get(key) || 1;
-      if (maxVer > existing) {
-        functionVersionMap.set(key, maxVer);
-      }
-    }
+    const spellSlots = Array.isArray(sheetData.spell_slots) ? sheetData.spell_slots : [];
     let functionVersionsNet = 0;
-    for (const ver of functionVersionMap.values()) {
-      if (ver > 1) {
-        functionVersionsNet += calculateCumulativeVersionAp(ver);
+    for (const s of spellSlots) {
+      if (!s || !s.name) continue;
+      const { version } = parseAbilityVersion(s.base_name || s.name);
+      const itemVer = typeof s.version === 'number' ? s.version : version;
+      if (itemVer > 1) {
+        functionVersionsNet += calculateCumulativeVersionAp(itemVer);
       }
     }
-    const magicItemsNet = loadoutApSpent + functionVersionsNet;
+    const magicItemsNet = liveApData.categories.Exotics;
 
-    const sumLogCategory = (cat: string) =>
-      apLog.reduce((sum, e) => (e && e.category === cat ? sum + (e.cost || 0) : sum), 0);
+    const rawBonusPaths: string[] = Array.isArray(sheetData.favorite_trait_kits) ? sheetData.favorite_trait_kits : [];
+    const bonusPathsList = Array.from(
+      new Set(
+        rawBonusPaths
+          .map((p: string) => (p || '').replace(/\s*\(mso\)/gi, '').replace(/\s*\{[^}]*\}/gi, '').trim())
+          .filter((p: string) => p && !['innate', 'base', 'universal', 'general'].includes(p.toLowerCase()))
+      )
+    );
+    const pathsNet = liveApData.categories.Paths || 0;
 
-    const attributesNet = Math.max(0, sumLogCategory('Attributes'));
-    const focusNet = Math.max(0, sumLogCategory('Focus Die'));
-    const vitalityNet = Math.max(0, sumLogCategory('Vitality'));
-    const capstonesNet = Math.max(0, sumLogCategory('Capstones'));
+    const sheetTraits = Array.isArray(sheetData.traits_quirks) ? sheetData.traits_quirks : [];
+    const paidTraits = sheetTraits.filter((t: any) => t && (t.ap_cost || 0) > 0);
+    const traitsNet = liveApData.categories.Traits || 0;
+
+    const attributesNet = liveApData.categories.Attributes;
+    const focusNet = liveApData.categories.Focus;
+    const vitalityNet = liveApData.categories.Vitality;
+    const capstonesNet = liveApData.categories.Capstones;
 
     return [
       {
@@ -308,16 +302,25 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
       },
       {
         id: 'loadoutSlots',
-        name: 'Loadout Slots',
+        name: 'Exotics',
         emoji: '🧿',
         netAp: magicItemsNet,
         badgeColor: 'text-cyan-300 bg-cyan-950/60 border-cyan-500/30',
         details: [
-          { label: `Base Exotic Power Slots`, value: `5 Slots (0 AP Baseline)` },
-          { label: `Purchased Slots`, value: `${loadoutExpansions} Slots (+${loadoutExpansions} AP)` },
-          { label: `Total Active Loadout Capacity`, value: `${totalLoadoutCapacity} Slots` },
+          { label: `Learned Exotic Powers (${spellSlots.length})`, value: `${Math.max(0, magicItemsNet - functionVersionsNet)} AP (1 AP each)` },
           ...(functionVersionsNet > 0 ? [{ label: `Exotic Power Version Upgrades`, value: `+${functionVersionsNet} AP` }] : []),
           { label: `Total AP Invested`, value: `${magicItemsNet} AP` },
+        ],
+      },
+      {
+        id: 'paths',
+        name: 'Paths',
+        emoji: '🧭',
+        netAp: pathsNet,
+        badgeColor: 'text-purple-300 bg-purple-950/60 border-purple-500/30',
+        details: [
+          { label: `Starting Paths (Innate, Universal, Race, Class)`, value: `0 AP (Free)` },
+          { label: `Bonus Paths Unlocked (${bonusPathsList.length > 0 ? bonusPathsList.join(', ') : 'None'})`, value: `${pathsNet} AP (4 AP each)` },
         ],
       },
       {
@@ -349,8 +352,18 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         netAp: skillsNet,
         badgeColor: 'text-indigo-300 bg-indigo-950/60 border-indigo-500/30',
         details: [
-          { label: `SkillSets (${knownSkillsets.length} learned)`, value: `${skillsetCost} AP (2 AP each)` },
-          { label: `Individual Skills (${knownIndivSkills.length} learned)`, value: `${indivCost} AP (1 AP each)` },
+          { label: `Paid SkillSets (${paidSkillsets.length} learned, ${knownSkillsets.length - paidSkillsets.length} free)`, value: `${skillsetCost} AP (2 AP each)` },
+          { label: `Paid Individual Skills (${paidIndivSkills.length} learned, ${knownIndivSkills.length - paidIndivSkills.length} free)`, value: `${indivCost} AP (1 AP each)` },
+        ],
+      },
+      {
+        id: 'traits',
+        name: 'Traits',
+        emoji: '🧬',
+        netAp: traitsNet,
+        badgeColor: 'text-emerald-300 bg-emerald-950/60 border-emerald-500/30',
+        details: [
+          { label: `Purchased Traits (${paidTraits.length} paid, ${sheetTraits.length - paidTraits.length} free)`, value: `${traitsNet} AP` },
         ],
       },
       {
@@ -374,7 +387,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
         ],
       },
     ];
-  }, [sheetData, apLog, focusDie, gmBonusAp]);
+  }, [sheetData, apLog, focusDie, gmBonusAp, liveApData]);
 
   if (!isOpen || !activeCharacter) return null;
 
@@ -555,7 +568,7 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
 
                       {/* Center: Always-Visible Centered Manage Button */}
                       <div className="flex-1 flex justify-center px-1">
-                        {['armor', 'attributes', 'focus', 'loadoutSlots', 'magicItems', 'powers', 'shields', 'skills', 'vitality', 'weapons'].includes(cat.id) && (
+                        {['armor', 'attributes', 'focus', 'loadoutSlots', 'magicItems', 'paths', 'powers', 'shields', 'skills', 'traits', 'vitality', 'weapons'].includes(cat.id) && (
                           <button
                             type="button"
                             onClick={(e) => {
@@ -702,13 +715,13 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
                   {/* Quick Log of GM Entries */}
                   <div className="space-y-2 pt-2 border-t border-slate-800">
                     <span className="text-xs font-bold text-slate-300 block">GM Adjustment History:</span>
-                    {apLog.filter((e) => e && (e.category === 'GM Bonus' || e.category === 'Manual')).length === 0 ? (
+                    {apLog.filter((e) => e && (e.category === 'GM Bonus' || e.category === 'Manual') && !/^Learned New (?:Path|Kit):/i.test(e.description || '')).length === 0 ? (
                       <div className="p-4 text-center bg-slate-950/40 rounded-xl border border-dashed border-slate-800 text-slate-500 text-xs">
                         No GM AP adjustments logged yet.
                       </div>
                     ) : (
                       apLog
-                        .filter((e) => e && (e.category === 'GM Bonus' || e.category === 'Manual'))
+                        .filter((e) => e && (e.category === 'GM Bonus' || e.category === 'Manual') && !/^Learned New (?:Path|Kit):/i.test(e.description || ''))
                         .map((entry) => (
                           <div
                             key={entry.id || Math.random().toString()}

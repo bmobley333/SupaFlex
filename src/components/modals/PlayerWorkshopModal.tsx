@@ -2149,7 +2149,7 @@ export const PlayerWorkshopModal: React.FC<PlayerWorkshopModalProps> = ({
       return;
     }
 
-    recordApExpenditure(4, 'Manual', `Learned New Path: ${clean}`, 'Creation', 'Paths Hub');
+    recordApExpenditure(4, 'Paths', `Learned New Path: ${clean}`, 'Creation', 'Paths Hub');
 
     updateActiveSheetData((prev) => {
       const prevList = Array.isArray(prev.favorite_trait_kits) ? prev.favorite_trait_kits : [];

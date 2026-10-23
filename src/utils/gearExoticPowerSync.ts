@@ -101,26 +101,11 @@ export const isBelongsToMatch = (
  * Checks if a mod is inherently {Free} for a specific physically owned host item.
  */
 export const isModFreeForHost = (
-  mod: { belongs_to?: string | null },
-  hostItemName: string
+  _mod: { belongs_to?: string | null },
+  _hostItemName: string
 ): boolean => {
-  if (!mod.belongs_to || !hostItemName) return false;
-  const hostClean = cleanBelongsToName(hostItemName);
-  const hostStripped = hostClean.replace(/\(mso\)/gi, '').trim();
-
-  const parts = splitBelongsToTargets(mod.belongs_to);
-  return parts.some((p) => {
-    const trimmed = p.trim();
-    if (!/\{free\}/i.test(trimmed)) return false;
-    const targetClean = cleanBelongsToName(trimmed);
-    const targetStripped = targetClean.replace(/\(mso\)/gi, '').trim();
-    return (
-      targetClean === hostClean ||
-      targetStripped === hostStripped ||
-      targetClean === hostStripped ||
-      targetStripped === hostClean
-    );
-  });
+  // Per strict rule: NO catalog mod in public.mods is free of gold/silver; only the virtual "Inherent" chassis group is free.
+  return false;
 };
 
 /**
@@ -904,13 +889,14 @@ export const reconcileCharacterVaultWithGear = (
         const validMod = isStaleMso ? template?.source_mod : ((slot as any).source_mod || template?.source_mod);
         const validCategory = template?.category || (slot as any).category;
         const validWeight = template?.slot_weight ?? (slot as any).slot_weight;
-        if ((slot as any).slot_weight !== validWeight || (slot as any).category !== validCategory) {
+        if ((slot as any).slot_weight !== validWeight || (slot as any).category !== validCategory || (slot as any).ap_cost !== 1) {
           metadataHealed = true;
         }
         finalSlots.push({
           ...slot,
           category: validCategory,
           slot_weight: validWeight,
+          ap_cost: Math.max(1, typeof (slot as any).ap_cost === 'number' ? (slot as any).ap_cost : 1),
           is_hardware: true,
           source_gear: validGear,
           source_mod: validMod,

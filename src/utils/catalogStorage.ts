@@ -158,7 +158,11 @@ export function purgeLegacyLocalStorageCaches(): void {
  */
 export function getCatalogStorageKey(email?: string): string {
   const clean = (email || '').trim().toLowerCase();
-  return clean ? `supaflex_catalogs_v${CATALOG_CACHE_VERSION}_${clean}` : `supaflex_catalogs_v${CATALOG_CACHE_VERSION}`;
+  const isGs = typeof window !== 'undefined' && window.localStorage?.getItem('supaflex_guildspace_unlocked') === 'true';
+  const gsSuffix = isGs ? '_gs1' : '_gs0';
+  return clean
+    ? `supaflex_catalogs_v${CATALOG_CACHE_VERSION}${gsSuffix}_${clean}`
+    : `supaflex_catalogs_v${CATALOG_CACHE_VERSION}${gsSuffix}`;
 }
 
 /**

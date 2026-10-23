@@ -522,85 +522,90 @@ export const ChaosGauntletCard: React.FC = () => {
             return (
               <div
                 key={slot.slot_id}
-                className={`px-2.5 py-1.5 min-h-[34px] rounded-xl border flex items-center justify-between gap-2.5 transition-all text-xs ${
+                className={`px-3 py-2 rounded-xl border flex flex-col gap-1.5 transition-all text-xs ${
                   isWrist
                     ? 'bg-gradient-to-r from-amber-950/40 via-violet-950/20 to-slate-950/90 border-amber-500/50 shadow-sm shadow-amber-950/20 hover:border-amber-400'
                     : 'bg-slate-950/70 hover:bg-slate-950/90 border-slate-800/80 hover:border-slate-700 shadow-sm'
                 }`}
               >
-                {/* 1. Slot Identifier Badge */}
-                <div className="shrink-0 flex items-center">
-                  {isWrist ? (
-                    <span className="px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold whitespace-nowrap shadow-inner">
-                      {meta?.shortLabel || '👑 Mega Slot'}
-                    </span>
-                  ) : (
-                    <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800 text-[10px] font-mono font-bold whitespace-nowrap">
-                      {meta?.shortLabel || `Slot ${slot.slot_number}`}
-                    </span>
-                  )}
-                </div>
+                {/* Row 1: Compact Header Strip (Badge + Gem Name on left, Checkboxes + Spark on right) */}
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {/* 1. Slot Identifier Badge */}
+                    <div className="shrink-0 flex items-center">
+                      {isWrist ? (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 text-[10px] font-mono font-bold whitespace-nowrap shadow-inner">
+                          {meta?.shortLabel || '👑 Mega Slot'}
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800 text-[10px] font-mono font-bold whitespace-nowrap">
+                          {meta?.shortLabel || `Slot ${slot.slot_number}`}
+                        </span>
+                      )}
+                    </div>
 
-                {/* 2. Gem Name (w-28 sm:w-36 shrink-0 truncate) */}
-                <div className="w-28 sm:w-36 shrink-0 truncate" title={gem.name}>
-                  <span className="font-outfit font-bold text-xs text-slate-100 inline-flex items-center align-baseline gap-1 truncate max-w-full">
-                    <span className="text-[11px] leading-none shrink-0">💎</span>
-                    <span className="truncate">{gem.name}</span>
-                    <ItemNotesPopover notes={(gem as any).notes} itemName={gem.name} inline />
-                  </span>
-                </div>
+                    {/* 2. Gem Name */}
+                    <div className="min-w-0 truncate" title={gem.name}>
+                      <span className="font-outfit font-bold text-xs text-slate-100 inline-flex items-center align-baseline gap-1 truncate max-w-full">
+                        <span className="text-[11px] leading-none shrink-0">💎</span>
+                        <span className="truncate">{gem.name}</span>
+                        <ItemNotesPopover notes={(gem as any).notes} itemName={gem.name} inline />
+                      </span>
+                    </div>
+                  </div>
 
-                {/* 3. Three Clickable Usage Checkboxes (ALWAYS 3) */}
-                <div className="w-16 shrink-0 flex items-center gap-1 justify-center px-1">
-                  {[0, 1, 2].map((bIdx) => {
-                    const isChecked = !!(gem.checked && gem.checked[bIdx]);
-                    return (
-                      <input
-                        key={bIdx}
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => handleToggleCheckbox(slot.slot_id, bIdx)}
-                        className={`w-3.5 h-3.5 rounded border-slate-600 bg-slate-950 focus:ring-0 cursor-pointer ${
-                          isWrist
-                            ? 'text-amber-400 accent-amber-400'
-                            : 'text-violet-400 accent-violet-400'
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* 3. Three Clickable Usage Checkboxes (ALWAYS 3) */}
+                    <div className="flex items-center gap-1 justify-end">
+                      {[0, 1, 2].map((bIdx) => {
+                        const isChecked = !!(gem.checked && gem.checked[bIdx]);
+                        return (
+                          <input
+                            key={bIdx}
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleCheckbox(slot.slot_id, bIdx)}
+                            className={`w-3.5 h-3.5 rounded border-slate-600 bg-slate-950 focus:ring-0 cursor-pointer ${
+                              isWrist
+                                ? 'text-amber-400 accent-amber-400'
+                                : 'text-violet-400 accent-violet-400'
+                            }`}
+                            title={`Use slot ${bIdx + 1} (${isChecked ? 'Used' : 'Available'})`}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    {/* 4. Action: Spark (Mega Slot Only) */}
+                    {isWrist && (
+                      <button
+                        type="button"
+                        onClick={() => handleSparkActivation(slot.slot_id)}
+                        disabled={!isSparkReady}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 flex items-center gap-1 transition-all shadow-sm ${
+                          isSparkReady
+                            ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold border border-amber-200 shadow-md shadow-amber-500/50 animate-pulse cursor-pointer'
+                            : 'bg-amber-950/20 text-amber-500/40 border border-amber-500/20 cursor-not-allowed opacity-30'
                         }`}
-                        title={`Use slot ${bIdx + 1} (${isChecked ? 'Used' : 'Available'})`}
-                      />
-                    );
-                  })}
+                        title={
+                          isSparkReady
+                            ? '⚡ Full Spark Ready! Activate Mega Slot without consuming gem durability (Consumes 5/5 Charges).'
+                            : `Requires a Full Spark (5/5 Charges in Charge HUD, currently ${currentCharges}/5).`
+                        }
+                      >
+                        <Zap className={`w-3 h-3 ${isSparkReady ? 'text-slate-950 fill-slate-950' : 'text-amber-500/40'}`} />
+                        <span>Spark</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* 4. Mechanical Effect Description (Immediately to right of checkboxes, matching Powers & Functions) */}
-                <div className="flex-1 min-w-0 px-2">
+                {/* Row 2: Full-Width Mechanical Effect Description */}
+                <div className="w-full min-w-0">
                   <p className="text-[11px] text-slate-300 leading-snug whitespace-normal break-words font-sans">
                     {gem.effect || 'No effect description'}
                   </p>
                 </div>
-
-                {/* 5. Action: Spark (Mega Slot Only) */}
-                {isWrist && (
-                  <div className="shrink-0 flex items-center">
-                    <button
-                      type="button"
-                      onClick={() => handleSparkActivation(slot.slot_id)}
-                      disabled={!isSparkReady}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 flex items-center gap-1 transition-all shadow-sm ${
-                        isSparkReady
-                          ? 'bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold border border-amber-200 shadow-md shadow-amber-500/50 animate-pulse cursor-pointer'
-                          : 'bg-amber-950/20 text-amber-500/40 border border-amber-500/20 cursor-not-allowed opacity-30'
-                      }`}
-                      title={
-                        isSparkReady
-                          ? '⚡ Full Spark Ready! Activate Mega Slot without consuming gem durability (Consumes 5/5 Charges).'
-                          : `Requires a Full Spark (5/5 Charges in Charge HUD, currently ${currentCharges}/5).`
-                      }
-                    >
-                      <Zap className={`w-3 h-3 ${isSparkReady ? 'text-slate-950 fill-slate-950' : 'text-amber-500/40'}`} />
-                      <span>Spark</span>
-                    </button>
-                  </div>
-                )}
               </div>
             );
           })}

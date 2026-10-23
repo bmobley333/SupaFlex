@@ -133,7 +133,8 @@ export const getCharacterFreeElementNames = (
       if (entry.isFree) {
         const clean = entry.cleanPath.toLowerCase().trim();
         if (knownPaths.has(clean) && item.name) {
-          freeElements.add(cleanPathName(item.name).toLowerCase().trim());
+          const exactNoBraces = String(item.name).replace(/\s*\{[^}]*\}/g, '').toLowerCase().trim();
+          if (exactNoBraces) freeElements.add(exactNoBraces);
           break;
         }
       }
@@ -347,8 +348,11 @@ export const evaluateItemAp = (
   // 2. Any itemSets in freeSets
   // 3. rawPath contains {Free} / {Perk} / {Trait} and matches knownPaths
   let isFree = false;
-  if (itemName && freeElementNames && freeElementNames.has(cleanPathName(itemName).toLowerCase().trim())) {
-    isFree = true;
+  if (itemName && freeElementNames) {
+    const exactItemName = String(itemName).replace(/\s*\{[^}]*\}/g, '').toLowerCase().trim();
+    if (freeElementNames.has(exactItemName) || freeElementNames.has(cleanPathName(itemName).toLowerCase().trim())) {
+      isFree = true;
+    }
   }
   if (!isFree && itemSets && Array.isArray(itemSets) && freeSets && freeSets.size > 0) {
     for (const s of itemSets) {

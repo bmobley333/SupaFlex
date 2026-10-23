@@ -1151,9 +1151,10 @@ export default function App() {
                 setLaunchHubInitialTab('account');
                 setShowUnifiedLaunchHubModal(true);
               }}
-              onCharacterCloned={(clonedChar) => {
-                fetchInitialData();
-                selectCharacter(clonedChar.id);
+              onCharacterCloned={async (clonedChar) => {
+                sessionStorage.setItem('supaflex_last_active_char_id', String(clonedChar.id));
+                await selectCharacter(clonedChar.id);
+                await fetchInitialData({ silent: true });
               }}
               onRefreshCharacters={fetchInitialData}
             />
