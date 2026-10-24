@@ -855,13 +855,17 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
           }
         }
 
-        if (chars && chars.length > 0) {
-          cacheCharactersList(chars).catch(console.warn);
+        const mergedChars = selectedChar
+          ? chars.map((c) => (c.id === selectedChar.id ? selectedChar : c))
+          : chars;
+
+        if (mergedChars && mergedChars.length > 0) {
+          cacheCharactersList(mergedChars).catch(console.warn);
         }
         const initialOutboxCount = await getPendingOutboxCount();
 
         set({
-          characters: chars,
+          characters: mergedChars,
           activeCharacter: selectedChar,
           pendingOutboxCount: initialOutboxCount,
           players: playersData || [],
@@ -975,21 +979,25 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
       });
     };
 
-    const found = get().characters.find((c) => c.id === id);
-    if (found) {
-      const migratedFoundSheet = reconcileSheet(found.sheet_data, found);
-      const migratedFound = { ...found, sheet_data: migratedFoundSheet };
-      set({ activeCharacter: migratedFound });
-    }
-    try {
-      const cached = await getCachedCharacter(id);
-      if (cached && (!found || cached.updated_at !== found.updated_at)) {
-        const migratedSheet = reconcileSheet(cached.sheet_data, cached);
-        const migratedChar = { ...cached, sheet_data: migratedSheet };
-        set({ activeCharacter: migratedChar });
+    const currentActive = get().activeCharacter;
+    if (currentActive && currentActive.id === id) {
+      const migratedActiveSheet = reconcileSheet(currentActive.sheet_data, currentActive);
+      const migratedActive = { ...currentActive, sheet_data: migratedActiveSheet };
+      set((state) => ({
+        activeCharacter: migratedActive,
+        characters: state.characters.map((c) => (c.id === id ? migratedActive : c)),
+      }));
+    } else {
+      try {
+        const cached = await getCachedCharacter(id);
+        if (cached) {
+          const migratedSheet = reconcileSheet(cached.sheet_data, cached);
+          const migratedChar = { ...cached, sheet_data: migratedSheet };
+          set({ activeCharacter: migratedChar });
+        }
+      } catch (cacheErr) {
+        console.warn('[useCharacterStore] Offline cache check failed in selectCharacter:', cacheErr);
       }
-    } catch (cacheErr) {
-      console.warn('[useCharacterStore] Offline cache check failed in selectCharacter:', cacheErr);
     }
     try {
       const updated = await gameApi.getCharacterById(id);

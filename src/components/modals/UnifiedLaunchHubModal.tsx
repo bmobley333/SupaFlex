@@ -353,26 +353,47 @@ export const UnifiedLaunchHubModal: React.FC<UnifiedLaunchHubModalProps> = ({
   };
 
   const handleSaveEdit = async (char: Character) => {
-    if (!editName.trim()) return;
+    const trimmedName = editName.trim();
+    if (!trimmedName) return;
     setIsSavingEdit(true);
 
     try {
+      const remoteChar = await gameApi.getCharacterById(char.id);
+      const authoritativeChar =
+        (activeCharacter?.id === char.id &&
+        activeCharacter.sheet_data &&
+        (activeCharacter.sheet_data.ap_log?.length ||
+          activeCharacter.sheet_data.power_slots?.length ||
+          activeCharacter.sheet_data.weapons?.length ||
+          activeCharacter.sheet_data.traits_quirks?.length)
+          ? activeCharacter
+          : remoteChar) ||
+        remoteChar ||
+        char;
+
       const updatedSheet = {
-        ...(char.sheet_data || {}),
+        ...(authoritativeChar.sheet_data || {}),
         identity: {
-          ...((char.sheet_data as any)?.identity || {}),
-          name: editName.trim(),
-          race: char.race || 'Human',
-          class: char.class || 'Adventurer',
+          ...((authoritativeChar.sheet_data as any)?.identity || {}),
+          name: trimmedName,
+          race: authoritativeChar.race || char.race || 'Human',
+          class: authoritativeChar.class || char.class || 'Adventurer',
         },
       };
 
-      await gameApi.updateCharacter(char.id, {
-        name: editName.trim(),
-        race: char.race || 'Human',
-        class: char.class || 'Adventurer',
+      const saved = await gameApi.updateCharacter(char.id, {
+        name: trimmedName,
+        race: authoritativeChar.race || char.race || 'Human',
+        class: authoritativeChar.class || char.class || 'Adventurer',
         sheet_data: updatedSheet as any,
       });
+
+      if (activeCharacter?.id === char.id) {
+        useCharacterStore.getState().updateActiveCharacterMeta({
+          name: saved.name,
+          sheet_data: saved.sheet_data,
+        });
+      }
 
       setEditingCharId(null);
       if (onRefreshCharacters) onRefreshCharacters();
