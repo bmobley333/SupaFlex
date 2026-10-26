@@ -489,6 +489,7 @@ export const projectTacticalTableRows = (
       ? '❌'
       : `d${calculateTacticalWeaponDmg(w.name, w.mhs, attributeDice)}`;
 
+    const atkDmgPrefix = `Atk ${atkEmoji}${atkVal}, Dmg ${dmgStr}`;
     const blkPart =
       w.max_blk && w.max_blk !== 'n/a'
         ? `Blk 💪${mightNum} (Cap ${w.max_blk})`
@@ -510,7 +511,7 @@ export const projectTacticalTableRows = (
       checked: [],
       atkDef: `${atkEmoji}${atkVal}`,
       dmg: dmgStr,
-      effect: `${blkPart}${unskPart}`,
+      effect: `${atkDmgPrefix} • ${blkPart}${unskPart}`,
       notes: resolvedNotes,
       origin: {
         categoryLabel: `⚔️ Weapon (${catKey})`,
@@ -742,7 +743,7 @@ export const projectTacticalTableRows = (
         checked: [],
         atkDef: `${sk.emoji}${sk.dieRating}`,
         dmg: '',
-        effect: sk.notes || `Skilled (2H20 + d${sk.dieRating})`,
+        effect: `Roll ${sk.emoji}${sk.dieRating} (2H20 + d${sk.dieRating})${sk.notes ? ` • ${sk.notes}` : ''}`,
         notes: sk.notes,
         origin: {
           categoryLabel: '🎓 Pinned Skill',

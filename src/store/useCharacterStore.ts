@@ -348,16 +348,16 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     return (sessionStorage.getItem('supaflex_active_role') as 'player' | 'gm') || 'player';
   })(),
   sheetViewMode: (() => {
-    if (typeof window === 'undefined') return 'cards';
+    if (typeof window === 'undefined') return 'table';
     try {
-      return localStorage.getItem('supaflex_sheet_view_mode') === 'table' ? 'table' : 'cards';
+      return localStorage.getItem('supaflex_sheet_view_mode_v2') === 'cards' ? 'cards' : 'table';
     } catch {
-      return 'cards';
+      return 'table';
     }
   })(),
   setSheetViewMode: (mode: 'cards' | 'table') => {
     try {
-      localStorage.setItem('supaflex_sheet_view_mode', mode);
+      localStorage.setItem('supaflex_sheet_view_mode_v2', mode);
     } catch {}
     set({ sheetViewMode: mode });
   },

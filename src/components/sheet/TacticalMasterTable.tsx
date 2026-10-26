@@ -13,6 +13,7 @@ import {
   Pin,
   Lock,
   Unlock,
+  GripVertical,
 } from 'lucide-react';
 import { useCharacterStore } from '../../store/useCharacterStore';
 import { ItemNotesPopover } from '../common/ItemNotesPopover';
@@ -25,8 +26,6 @@ import {
   projectTacticalTableRows,
   isTacticalRowDimmed,
 } from '../../utils/tacticalTableUtils';
-
-export type RollColumnPlacement = 'split' | 'right';
 
 const ACTION_BADGE_STYLES: Record<string, string> = {
   AM: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
@@ -44,6 +43,41 @@ const DOMAIN_LEFT_BORDER: Record<TacticalRowDomain, string> = {
   traits: 'border-l-[3px] border-l-purple-500',
   skills: 'border-l-[3px] border-l-indigo-500',
   divider: 'border-l-[3px] border-l-slate-700',
+};
+
+const applyCoupledRndAction = (
+  current: RndActionsSpentState,
+  key: 'am' | 'a' | 'm' | 'p',
+  nextVal: boolean
+): RndActionsSpentState => {
+  if (key === 'am') {
+    return {
+      ...current,
+      am: nextVal,
+      a: nextVal,
+      m: nextVal,
+    };
+  }
+  if (key === 'a') {
+    const curM = !!current.m;
+    return {
+      ...current,
+      a: nextVal,
+      am: nextVal && curM,
+    };
+  }
+  if (key === 'm') {
+    const curA = !!current.a;
+    return {
+      ...current,
+      m: nextVal,
+      am: curA && nextVal,
+    };
+  }
+  return {
+    ...current,
+    p: nextVal,
+  };
 };
 
 export const TacticalMasterTable: React.FC = () => {
@@ -67,27 +101,12 @@ export const TacticalMasterTable: React.FC = () => {
 
   const sheetData = activeCharacter?.sheet_data;
 
-  // Arrange mode toggle & Secondary Bench Tray accordion state
+  // Arrange mode toggle, Drag-and-Drop state & Secondary Bench Tray accordion state
   const [isArrangeMode, setIsArrangeMode] = useState<boolean>(false);
   const [isSecondaryOpen, setIsSecondaryOpen] = useState<boolean>(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
-
-  // Roll Column Placement preference ('split' = Option A, 'right' = Option B)
-  const [rollPlacement, setRollPlacement] = useState<RollColumnPlacement>(() => {
-    try {
-      const saved = localStorage.getItem('supaflex_tactical_roll_cols');
-      return saved === 'right' ? 'right' : 'split';
-    } catch {
-      return 'split';
-    }
-  });
-
-  const handleSetRollPlacement = (mode: RollColumnPlacement) => {
-    setRollPlacement(mode);
-    try {
-      localStorage.setItem('supaflex_tactical_roll_cols', mode);
-    } catch {}
-  };
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   // Floating Extended Origin Popover State
   const [activeOriginPopover, setActiveOriginPopover] = useState<{
@@ -143,181 +162,157 @@ export const TacticalMasterTable: React.FC = () => {
     return sheetData?.rnd_actions_spent || { am: false, a: false, m: false, p: false };
   }, [sheetData?.rnd_actions_spent]);
 
-  // Toggle a Round Action (🔷: AM, A, M, P)
+  // Toggle a Round Action (🔷: AM, A, M, P) with AM <-> A+M coupling
   const handleToggleRndAction = (key: 'am' | 'a' | 'm' | 'p', explicitValue?: boolean) => {
     updateActiveSheetData((prev) => {
       const current = prev.rnd_actions_spent || { am: false, a: false, m: false, p: false };
       const nextVal = explicitValue !== undefined ? explicitValue : !current[key];
       return {
         ...prev,
-        rnd_actions_spent: {
-          ...current,
-          [key]: nextVal,
-        },
+        rnd_actions_spent: applyCoupledRndAction(current, key, nextVal),
       };
     });
     saveActiveCharacter();
   };
 
   // Reset Round (🔄 Reset Rnd): Clears AM, A, M, P AND unchecks all 1-Rnd usage boxes across Powers & Exotics
-  const handleResetRnd = () => {
+  const handleResetRound = () => {
     updateActiveSheetData((prev) => {
-      const resetSlotIfOneRnd = (s: any) => {
-        if (!s || !s.usage) return s;
-        if (/1-rnd/i.test(s.usage) && Array.isArray(s.checked) && s.checked.some(Boolean)) {
+      const resetSlotIfRnd = (slot: any) => {
+        const u = (slot.usage || '').toLowerCase();
+        if (u.includes('rnd') || u.includes('round')) {
           return {
-            ...s,
-            checked: s.checked.map(() => false),
+            ...slot,
+            checked: (slot.checked || []).map(() => false),
           };
         }
-        return s;
+        return slot;
       };
-
-      const nextPowers = Array.isArray(prev.power_slots)
-        ? prev.power_slots.map(resetSlotIfOneRnd)
-        : prev.power_slots;
-      const nextSpells = Array.isArray(prev.spell_slots)
-        ? prev.spell_slots.map(resetSlotIfOneRnd)
-        : prev.spell_slots;
-
       return {
         ...prev,
         rnd_actions_spent: { am: false, a: false, m: false, p: false },
-        power_slots: nextPowers,
-        spell_slots: nextSpells,
+        power_slots: (prev.power_slots || []).map(resetSlotIfRnd),
+        spell_slots: (prev.spell_slots || []).map(resetSlotIfRnd),
       };
     });
     saveActiveCharacter();
+    showToast('🔄 New Round: Cleared Round Actions (AM/A/M/P) & 1-Rnd Uses.');
   };
 
-  // Clear All Encounter & Round Uses across Powers & Exotics
-  const handleClearAllEncounterUses = () => {
-    updateActiveSheetData((prev) => {
-      const clearChecks = (s: any) =>
-        s && Array.isArray(s.checked) && s.checked.some(Boolean)
-          ? { ...s, checked: s.checked.map(() => false) }
-          : s;
-      return {
-        ...prev,
-        rnd_actions_spent: { am: false, a: false, m: false, p: false },
-        power_slots: Array.isArray(prev.power_slots)
-          ? prev.power_slots.map(clearChecks)
-          : prev.power_slots,
-        spell_slots: Array.isArray(prev.spell_slots)
-          ? prev.spell_slots.map(clearChecks)
-          : prev.spell_slots,
-      };
-    });
+  // Clear Encounter Uses (Clears all power_slots and spell_slots checkboxes + Round Actions)
+  const handleClearEncounterUses = () => {
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      rnd_actions_spent: { am: false, a: false, m: false, p: false },
+      power_slots: (prev.power_slots || []).map((s) => ({
+        ...s,
+        checked: (s.checked || []).map(() => false),
+      })),
+      spell_slots: (prev.spell_slots || []).map((s) => ({
+        ...s,
+        checked: (s.checked || []).map(() => false),
+      })),
+    }));
     saveActiveCharacter();
+    showToast('✨ Cleared all Encounter & Round Usage checkboxes.');
   };
 
-  // Auto-couple helper: maps 'AM' | 'A' | 'M' | 'P' to rnd_actions_spent property
-  const applyCoupledRndActionOnCheck = (
-    currentRnd: RndActionsSpentState | undefined,
-    action: string,
-    isNowChecked: boolean
-  ): RndActionsSpentState => {
-    const base = { ...(currentRnd || { am: false, a: false, m: false, p: false }) };
-    const upper = (action || '').toUpperCase();
-    if (upper === 'AM') base.am = isNowChecked;
-    else if (upper === 'A') base.a = isNowChecked;
-    else if (upper === 'M') base.m = isNowChecked;
-    else if (upper === 'P') base.p = isNowChecked;
-    return base;
-  };
-
-  // Toggle Usage Checkbox on a Row (with automatic 🔷 Rnd Action coupling!)
-  const handleToggleRowCheckbox = (row: TacticalRowItem, boxIdx: number) => {
-    const currentlyChecked = Boolean(row.checked && row.checked[boxIdx]);
-    const willBeChecked = !currentlyChecked;
+  // Coupled Usage Box Click Handler: Toggles row usage box AND auto-checks/unchecks corresponding Round Action (🔷)
+  const handleToggleRowUsageBox = (row: TacticalRowItem, boxIdx: number) => {
+    const wasChecked = !!(row.checked && row.checked[boxIdx]);
+    const nextChecked = !wasChecked;
+    const act = (row.action || '').toUpperCase();
+    const rndKey =
+      act === 'AM'
+        ? 'am'
+        : act === 'A'
+        ? 'a'
+        : act === 'M'
+        ? 'm'
+        : act === 'P'
+        ? 'p'
+        : null;
 
     if (row.domain === 'powers' && row.rawPowerSlot) {
       const targetName = row.rawPowerSlot.name;
       updateActiveSheetData((prev) => {
-        const nextPowers = (prev.power_slots || []).map((slot) => {
-          if (slot.name !== targetName) return slot;
-          const nextChecked = Array.isArray(slot.checked) ? [...slot.checked] : [];
-          while (nextChecked.length <= boxIdx) nextChecked.push(false);
-          nextChecked[boxIdx] = willBeChecked;
-          return { ...slot, checked: nextChecked };
+        const currentRnd = prev.rnd_actions_spent || { am: false, a: false, m: false, p: false };
+        const updatedPowers = (prev.power_slots || []).map((s) => {
+          if (s.name !== targetName) return s;
+          const nextArr = Array.isArray(s.checked) ? [...s.checked] : [false, false, false];
+          nextArr[boxIdx] = nextChecked;
+          return { ...s, checked: nextArr };
         });
         return {
           ...prev,
-          power_slots: nextPowers,
-          rnd_actions_spent: applyCoupledRndActionOnCheck(
-            prev.rnd_actions_spent,
-            row.action,
-            willBeChecked
-          ),
+          power_slots: updatedPowers,
+          rnd_actions_spent: rndKey
+            ? applyCoupledRndAction(currentRnd, rndKey, nextChecked)
+            : currentRnd,
         };
       });
       saveActiveCharacter();
-    } else if (row.domain === 'exotics' && row.rawExoticSlot) {
-      // Update exotic power usage + coupled round action
+      return;
+    }
+
+    if (row.domain === 'exotics' && row.rawExoticSlot) {
       toggleGearPowerUsage(row.rawExoticSlot.name, boxIdx);
-      if (row.action === 'AM' || row.action === 'A' || row.action === 'M' || row.action === 'P') {
-        const key = row.action.toLowerCase() as 'am' | 'a' | 'm' | 'p';
-        handleToggleRndAction(key, willBeChecked);
+      if (rndKey) {
+        handleToggleRndAction(rndKey, nextChecked);
       }
-    } else if (row.domain === 'chaos_gems' && row.rawGemSlot) {
+      return;
+    }
+
+    if (row.domain === 'chaos_gems' && row.rawGemSlot) {
       const slotId = row.rawGemSlot.slot_id;
       const gemName = row.name;
-      const currentChecked = Array.isArray(row.checked) ? [...row.checked] : [false, false, false];
-      while (currentChecked.length < 3) currentChecked.push(false);
-      currentChecked[boxIdx] = willBeChecked;
-      const checkedCount = currentChecked.filter(Boolean).length;
+      const currentArr = Array.isArray(row.checked) ? [...row.checked] : [false, false, false];
+      currentArr[boxIdx] = nextChecked;
+      const allThreeChecked =
+        currentArr.length >= 3 && currentArr[0] && currentArr[1] && currentArr[2];
 
-      updateActiveSheetData((prev) => {
-        const currentSlots = Array.isArray(prev.chaos_gauntlet_slots)
-          ? prev.chaos_gauntlet_slots.map((s) => ({ ...s }))
-          : [];
-        const targetIdx = currentSlots.findIndex((s) => s.slot_id === slotId);
-        if (targetIdx !== -1 && currentSlots[targetIdx].gem) {
-          if (checkedCount >= 3) {
-            currentSlots[targetIdx] = { ...currentSlots[targetIdx], gem: null };
-          } else {
-            currentSlots[targetIdx] = {
-              ...currentSlots[targetIdx],
-              gem: {
-                ...currentSlots[targetIdx].gem!,
-                checked: currentChecked,
-                usage: Math.max(0, 3 - checkedCount),
-              },
-            };
-          }
+      if (allThreeChecked) {
+        const confirmed = window.confirm(
+          `💎 All 3 charges of '${gemName}' have been spent!\n\nShatter and remove '${gemName}' from your Chaos Gauntlet now?`
+        );
+        if (confirmed) {
+          updateActiveSheetData((prev) => ({
+            ...prev,
+            chaos_gauntlet_slots: (prev.chaos_gauntlet_slots || []).map((s) =>
+              s.slot_id === slotId ? { ...s, gem: null } : s
+            ),
+          }));
+          saveActiveCharacter();
+          showToast(`💥 Shattered & removed '${gemName}'.`);
+          return;
         }
-        return { ...prev, chaos_gauntlet_slots: currentSlots };
-      });
-      saveActiveCharacter();
-      if (checkedCount >= 3) {
-        showToast(`💥 '${gemName}' reached 0 uses and shattered into dust!`);
       }
+
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        chaos_gauntlet_slots: (prev.chaos_gauntlet_slots || []).map((s) =>
+          s.slot_id === slotId && s.gem
+            ? { ...s, gem: { ...s.gem, checked: currentArr } }
+            : s
+        ),
+      }));
+      saveActiveCharacter();
     }
   };
 
-  // Ensure master_table_order is materialized from current primaryRows before mutating
-  const getMaterializedPrimaryOrder = (): string[] => {
+  // Ensure master_table_order is hydrated with current primaryRows before mutating order
+  const getHydratedPrimaryOrder = useCallback((): string[] => {
     return primaryRows.map((r) => r.rowKey);
-  };
+  }, [primaryRows]);
 
-  // Insert a Blank / Label Divider Row at top of Primary Table
-  const handleAddDividerRow = () => {
-    const newKey = `div:${Date.now().toString(36)}:`;
-    const currentOrder = getMaterializedPrimaryOrder();
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      master_table_order: [newKey, ...currentOrder],
-    }));
-    saveActiveCharacter();
-    setIsArrangeMode(true);
-  };
+  const handleMoveRow = (index: number, direction: 'up' | 'down') => {
+    const order = getHydratedPrimaryOrder();
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= order.length) return;
+    const nextOrder = [...order];
+    const [moved] = nextOrder.splice(index, 1);
+    nextOrder.splice(targetIdx, 0, moved);
 
-  // Update Divider Row Label
-  const handleUpdateDividerLabel = (oldRowKey: string, divId: string, newLabel: string) => {
-    const cleanLabel = newLabel.replace(/[\r\n]/g, '');
-    const updatedKey = `div:${divId}:${cleanLabel}`;
-    const currentOrder = getMaterializedPrimaryOrder();
-    const nextOrder = currentOrder.map((k) => (k === oldRowKey ? updatedKey : k));
     updateActiveSheetData((prev) => ({
       ...prev,
       master_table_order: nextOrder,
@@ -325,421 +320,460 @@ export const TacticalMasterTable: React.FC = () => {
     saveActiveCharacter();
   };
 
-  // Delete Divider Row
-  const handleDeleteDividerRow = (rowKey: string) => {
-    const currentOrder = getMaterializedPrimaryOrder().filter((k) => k !== rowKey);
+  // Drag-and-Drop Row Reordering Handlers
+  const handleDragStart = (e: React.DragEvent<HTMLTableRowElement>, index: number) => {
+    if (!isArrangeMode) return;
+    setDraggedIdx(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLTableRowElement>, index: number) => {
+    if (!isArrangeMode || draggedIdx === null) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIdx !== index) {
+      setDragOverIdx(index);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLTableRowElement>, dropIndex: number) => {
+    e.preventDefault();
+    if (!isArrangeMode || draggedIdx === null || draggedIdx === dropIndex) {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    const order = getHydratedPrimaryOrder();
+    if (draggedIdx >= 0 && draggedIdx < order.length && dropIndex >= 0 && dropIndex < order.length) {
+      const nextOrder = [...order];
+      const [moved] = nextOrder.splice(draggedIdx, 1);
+      nextOrder.splice(dropIndex, 0, moved);
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        master_table_order: nextOrder,
+      }));
+      saveActiveCharacter();
+    }
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleInsertDivider = (afterIndex?: number, withLabel?: boolean) => {
+    let label = '';
+    if (withLabel) {
+      const input = window.prompt('Enter section label header (leave blank for a thin rule line):', '⚔️ PRIMARY OFFENSE');
+      if (input === null) return;
+      label = input.trim();
+    }
+    const divKey = `div:${Date.now().toString(36)}:${label}`;
+    const order = getHydratedPrimaryOrder();
+    const insertPos = afterIndex !== undefined ? afterIndex + 1 : order.length;
+    const nextOrder = [...order];
+    nextOrder.splice(insertPos, 0, divKey);
+
     updateActiveSheetData((prev) => ({
       ...prev,
-      master_table_order: currentOrder,
+      master_table_order: nextOrder,
     }));
     saveActiveCharacter();
   };
 
-  // Move Row Up / Down in Primary Table
-  const handleMovePrimaryRow = (index: number, direction: -1 | 1) => {
-    const currentOrder = getMaterializedPrimaryOrder();
-    const targetIdx = index + direction;
-    if (targetIdx < 0 || targetIdx >= currentOrder.length) return;
-    const swapped = [...currentOrder];
-    const temp = swapped[index];
-    swapped[index] = swapped[targetIdx];
-    swapped[targetIdx] = temp;
-
+  const handleEditDividerLabel = (row: TacticalRowItem) => {
+    const nextLabel = window.prompt('Edit section label (leave blank for a thin rule line):', row.dividerLabel || '');
+    if (nextLabel === null) return;
+    const newKey = `div:${row.dividerId || Date.now().toString(36)}:${nextLabel.trim()}`;
+    const order = getHydratedPrimaryOrder().map((k) => (k === row.rowKey ? newKey : k));
     updateActiveSheetData((prev) => ({
       ...prev,
-      master_table_order: swapped,
+      master_table_order: order,
     }));
     saveActiveCharacter();
   };
 
-  // Demote Row from Primary Table to Secondary (Bench) Table
+  const handleDeleteDivider = (rowKey: string) => {
+    const order = getHydratedPrimaryOrder().filter((k) => k !== rowKey);
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      master_table_order: order,
+    }));
+    saveActiveCharacter();
+  };
+
   const handleBenchRow = (rowKey: string) => {
-    const currentOrder = getMaterializedPrimaryOrder().filter((k) => k !== rowKey);
+    const order = getHydratedPrimaryOrder().filter((k) => k !== rowKey);
     updateActiveSheetData((prev) => {
-      const currentBenched = Array.isArray(prev.master_table_benched)
-        ? prev.master_table_benched
-        : [];
-      const nextBenched = currentBenched.includes(rowKey)
-        ? currentBenched
-        : [...currentBenched, rowKey];
+      const currentBenched = Array.isArray(prev.master_table_benched) ? prev.master_table_benched : [];
+      const nextBenched = currentBenched.includes(rowKey) ? currentBenched : [...currentBenched, rowKey];
       return {
         ...prev,
-        master_table_order: currentOrder,
+        master_table_order: order,
         master_table_benched: nextBenched,
       };
     });
     saveActiveCharacter();
   };
 
-  // Promote Row from Secondary (Bench) Table back to Primary Table
-  const handlePromoteRow = (rowKey: string) => {
-    const currentOrder = getMaterializedPrimaryOrder();
+  const handlePromoteFromBench = (rowKey: string) => {
+    const order = [...getHydratedPrimaryOrder(), rowKey];
     updateActiveSheetData((prev) => {
-      const currentBenched = Array.isArray(prev.master_table_benched)
-        ? prev.master_table_benched.filter((k) => k !== rowKey)
-        : [];
-      const nextOrder = currentOrder.includes(rowKey) ? currentOrder : [...currentOrder, rowKey];
+      const currentBenched = Array.isArray(prev.master_table_benched) ? prev.master_table_benched : [];
       return {
         ...prev,
-        master_table_order: nextOrder,
-        master_table_benched: currentBenched,
+        master_table_order: order,
+        master_table_benched: currentBenched.filter((k) => k !== rowKey),
       };
     });
     saveActiveCharacter();
   };
 
-  // Pin / Unpin a Derived Skill into Primary Table
   const handleTogglePinSkill = (skillRowKey: string) => {
-    const currentOrder = getMaterializedPrimaryOrder();
-    const isAlreadyPinned = currentOrder.includes(skillRowKey);
-    const nextOrder = isAlreadyPinned
-      ? currentOrder.filter((k) => k !== skillRowKey)
-      : [...currentOrder, skillRowKey];
+    const order = getHydratedPrimaryOrder();
+    const isCurrentlyPinned = pinnedSkillKeys.has(skillRowKey);
+    const nextOrder = isCurrentlyPinned
+      ? order.filter((k) => k !== skillRowKey)
+      : [...order, skillRowKey];
 
     updateActiveSheetData((prev) => ({
       ...prev,
       master_table_order: nextOrder,
-      master_table_benched: (prev.master_table_benched || []).filter((k) => k !== skillRowKey),
     }));
     saveActiveCharacter();
   };
 
-  // Launch Manager Modal for a Domain
-  const handleOpenDomainManager = (
-    managerKey: 'weapons' | 'powers' | 'exotics' | 'traits' | 'chaos_gauntlet' | 'skills'
-  ) => {
-    setActiveOriginPopover(null);
-    if (managerKey === 'exotics') {
-      setExoticGearManagerModalOpen(true);
-    } else {
-      window.dispatchEvent(new CustomEvent('supaflex:open-manager', { detail: managerKey }));
+  const handleResetOrderToDefault = () => {
+    if (!window.confirm('Reset Tactical Table row order to default category order (and clear custom dividers)?')) {
+      return;
     }
+    updateActiveSheetData((prev) => ({
+      ...prev,
+      master_table_order: [],
+    }));
+    saveActiveCharacter();
   };
 
-  // Render an Individual Tactical Row (Primary or Secondary)
-  const renderTacticalRow = (
-    row: TacticalRowItem,
-    index: number,
-    totalCount: number,
-    isSecondary: boolean
-  ) => {
-    // 1. Custom Blank / Label Divider Row
+  const handleOpenRowManager = (row: TacticalRowItem) => {
+    setActiveOriginPopover(null);
+    const key = row.origin.managerEventKey;
+    if (key === 'exotics') {
+      setExoticGearManagerModalOpen(true, row.origin.sourceGear || null);
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('supaflex:open-manager', { detail: key }));
+  };
+
+  // Highlight inline Atk/Roll/Blk formulas (cyan) and Dmg dice (amber) inside Effect text
+  const renderHighlightedEffect = (effectText: string) => {
+    if (!effectText) return <span className="text-slate-600 italic">—</span>;
+    const tokenRegex =
+      /((?:Atk|Roll|Blk)\s*(?:💪|🏃|👁️|✨|🫀)\d+|\b(?:💪|🏃|👁️|✨|🫀)\s*\^\s*(?:💪|🏃|👁️|✨|🫀|Prone|Dodge|Block|Parry|Will|Fort|Ref|\d+)|\bd\d+x?\s*Dmg\b|\bDmg\s*(?:d\d+x?|❌))/gi;
+    const parts = effectText.split(tokenRegex);
+    return parts.map((part, i) => {
+      if (!part) return null;
+      if (/^(?:Atk|Roll|Blk)\s*(?:💪|🏃|👁️|✨|🫀)\d+/i.test(part) || /\^/.test(part)) {
+        return (
+          <span key={i} className="font-mono font-bold text-cyan-300">
+            {part}
+          </span>
+        );
+      }
+      if (/dmg/i.test(part)) {
+        return (
+          <span key={i} className="font-mono font-bold text-amber-300">
+            {part}
+          </span>
+        );
+      }
+      return <React.Fragment key={i}>{part}</React.Fragment>;
+    });
+  };
+
+  const renderTableRow = (row: TacticalRowItem, idx: number, isSecondary: boolean) => {
+    const dimmed = !isSecondary && isTacticalRowDimmed(row, rndActions);
+    const isMso = isGsUnlocked && isMsoEntry(row.name);
+    const totalCols = 4 + (isArrangeMode ? 1 : 0);
+
+    // Custom Blank / Label Divider Row
     if (row.domain === 'divider') {
-      const hasLabel = Boolean(row.dividerLabel && row.dividerLabel.trim() !== '');
       return (
-        <div
+        <tr
           key={row.rowKey}
-          className={`rounded-lg transition-all flex items-center justify-between gap-2 ${
-            isArrangeMode
-              ? 'px-2.5 py-1.5 bg-slate-900/90 border border-dashed border-amber-500/40'
-              : hasLabel
-              ? 'px-3 py-1 bg-slate-950/90 border-y border-slate-800/90 my-0.5'
-              : 'h-3 bg-slate-950/30 border-b border-slate-800/40 my-0.5'
+          draggable={isArrangeMode && !isSecondary}
+          onDragStart={(e) => handleDragStart(e, idx)}
+          onDragOver={(e) => handleDragOver(e, idx)}
+          onDrop={(e) => handleDrop(e, idx)}
+          onDragEnd={handleDragEnd}
+          className={`bg-slate-950/95 border-y border-slate-800/90 transition-all ${
+            dragOverIdx === idx && draggedIdx !== idx ? 'ring-1 ring-amber-400 bg-amber-500/15' : ''
           }`}
         >
-          {isArrangeMode ? (
-            <>
-              <div className="flex items-center gap-1.5 flex-1">
-                <span className="text-xs text-amber-400 font-mono font-bold">──</span>
-                <input
-                  type="text"
-                  defaultValue={row.dividerLabel || ''}
-                  placeholder="Optional section label (leave blank for slim spacer row)..."
-                  onBlur={(e) =>
-                    handleUpdateDividerLabel(row.rowKey, row.dividerId || '0', e.target.value)
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      (e.target as HTMLInputElement).blur();
-                    }
-                  }}
-                  className="bg-slate-950 text-amber-200 text-xs font-outfit font-bold tracking-wider uppercase px-2 py-0.5 rounded border border-slate-700 focus:border-amber-400 outline-none flex-1 max-w-md"
-                />
-                <span className="text-xs text-amber-400 font-mono font-bold">──</span>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  type="button"
-                  disabled={index === 0}
-                  onClick={() => handleMovePrimaryRow(index, -1)}
-                  className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 cursor-pointer"
-                  title="Move Divider Up"
-                >
-                  <ArrowUp className="w-3 h-3" />
-                </button>
-                <button
-                  type="button"
-                  disabled={index === totalCount - 1}
-                  onClick={() => handleMovePrimaryRow(index, 1)}
-                  className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-30 cursor-pointer"
-                  title="Move Divider Down"
-                >
-                  <ArrowDown className="w-3 h-3" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteDividerRow(row.rowKey)}
-                  className="p-1 rounded bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-500/30 cursor-pointer"
-                  title="Delete Divider Row"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            </>
-          ) : hasLabel ? (
-            <div className="w-full flex items-center gap-2">
-              <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-amber-500/40 to-amber-500/40" />
-              <span className="font-outfit font-black text-[11px] uppercase tracking-widest text-amber-300/90 px-2">
-                {row.dividerLabel}
-              </span>
-              <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent via-amber-500/40 to-amber-500/40" />
+          <td colSpan={totalCols} className="px-3 py-1">
+            <div className="flex items-center justify-between gap-2">
+              {row.dividerLabel ? (
+                <div className="flex items-center gap-2 w-full">
+                  <span className="text-[10px] font-outfit font-black uppercase tracking-widest text-amber-300/90 whitespace-nowrap">
+                    {row.dividerLabel}
+                  </span>
+                  <div className="h-[1px] flex-1 bg-gradient-to-r from-amber-500/40 to-transparent" />
+                </div>
+              ) : (
+                <div className="h-[2px] w-full bg-slate-800/90 rounded-full my-1" />
+              )}
+
+              {isArrangeMode && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <span
+                    className="p-0.5 text-slate-500 hover:text-amber-300 cursor-grab active:cursor-grabbing"
+                    title="Drag to reorder divider"
+                  >
+                    <GripVertical className="w-3.5 h-3.5" />
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleMoveRow(idx, 'up')}
+                    disabled={idx === 0}
+                    className="p-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer"
+                    title="Move Up"
+                  >
+                    <ArrowUp className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMoveRow(idx, 'down')}
+                    disabled={idx === primaryRows.length - 1}
+                    className="p-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer"
+                    title="Move Down"
+                  >
+                    <ArrowDown className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleEditDividerLabel(row)}
+                    className="p-0.5 px-1 rounded bg-slate-900 hover:bg-slate-800 text-[10px] text-amber-300 border border-slate-700 cursor-pointer"
+                    title="Edit Divider Label"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteDivider(row.rowKey)}
+                    className="p-0.5 rounded bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 cursor-pointer"
+                    title="Remove Divider"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
             </div>
-          ) : null}
-        </div>
+          </td>
+        </tr>
       );
     }
 
-    // 2. Standard Ability Row
-    const { dimmed, reason } = isTacticalRowDimmed(row, rndActions);
-    const borderClass = DOMAIN_LEFT_BORDER[row.domain] || 'border-l-[3px] border-l-slate-600';
-    const isMso = isGsUnlocked && isMsoEntry(row.name);
-    const actUpper = row.action;
-    const actStyle =
-      ACTION_BADGE_STYLES[actUpper] || 'bg-slate-900 text-slate-500 border-slate-800';
-
-    // Shared Cell Sub-Renders
-    const atkDefCell = (
-      <div className="w-[62px] shrink-0 flex items-center justify-center">
-        {row.atkDef ? (
-          <span
-            className="w-full py-0.5 px-1 bg-slate-900/95 border border-cyan-500/30 rounded text-[11px] font-mono font-extrabold text-cyan-200 text-center truncate shadow-inner"
-            title={`Roll: ${row.atkDef}`}
-          >
-            {row.atkDef}
-          </span>
-        ) : (
-          <span className="text-[10px] font-mono text-slate-700 select-none">-</span>
-        )}
-      </div>
-    );
-
-    const dmgCell = (
-      <div className="w-[56px] shrink-0 flex items-center justify-center">
-        {row.dmg ? (
-          <span
-            className={`w-full py-0.5 px-1 bg-slate-900/95 border rounded text-[11px] font-mono font-extrabold text-center truncate shadow-inner ${
-              row.dmg === '❌'
-                ? 'text-rose-400 border-rose-500/40'
-                : 'text-rose-300 border-rose-500/30'
-            }`}
-            title={
-              row.dmg === '❌'
-                ? 'Special Damage: Governed by loaded ammunition type'
-                : `Damage: ${row.dmg}`
-            }
-          >
-            {row.dmg}
-          </span>
-        ) : (
-          <span className="text-[10px] font-mono text-slate-700 select-none">-</span>
-        )}
-      </div>
-    );
-
-    const actionCell = (
-      <div className="w-[34px] shrink-0 flex items-center justify-center">
-        {actUpper ? (
+    return (
+      <tr
+        key={row.rowKey}
+        draggable={isArrangeMode && !isSecondary}
+        onDragStart={(e) => handleDragStart(e, idx)}
+        onDragOver={(e) => handleDragOver(e, idx)}
+        onDrop={(e) => handleDrop(e, idx)}
+        onDragEnd={handleDragEnd}
+        className={`border-b border-slate-800/70 transition-all hover:bg-slate-800/35 ${
+          DOMAIN_LEFT_BORDER[row.domain]
+        } ${dimmed ? 'opacity-40 bg-slate-950/80' : 'bg-slate-900/40'} ${
+          dragOverIdx === idx && draggedIdx !== idx ? 'ring-1 ring-amber-400 bg-amber-500/15' : ''
+        } ${isArrangeMode && !isSecondary ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      >
+        {/* 1. TYPE ICON CELL (28px, Icon-Only, Click opens Extended Origin Popover) */}
+        <td className="w-7 px-1 py-1.5 text-center align-middle shrink-0">
           <button
             type="button"
-            onClick={() => {
-              if (actUpper === 'AM' || actUpper === 'A' || actUpper === 'M' || actUpper === 'P') {
-                handleToggleRndAction(actUpper.toLowerCase() as 'am' | 'a' | 'm' | 'p');
-              }
-            }}
-            className={`text-[10px] font-mono font-extrabold px-1.5 py-0.5 rounded border uppercase transition-transform ${actStyle} ${
-              actUpper !== 'F' ? 'cursor-pointer hover:scale-105' : 'cursor-default'
-            }`}
-            title={
-              actUpper !== 'F'
-                ? `Action: ${actUpper} (Click to toggle ${actUpper} in Rnd Actions tracker)`
-                : 'Free Action (F)'
-            }
-          >
-            {actUpper}
-          </button>
-        ) : (
-          <span className="text-[10px] font-mono text-slate-700 select-none">-</span>
-        )}
-      </div>
-    );
-
-    const usesAndBoxesCell = (
-      <div className="w-[92px] shrink-0 flex items-center justify-start gap-1">
-        {row.usage ? (
-          <span
-            className="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 text-[10px] font-mono text-slate-300 shrink-0"
-            title={`Usage: ${row.usage}`}
-          >
-            {row.usage}
-          </span>
-        ) : (
-          <span className="text-[10px] font-mono text-slate-700 px-1 select-none">-</span>
-        )}
-
-        {row.usageCount > 0 && (
-          <div className="flex items-center gap-1 ml-0.5">
-            {Array.from({ length: row.usageCount }).map((_, bIdx) => {
-              const isChecked = Boolean(row.checked && row.checked[bIdx]);
-              return (
-                <input
-                  key={bIdx}
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={() => handleToggleRowCheckbox(row, bIdx)}
-                  className="w-3.5 h-3.5 rounded border-slate-700 bg-slate-950 text-indigo-500 focus:ring-0 cursor-pointer accent-indigo-500"
-                  title={`Use ${bIdx + 1} of ${row.usageCount} (Auto-checks ${
-                    row.action || 'Action'
-                  } in Rnd Tracker)`}
-                />
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setActiveOriginPopover((prev) =>
+                prev?.row.rowKey === row.rowKey ? null : { row, rect }
               );
-            })}
-          </div>
-        )}
-      </div>
-    );
+            }}
+            className="w-6 h-6 rounded-lg bg-slate-950/90 hover:bg-slate-800 border border-slate-800 hover:border-slate-600 flex items-center justify-center text-xs cursor-pointer transition-transform hover:scale-110 mx-auto"
+            title={`${row.origin.categoryLabel} — Click for origin details & Manager`}
+          >
+            <span>{row.icon}</span>
+          </button>
+        </td>
 
-    const nameAndEffectCell = (
-      <div className="flex-1 min-w-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 pr-1">
-        <span
-          className={`font-outfit font-bold text-xs leading-snug inline-flex items-center gap-1 ${
-            isMso ? 'text-purple-300' : 'text-slate-100'
-          }`}
-        >
-          <span>{isMso ? `🌌 ${row.name}` : row.name}</span>
-          {row.subBadge && (
-            <span className="text-[9px] font-mono font-extrabold px-1.5 py-0.1 rounded bg-slate-900 text-indigo-300 border border-indigo-500/30">
-              {row.subBadge}
-            </span>
+        {/* 2. ACTION (🔷) CELL */}
+        <td className="w-11 px-1 py-1.5 text-center align-middle whitespace-nowrap">
+          {row.action ? (
+            <button
+              type="button"
+              onClick={() => {
+                const act = row.action.toLowerCase();
+                if (act === 'am' || act === 'a' || act === 'm' || act === 'p') {
+                  handleToggleRndAction(act as 'am' | 'a' | 'm' | 'p');
+                }
+              }}
+              className={`px-1.5 py-0.5 rounded border text-[10px] font-mono font-extrabold cursor-pointer transition-transform active:scale-95 ${
+                ACTION_BADGE_STYLES[row.action] || 'bg-slate-800 text-slate-300 border-slate-700'
+              }`}
+              title={
+                row.action === 'A'
+                  ? 'Attack Action (A) — Click to mark spent this Round'
+                  : row.action === 'M'
+                  ? 'Move Action (M) — Click to mark spent this Round'
+                  : row.action === 'AM'
+                  ? 'Full-Round Action (AM) — Click to mark AM, A & M spent this Round'
+                  : row.action === 'P'
+                  ? 'Partial Action (P, 1/Rnd) — Click to mark spent this Round'
+                  : 'Free Action (F)'
+              }
+            >
+              {row.action}
+            </button>
+          ) : (
+            <span className="text-[10px] font-mono text-slate-700 select-none">—</span>
           )}
-          <ItemNotesPopover notes={row.notes} itemName={row.name} inline />
-        </span>
+        </td>
 
-        {row.effect && (
-          <span className="text-xs text-slate-300 font-sans leading-snug break-words">
-            <span className="text-slate-600 mr-1 select-none">—</span>
-            {row.effect}
-          </span>
-        )}
-      </div>
-    );
+        {/* 3. USES (🔄) & COUPLED CHECKBOXES CELL */}
+        <td className="w-28 px-1.5 py-1.5 align-middle whitespace-nowrap">
+          {row.usage || row.usageCount > 0 ? (
+            <div className="flex items-center gap-1.5">
+              {row.usage && (
+                <span className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-300">
+                  {row.usage}
+                </span>
+              )}
+              {row.usageCount > 0 && (
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: row.usageCount }).map((_, bIdx) => {
+                    const isChecked = !!(row.checked && row.checked[bIdx]);
+                    return (
+                      <input
+                        key={bIdx}
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => handleToggleRowUsageBox(row, bIdx)}
+                        className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-950 text-amber-500 focus:ring-0 cursor-pointer accent-amber-500"
+                        title={`Use ${bIdx + 1} of ${row.usageCount} (auto-marks ${row.action || 'Action'} spent)`}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-[10px] font-mono text-slate-700 select-none"></span>
+          )}
+        </td>
 
-    return (
-      <div
-        key={row.rowKey}
-        title={dimmed && reason ? reason : undefined}
-        className={`px-2 py-1.5 bg-slate-950/75 rounded-lg border border-slate-800/90 ${borderClass} flex items-center gap-2 hover:border-slate-700 transition-all ${
-          dimmed ? 'opacity-35 grayscale-[55%]' : 'opacity-100'
-        }`}
-      >
-        {/* 1. Icon-Only Type Column (28px) with Extended Origin Popover */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            const rect = e.currentTarget.getBoundingClientRect();
-            setActiveOriginPopover((prev) =>
-              prev?.row.rowKey === row.rowKey ? null : { row, rect }
-            );
-          }}
-          className="w-6 h-6 shrink-0 rounded-md bg-slate-900/90 hover:bg-slate-800 border border-slate-800 flex items-center justify-center text-xs cursor-pointer transition-transform hover:scale-105"
-          title={`${row.origin.categoryLabel} — Click for origin details & Manager link`}
-        >
-          <span>{row.icon}</span>
-        </button>
+        {/* 4. UNIFIED NAME — EFFECT CELL */}
+        <td className="px-2 py-1.5 align-middle text-xs leading-snug min-w-[240px]">
+          <div className="inline">
+            <span
+              className={`font-outfit font-extrabold ${
+                dimmed
+                  ? 'line-through text-slate-400'
+                  : isMso
+                  ? 'text-purple-300'
+                  : 'text-slate-100'
+              }`}
+            >
+              {isMso ? `🌌 ${row.name}` : row.name}
+            </span>
+            {row.subBadge && (
+              <span className="ml-1.5 px-1 py-0.2 rounded bg-slate-950 border border-slate-800 text-[9px] font-mono font-bold text-slate-400 align-middle">
+                {row.subBadge}
+              </span>
+            )}
+            <ItemNotesPopover notes={row.notes} itemName={row.name} inline />
+            <span className="mx-1.5 text-slate-600 select-none">—</span>
+            <span className="text-slate-300">{renderHighlightedEffect(row.effect)}</span>
+          </div>
+        </td>
 
-        {/* 2. Dynamic Column Order: Split Rolls (Option A) vs Right Rolls (Option B) */}
-        {rollPlacement === 'split' ? (
-          <>
-            {atkDefCell}
-            {actionCell}
-            {usesAndBoxesCell}
-            {nameAndEffectCell}
-            {dmgCell}
-          </>
-        ) : (
-          <>
-            {actionCell}
-            {usesAndBoxesCell}
-            {nameAndEffectCell}
-            {atkDefCell}
-            {dmgCell}
-          </>
-        )}
-
-        {/* 3. Arrange Mode Controls (Move Up/Down, Bench/Promote, Unpin Skill) */}
+        {/* 5. ARRANGE MODE CONTROLS (Icon-Only + Drag Handle) */}
         {isArrangeMode && (
-          <div className="flex items-center gap-1 shrink-0 pl-1 border-l border-slate-800">
+          <td className="w-28 px-1.5 py-1.5 text-right align-middle whitespace-nowrap">
             {!isSecondary ? (
-              <>
+              <div className="flex items-center justify-end gap-1">
+                <span
+                  className="p-0.5 text-slate-500 hover:text-amber-300 cursor-grab active:cursor-grabbing"
+                  title="Drag row to reorder"
+                >
+                  <GripVertical className="w-3.5 h-3.5" />
+                </span>
                 <button
                   type="button"
-                  disabled={index === 0}
-                  onClick={() => handleMovePrimaryRow(index, -1)}
-                  className="p-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-25 cursor-pointer"
+                  onClick={() => handleMoveRow(idx, 'up')}
+                  disabled={idx === 0}
+                  className="p-1 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer border border-slate-800"
                   title="Move Row Up"
                 >
                   <ArrowUp className="w-3 h-3" />
                 </button>
                 <button
                   type="button"
-                  disabled={index === totalCount - 1}
-                  onClick={() => handleMovePrimaryRow(index, 1)}
-                  className="p-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-300 disabled:opacity-25 cursor-pointer"
+                  onClick={() => handleMoveRow(idx, 'down')}
+                  disabled={idx === primaryRows.length - 1}
+                  className="p-1 rounded bg-slate-950 hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer border border-slate-800"
                   title="Move Row Down"
                 >
                   <ArrowDown className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleInsertDivider(idx, true)}
+                  className="p-1 rounded bg-slate-950 hover:bg-slate-800 text-[10px] font-bold text-amber-300 border border-slate-800 cursor-pointer"
+                  title="Insert Blank or Label Divider below this row"
+                >
+                  ➕
                 </button>
                 {row.domain === 'skills' ? (
                   <button
                     type="button"
                     onClick={() => handleTogglePinSkill(row.rowKey)}
-                    className="px-1.5 py-0.5 rounded bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-500/40 text-[10px] font-bold cursor-pointer"
+                    className="p-1 rounded bg-indigo-950/70 hover:bg-indigo-900 text-[10px] font-bold text-indigo-300 border border-indigo-500/40 cursor-pointer"
                     title="Unpin Skill from Tactical Table"
                   >
-                    Unpin
+                    📌
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={() => handleBenchRow(row.rowKey)}
-                    className="px-1.5 py-0.5 rounded bg-slate-900 hover:bg-amber-950/80 text-slate-400 hover:text-amber-300 border border-slate-800 hover:border-amber-500/40 text-[10px] font-bold cursor-pointer"
-                    title="Move to Secondary / Non-Combat Tray at bottom"
+                    className="p-1 rounded bg-slate-950 hover:bg-amber-950/60 text-[10px] font-bold text-slate-300 hover:text-amber-200 border border-slate-800 cursor-pointer"
+                    title="Move to Secondary & Non-Combat Bench"
                   >
-                    ⬇️ Bench
+                    📥
                   </button>
                 )}
-              </>
+              </div>
             ) : (
               <button
                 type="button"
-                onClick={() => handlePromoteRow(row.rowKey)}
-                className="px-2 py-0.5 rounded bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold cursor-pointer"
-                title="Promote back to Primary Tactical Table"
+                onClick={() => handlePromoteFromBench(row.rowKey)}
+                className="p-1 rounded bg-emerald-950/70 hover:bg-emerald-900 text-[10px] font-bold text-emerald-300 border border-emerald-500/40 cursor-pointer"
+                title="Restore to Primary Tactical Table"
               >
-                ⬆️ Primary
+                📤
               </button>
             )}
-          </div>
+          </td>
         )}
-      </div>
+      </tr>
     );
   };
 
   return (
-    <div className="bg-gradient-to-b from-rose-950/25 via-slate-900/95 to-slate-950/95 border border-slate-800 border-t-2 border-t-rose-500/90 rounded-2xl p-3.5 flex flex-col gap-2.5 shadow-xl relative">
+    <div className="bg-gradient-to-b from-amber-950/20 via-slate-900/95 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 p-3 flex flex-col gap-2.5 shadow-xl relative">
       {/* Toast Notification Banner */}
       {toastMsg && (
-        <div className="px-3 py-2 rounded-xl bg-amber-950/90 border border-amber-500/60 text-amber-200 text-xs font-bold flex items-center justify-between shadow-lg animate-fadeIn">
+        <div className="px-3 py-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-200 text-xs font-bold flex items-center justify-between animate-fadeIn">
           <span>{toastMsg}</span>
           <button
             type="button"
@@ -751,52 +785,55 @@ export const TacticalMasterTable: React.FC = () => {
         </div>
       )}
 
-      {/* TOP BAR: Title + 🔷 RND ACTIONS Tracker + Arrange / Reset Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800/90">
-        {/* Left: Title & Help */}
+      {/* TOP BAR: Title + Coupled Round Action Tracker (🔷 AM / A / M / P) + Arrange Toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
+        {/* Left: Table Title & Help */}
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-xl bg-rose-950/90 border border-rose-500/50 text-rose-300 flex items-center justify-center shadow-[0_0_12px_rgba(244,63,94,0.25)]">
+          <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)]">
             <span className="text-sm leading-none">⚔️</span>
           </div>
-          <h3 className="font-outfit font-black text-sm tracking-wider text-slate-100 uppercase">
+          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-amber-200 uppercase">
             Tactical Table
           </h3>
+          <span className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 font-mono text-[10px] text-slate-400">
+            {primaryRows.filter((r) => r.domain !== 'divider').length} Active
+          </span>
           <CardHelpButton ruleKey="powers.basics" />
         </div>
 
-        {/* Center: 🔷 RND ACTIONS Checkboxes + Reset Rnd */}
-        <div className="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 px-2.5 py-1 rounded-xl shadow-inner flex-wrap">
+        {/* Center: Coupled Round Action Tracker (🔷 AM, A, M, P + Reset Rnd + Clear Enc) */}
+        <div className="flex flex-wrap items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1 shadow-inner">
           <span
-            className="text-[11px] font-outfit font-extrabold uppercase tracking-wider text-cyan-300 mr-1 flex items-center gap-1"
-            title="Round Actions (🔷): Check off spent actions (or click any row's usage box) to auto-dim unavailable rows this round"
+            className="text-[11px] font-outfit font-bold text-slate-300 mr-0.5 select-none"
+            title="Round Actions Spent — Checking any box dims unavailable actions in the table below"
           >
-            <span>🔷</span> Rnd:
+            🔷 Rnd:
           </span>
 
           {(
             [
-              { key: 'am', label: 'AM', title: 'Attack & Move Action (Dims AM, A, and M rows)' },
-              { key: 'a', label: 'A', title: 'Attack Action (Dims A and AM rows)' },
-              { key: 'm', label: 'M', title: 'Move Action (Dims M and AM rows)' },
-              { key: 'p', label: 'P', title: 'Partial Action — 1 per Round (Dims P rows)' },
+              { key: 'am', label: 'AM', title: 'Full-Round Action (AM) — Also checks A & M', color: 'text-amber-300 border-amber-500/40 bg-amber-950/40' },
+              { key: 'a', label: 'A', title: 'Attack Action (A)', color: 'text-rose-300 border-rose-500/40 bg-rose-950/40' },
+              { key: 'm', label: 'M', title: 'Move Action (M)', color: 'text-indigo-300 border-indigo-500/40 bg-indigo-950/40' },
+              { key: 'p', label: 'P', title: 'Partial Action (P, 1/Rnd)', color: 'text-emerald-300 border-emerald-500/40 bg-emerald-950/40' },
             ] as const
           ).map((act) => {
-            const isChecked = Boolean(rndActions[act.key]);
+            const isChecked = !!rndActions[act.key];
             return (
               <label
                 key={act.key}
                 title={act.title}
-                className={`px-2 py-0.5 rounded-lg border text-xs font-mono font-extrabold flex items-center gap-1.5 cursor-pointer select-none transition-all ${
+                className={`px-1.5 py-0.5 rounded-lg border text-[11px] font-mono font-extrabold flex items-center gap-1 cursor-pointer select-none transition-all ${
                   isChecked
-                    ? 'bg-slate-900 text-slate-400 border-slate-700 opacity-75'
-                    : ACTION_BADGE_STYLES[act.label]
+                    ? 'bg-slate-900 text-slate-400 border-slate-700 ring-1 ring-amber-500/40'
+                    : act.color
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={isChecked}
                   onChange={() => handleToggleRndAction(act.key)}
-                  className="w-3.5 h-3.5 rounded border-slate-700 bg-slate-950 text-rose-500 focus:ring-0 cursor-pointer accent-rose-500"
+                  className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-950 text-amber-500 focus:ring-0 cursor-pointer accent-amber-500"
                 />
                 <span>{act.label}</span>
               </label>
@@ -805,188 +842,196 @@ export const TacticalMasterTable: React.FC = () => {
 
           <button
             type="button"
-            onClick={handleResetRnd}
-            className="ml-1 px-2 py-0.5 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500/40 text-[11px] font-bold text-indigo-200 hover:text-white flex items-center gap-1 cursor-pointer transition-all shadow-sm"
-            title="Reset Round: Unchecks AM, A, M, P and clears all 1-Rnd ability usage boxes"
+            onClick={handleResetRound}
+            className="px-2 py-0.5 rounded-lg bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-500/40 text-[11px] font-bold text-indigo-200 hover:text-white flex items-center gap-1 cursor-pointer transition-colors ml-0.5"
+            title="Reset Round: Unchecks AM/A/M/P and resets all 1-Rnd usage checkboxes"
           >
-            <RotateCcw className="w-3 h-3" />
+            <RotateCcw className="w-3 h-3 text-indigo-300" />
             <span>Reset Rnd</span>
           </button>
 
           <button
             type="button"
-            onClick={handleClearAllEncounterUses}
-            className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[11px] font-semibold text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer transition-all"
-            title="Clear ALL Encounter (1-Enc, 2-Enc, 3-Enc) and Round checkboxes"
+            onClick={handleClearEncounterUses}
+            className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-pointer transition-colors"
+            title="Clear all Encounter (1-Enc, 2-Enc, 3-Enc) and Round checkboxes"
           >
-            <span>Clear Enc</span>
+            Clear Enc
           </button>
         </div>
 
-        {/* Right: + Divider & Arrange Toggle */}
-        <div className="flex items-center gap-1.5">
+        {/* Right: Dyslexia-Friendly Lock / Arrange Pill Switch */}
+        <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner">
           <button
             type="button"
-            onClick={handleAddDividerRow}
-            className="px-2.5 py-1 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-700/80 text-xs font-bold text-amber-300 flex items-center gap-1 cursor-pointer transition-all shadow-sm"
-            title="Insert a Blank Spacer or Custom Label Divider Row"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Divider</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsArrangeMode((prev) => !prev)}
-            className={`px-2.5 py-1 rounded-xl border text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-sm ${
-              isArrangeMode
-                ? 'bg-amber-500 text-slate-950 border-amber-400 font-extrabold'
-                : 'bg-slate-950 hover:bg-slate-800 text-slate-300 border-slate-700/80'
+            onClick={() => setIsArrangeMode(false)}
+            className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              !isArrangeMode
+                ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                : 'text-slate-400 hover:text-slate-200 border border-transparent'
             }`}
-            title="Toggle Arrange Mode to reorder rows, edit dividers, pin skills, or switch Roll Column placement"
           >
-            {isArrangeMode ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
-            <span>{isArrangeMode ? 'Done Arranging' : 'Arrange'}</span>
+            <Lock className="w-3 h-3" />
+            <span>Play</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsArrangeMode(true)}
+            className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+              isArrangeMode
+                ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+            }`}
+          >
+            <Unlock className="w-3 h-3" />
+            <span>Arrange</span>
           </button>
         </div>
       </div>
 
-      {/* ARRANGE MODE SUB-TOOLBAR: Roll Column Switch + Pin Skill Picker + Quick Managers */}
+      {/* ARRANGE MODE TOOLBAR */}
       {isArrangeMode && (
-        <div className="p-2.5 rounded-xl bg-slate-950/90 border border-amber-500/40 flex flex-wrap items-center justify-between gap-3 animate-fadeIn">
-          {/* 1. Dyslexia-Friendly KISS 2-Option Pill Switch: Split Rolls vs Right Rolls */}
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-              Roll Columns:
+        <div className="bg-slate-950/90 border border-amber-500/30 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 animate-fadeIn">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300/90 mr-1">
+              Drag ⠿ or use arrows to reorder:
             </span>
-            <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-              <button
-                type="button"
-                onClick={() => handleSetRollPlacement('split')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  rollPlacement === 'split'
-                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-                title="Option A: Place Atk^Def before Act/Uses/Name and Dmg on the far right"
-              >
-                <span>↔️</span>
-                <span>Split Rolls</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetRollPlacement('right')}
-                className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  rollPlacement === 'right'
-                    ? 'bg-emerald-600 text-white shadow-sm font-extrabold'
-                    : 'text-slate-400 hover:text-slate-200 border border-transparent'
-                }`}
-                title="Option B: Start row with Act/Uses/Name and group Atk^Def + Dmg on the right"
-              >
-                <span>➡️</span>
-                <span>Right Rolls</span>
-              </button>
-            </div>
-          </div>
-
-          {/* 2. Pin Derived Skill into Primary Table */}
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-indigo-300 flex items-center gap-1">
-              <Pin className="w-3 h-3" /> Pin Skill:
-            </span>
-            <select
-              value=""
-              onChange={(e) => {
-                if (e.target.value) {
-                  handleTogglePinSkill(e.target.value);
-                }
-              }}
-              className="bg-slate-900 border border-slate-700 text-slate-200 text-xs font-semibold px-2.5 py-1 rounded-lg outline-none focus:border-indigo-500 cursor-pointer"
+            <button
+              type="button"
+              onClick={() => handleInsertDivider(undefined, false)}
+              className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200 flex items-center gap-1 cursor-pointer"
+              title="Insert a thin horizontal blank separator row"
             >
-              <option value="">+ Select Derived Skill to Pin/Unpin...</option>
-              {allDerivedSkills.map((sk) => {
-                const isPinned = pinnedSkillKeys.has(sk.rowKey);
-                return (
-                  <option key={sk.rowKey} value={sk.rowKey}>
-                    {isPinned ? '📌 [Pinned] ' : '+ '}
-                    {sk.name} ({sk.emoji}
-                    {sk.dieRating})
+              <Plus className="w-3.5 h-3.5 text-amber-400" />
+              <span>➖ Blank Line</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleInsertDivider(undefined, true)}
+              className="px-2.5 py-1 rounded-lg bg-amber-950/60 hover:bg-amber-900/70 border border-amber-500/40 text-xs font-bold text-amber-200 flex items-center gap-1 cursor-pointer"
+              title="Insert a custom named section header row"
+            >
+              <Plus className="w-3.5 h-3.5 text-amber-300" />
+              <span>🏷️ Label Header</span>
+            </button>
+
+            {/* Pin Individual Skill Quick-Selector */}
+            {allDerivedSkills.length > 0 && (
+              <div className="flex items-center gap-1 bg-indigo-950/40 border border-indigo-500/30 rounded-lg px-2 py-0.5">
+                <Pin className="w-3 h-3 text-indigo-300" />
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      handleTogglePinSkill(e.target.value);
+                    }
+                  }}
+                  className="bg-transparent text-xs font-bold text-indigo-200 outline-none cursor-pointer"
+                  title="Pin or unpin a derived skill onto the Primary Tactical Table"
+                >
+                  <option value="" className="bg-slate-950 text-slate-300">
+                    + 📌 Pin Skill ({pinnedSkillKeys.size}/{allDerivedSkills.length})
                   </option>
-                );
-              })}
-            </select>
+                  {allDerivedSkills.map((sk) => {
+                    const isPinned = pinnedSkillKeys.has(sk.rowKey);
+                    return (
+                      <option key={sk.rowKey} value={sk.rowKey} className="bg-slate-950 text-slate-100">
+                        {isPinned ? '✓ Pinned: ' : '+ Pin: '}
+                        {sk.name} ({sk.emoji}
+                        {sk.dieRating})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleResetOrderToDefault}
+              className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-rose-950/50 border border-slate-800 hover:border-rose-500/40 text-[11px] font-bold text-slate-400 hover:text-rose-200 cursor-pointer"
+              title="Reset row order to default category order"
+            >
+              Reset Order
+            </button>
           </div>
 
-          {/* 3. Quick Open Domain Managers */}
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-[10px] font-bold text-slate-500 uppercase mr-1">Manage:</span>
+          {/* Quick Open Domain Managers Bar */}
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mr-1">
+              Open Manager:
+            </span>
             {(
               [
-                { key: 'weapons', icon: '⚔️', label: 'Weapons' },
-                { key: 'powers', icon: '🔥', label: 'Powers' },
-                { key: 'exotics', icon: '🧿', label: 'Exotics' },
-                { key: 'traits', icon: '🧬', label: 'Traits' },
+                { label: '⚔️ Weapons', key: 'weapons' },
+                { label: '🔥 Powers', key: 'powers' },
+                { label: '🧿 Exotics', key: 'exotics' },
+                { label: '💎 Gems', key: 'chaos_gauntlet' },
+                { label: '🧬 Traits', key: 'traits' },
+                { label: '🎓 Skills', key: 'skills' },
               ] as const
             ).map((m) => (
               <button
                 key={m.key}
                 type="button"
-                onClick={() => handleOpenDomainManager(m.key)}
-                className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-[11px] font-bold text-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
+                onClick={() => {
+                  if (m.key === 'exotics') {
+                    setExoticGearManagerModalOpen(true);
+                  } else {
+                    window.dispatchEvent(new CustomEvent('supaflex:open-manager', { detail: m.key }));
+                  }
+                }}
+                className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-bold text-slate-200 hover:text-white cursor-pointer transition-colors"
               >
-                <span>{m.icon}</span>
-                <span>{m.label}</span>
+                {m.label}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* COLUMN HEADERS */}
-      <div className="px-2 py-1 bg-slate-950/90 rounded-lg border border-slate-800/80 flex items-center gap-2 text-[10px] font-outfit font-extrabold uppercase tracking-wider text-slate-400">
-        <div className="w-6 shrink-0 text-center" title="Domain Icon (Click any icon for Origin & Manager)">
-          🌟
-        </div>
-        {rollPlacement === 'split' ? (
-          <>
-            <div className="w-[62px] shrink-0 text-center text-cyan-300/90">Atk^Def</div>
-            <div className="w-[34px] shrink-0 text-center">🔷</div>
-            <div className="w-[92px] shrink-0 text-left pl-1">Uses 🔄</div>
-            <div className="flex-1 min-w-0">Name — Effect</div>
-            <div className="w-[56px] shrink-0 text-center text-rose-300/90">Dmg</div>
-          </>
-        ) : (
-          <>
-            <div className="w-[34px] shrink-0 text-center">🔷</div>
-            <div className="w-[92px] shrink-0 text-left pl-1">Uses 🔄</div>
-            <div className="flex-1 min-w-0">Name — Effect</div>
-            <div className="w-[62px] shrink-0 text-center text-cyan-300/90">Atk^Def</div>
-            <div className="w-[56px] shrink-0 text-center text-rose-300/90">Dmg</div>
-          </>
-        )}
-        {isArrangeMode && <div className="w-28 shrink-0 text-right pr-1">Order</div>}
+      {/* PRIMARY TACTICAL TABLE (4 Ultra-Dense Columns) */}
+      <div className="overflow-x-auto rounded-xl border border-slate-800/90 bg-slate-950/60">
+        <table className="w-full border-collapse text-left">
+          <thead>
+            <tr className="bg-slate-950 border-b border-slate-800 text-[10px] font-outfit font-extrabold uppercase tracking-wider text-slate-400 select-none">
+              <th className="w-7 px-1 py-1.5 text-center" title="Domain Type (Click icon for Origin & Manager)">
+                Type
+              </th>
+              <th className="w-11 px-1 py-1.5 text-center" title="Action Economy (AM, A, M, P, F)">
+                🔷
+              </th>
+              <th className="w-28 px-1.5 py-1.5" title="Usage Limit & Coupled Checkboxes">
+                Uses 🔄
+              </th>
+              <th className="px-2 py-1.5">Name — Effect</th>
+              {isArrangeMode && <th className="w-28 px-1.5 py-1.5 text-right">Arrange</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {primaryRows.length > 0 ? (
+              primaryRows.map((row, idx) => renderTableRow(row, idx, false))
+            ) : (
+              <tr>
+                <td
+                  colSpan={4 + (isArrangeMode ? 1 : 0)}
+                  className="p-6 text-center text-xs text-slate-500 italic"
+                >
+                  No active combat abilities in Primary Table. Switch to Arrange mode or open a Manager to equip weapons, powers, exotics, or traits.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {/* PRIMARY TACTICAL TABLE ROWS */}
-      <div className="flex flex-col gap-1.5">
-        {primaryRows.length > 0 ? (
-          primaryRows.map((row, idx) =>
-            renderTacticalRow(row, idx, primaryRows.length, false)
-          )
-        ) : (
-          <div className="p-6 bg-slate-950/40 rounded-xl border border-slate-800 text-xs text-slate-500 italic text-center">
-            No active abilities in Primary Table. Click Arrange above to manage or promote abilities.
-          </div>
-        )}
-      </div>
-
-      {/* SECONDARY / EXTRAS COLLAPSIBLE BENCH TRAY */}
+      {/* SECONDARY & NON-COMBAT BENCH TRAY (Collapsible Bottom Accordion) */}
       {(secondaryRows.length > 0 || isArrangeMode) && (
-        <div className="mt-1 pt-2 border-t border-slate-800/80 flex flex-col gap-1.5">
+        <div className="border border-slate-800/80 rounded-xl bg-slate-950/50 overflow-hidden">
           <button
             type="button"
-            onClick={() => setIsSecondaryOpen((prev) => !prev)}
-            className="w-full px-3 py-1.5 rounded-xl bg-slate-950/80 hover:bg-slate-900 border border-slate-800 flex items-center justify-between text-xs font-bold text-slate-300 cursor-pointer transition-all"
+            onClick={() => setIsSecondaryOpen(!isSecondaryOpen)}
+            className="w-full px-3 py-1.5 flex items-center justify-between text-xs font-outfit font-bold text-slate-300 hover:text-white bg-slate-900/70 hover:bg-slate-900 transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2">
               {isSecondaryOpen ? (
@@ -994,124 +1039,107 @@ export const TacticalMasterTable: React.FC = () => {
               ) : (
                 <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
               )}
-              <span>📦 Secondary & Non-Combat Bench</span>
-              <span className="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 font-mono text-[10px] text-amber-300">
-                {secondaryRows.length}
-              </span>
+              <span>📦 Secondary & Non-Combat Bench ({secondaryRows.length})</span>
             </div>
-            <span className="text-[11px] font-normal text-slate-500">
-              {isSecondaryOpen ? 'Click to collapse' : 'Click to expand benched abilities'}
+            <span className="text-[10px] font-mono text-slate-500">
+              {isSecondaryOpen ? 'Click to collapse' : 'Click to view benched abilities'}
             </span>
           </button>
 
           {isSecondaryOpen && (
-            <div className="flex flex-col gap-1.5 pl-2 border-l-2 border-slate-800/80 animate-fadeIn">
+            <div className="border-t border-slate-800/80 overflow-x-auto">
               {secondaryRows.length > 0 ? (
-                secondaryRows.map((row, idx) =>
-                  renderTacticalRow(row, idx, secondaryRows.length, true)
-                )
+                <table className="w-full border-collapse text-left">
+                  <tbody>
+                    {secondaryRows.map((row, idx) => renderTableRow(row, idx, true))}
+                  </tbody>
+                </table>
               ) : (
-                <p className="text-xs text-slate-500 italic py-2 px-2">
-                  No abilities benched yet. In Arrange mode, click &quot;⬇️ Bench&quot; on any Primary row to move non-combat abilities here.
-                </p>
+                <div className="p-3 text-center text-xs text-slate-500 italic">
+                  No abilities currently on the Secondary Bench. In Arrange mode, click 📥 on any non-combat ability to park it here.
+                </div>
               )}
             </div>
           )}
         </div>
       )}
 
-      {/* PORTAL POPOVER FOR EXTENDED ORIGIN STACK & 1-CLICK MANAGER LAUNCHER */}
+      {/* EXTENDED ORIGIN POPOVER (Rendered via Portal on Type Icon Click) */}
       {activeOriginPopover &&
-        typeof document !== 'undefined' &&
         createPortal(
           <div
             ref={originPopoverRef}
             style={{
-              top: Math.min(window.innerHeight - 220, activeOriginPopover.rect.bottom + 6),
-              left: Math.min(
-                window.innerWidth - 300,
-                Math.max(12, activeOriginPopover.rect.left)
-              ),
+              top: `${Math.min(window.innerHeight - 230, activeOriginPopover.rect.bottom + 6)}px`,
+              left: `${Math.max(12, Math.min(window.innerWidth - 300, activeOriginPopover.rect.left))}px`,
             }}
-            className="fixed z-[9999] w-72 bg-slate-950/95 border border-indigo-500/60 rounded-xl p-3 shadow-2xl backdrop-blur-xl text-xs flex flex-col gap-2 animate-fadeIn"
+            className="fixed z-50 w-72 bg-slate-950/95 border border-slate-700 rounded-xl p-3 shadow-2xl backdrop-blur-md text-xs flex flex-col gap-2 animate-fadeIn"
           >
             <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
-              <span className="font-outfit font-extrabold text-slate-100 uppercase tracking-wider">
+              <span className="font-outfit font-extrabold text-amber-300">
                 {activeOriginPopover.row.origin.categoryLabel}
               </span>
               <button
                 type="button"
                 onClick={() => setActiveOriginPopover(null)}
-                className="p-0.5 text-slate-400 hover:text-white rounded cursor-pointer"
+                className="p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="flex flex-col gap-1 text-[11px] text-slate-300 font-mono">
+            <div className="flex flex-col gap-1 text-[11px] text-slate-300">
               <div>
-                <span className="text-slate-500">Ability: </span>
-                <strong className="text-slate-100 font-sans">
-                  {activeOriginPopover.row.name}
-                </strong>
-                {activeOriginPopover.row.origin.version &&
-                  activeOriginPopover.row.origin.version > 1 && (
-                    <span className="ml-1 text-indigo-300">
-                      (v{activeOriginPopover.row.origin.version})
-                    </span>
-                  )}
+                <span className="text-slate-500 font-semibold">Ability: </span>
+                <span className="font-bold text-slate-100">{activeOriginPopover.row.name}</span>
+                {activeOriginPopover.row.origin.version && activeOriginPopover.row.origin.version > 1 && (
+                  <span className="ml-1 text-amber-300 font-mono">
+                    (v{activeOriginPopover.row.origin.version})
+                  </span>
+                )}
               </div>
               {activeOriginPopover.row.origin.sourceGear && (
                 <div>
-                  <span className="text-slate-500">Source: </span>
-                  <span className="text-cyan-300">
+                  <span className="text-slate-500 font-semibold">Source: </span>
+                  <span className="text-cyan-300 font-semibold">
                     {activeOriginPopover.row.origin.sourceGear}
                   </span>
                 </div>
               )}
               {activeOriginPopover.row.origin.sourceMod && (
                 <div>
-                  <span className="text-slate-500">Mod: </span>
-                  <span className="text-teal-300">
+                  <span className="text-slate-500 font-semibold">Mod: </span>
+                  <span className="text-indigo-300 font-semibold">
                     {activeOriginPopover.row.origin.sourceMod}
                   </span>
                 </div>
               )}
               {activeOriginPopover.row.origin.discipline && (
                 <div>
-                  <span className="text-slate-500">Discipline: </span>
-                  <span className="text-orange-300">
-                    {activeOriginPopover.row.origin.discipline}
-                  </span>
+                  <span className="text-slate-500 font-semibold">Discipline: </span>
+                  <span>{activeOriginPopover.row.origin.discipline}</span>
                 </div>
               )}
               {activeOriginPopover.row.origin.pathLabel && (
                 <div>
-                  <span className="text-slate-500">Path: </span>
-                  <span className="text-amber-300">
-                    {activeOriginPopover.row.origin.pathLabel}
-                  </span>
+                  <span className="text-slate-500 font-semibold">Path: </span>
+                  <span className="text-purple-300">{activeOriginPopover.row.origin.pathLabel}</span>
                 </div>
               )}
               {activeOriginPopover.row.origin.setsLabel && (
                 <div>
-                  <span className="text-slate-500">Sets: </span>
-                  <span className="text-indigo-300">
-                    {activeOriginPopover.row.origin.setsLabel}
-                  </span>
+                  <span className="text-slate-500 font-semibold">Sets: </span>
+                  <span className="text-emerald-300">{activeOriginPopover.row.origin.setsLabel}</span>
                 </div>
               )}
             </div>
 
             <button
               type="button"
-              onClick={() =>
-                handleOpenDomainManager(activeOriginPopover.row.origin.managerEventKey)
-              }
-              className="mt-1 w-full py-1.5 px-3 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 text-indigo-200 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+              onClick={() => handleOpenRowManager(activeOriginPopover.row)}
+              className="mt-1 w-full py-1.5 px-3 rounded-lg bg-amber-600/20 hover:bg-amber-600/35 border border-amber-500/50 text-amber-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
             >
-              <span>✏️</span>
-              <span>Open Manager Modal</span>
+              <span>✏️ Open {activeOriginPopover.row.origin.managerEventKey.replace('_', ' ').toUpperCase()} Manager</span>
             </button>
           </div>,
           document.body

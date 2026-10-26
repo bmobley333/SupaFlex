@@ -190,12 +190,24 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
       return;
     }
 
+    // Check if the card resides inside an independent scroll pane (e.g. Tactical Table Left/Right panes on XL)
+    const scrollPane = element.closest('[data-scroll-pane]') as HTMLElement | null;
+    if (scrollPane && scrollPane.scrollHeight > scrollPane.clientHeight + 4) {
+      const paneRect = scrollPane.getBoundingClientRect();
+      const elRect = element.getBoundingClientRect();
+      scrollPane.scrollTo({
+        top: Math.max(0, scrollPane.scrollTop + (elRect.top - paneRect.top) - 8),
+        behavior: 'smooth',
+      });
+      return;
+    }
+
     // Dynamically calculate the actual pixel height of the frozen top sticky header
     const header = document.querySelector('header');
     const headerHeight = header ? header.getBoundingClientRect().height : 105;
     const elementY = element.getBoundingClientRect().top + window.pageYOffset;
 
-    // 12px breathing room below Row 2 of header
+    // 12px breathing room below header
     window.scrollTo({
       top: Math.max(0, elementY - headerHeight - 12),
       behavior: 'smooth',

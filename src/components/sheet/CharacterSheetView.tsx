@@ -74,7 +74,12 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
   );
 
   return (
-    <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-[60vh] relative">
+    <div
+      key={heroKey}
+      className={`flex flex-col gap-4 w-full max-w-[2500px] mx-auto relative ${
+        sheetViewMode === 'table' ? 'pb-24 xl:pb-0' : 'pb-[60vh]'
+      }`}
+    >
       {sheetViewMode === 'cards' ? (
         <>
           {/* Top Section: Character Card (Left) & Paths Card (Right) */}
@@ -162,27 +167,56 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         </>
       ) : (
         <>
-          {/* ⚔️ TACTICAL TABLE WORKSPACE: 2-Zone Widescreen Combat Layout */}
-          <div id="section-tactical-workspace" className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start scroll-mt-32">
-            {/* Left/Center Zone (8 cols on XL): Tactical Master Table + Compact Skills Cloud */}
-            <div className="xl:col-span-8 flex flex-col gap-4 min-w-0">
-              <div id="card-tactical-table" className="scroll-mt-28">
+          {/* ⚔️ TACTICAL TABLE WORKSPACE: 2-Pane Split Layout with Independent Vertical Scrolling */}
+          <div id="section-tactical-workspace" className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
+            {/* Left Pane (8 cols on XL, Independent Vertical Scroll): Tactical Table + Skills + Level/AP, Paths, Money & Gear */}
+            <div
+              id="tactical-left-pane"
+              data-scroll-pane="left"
+              className="xl:col-span-8 flex flex-col gap-4 min-w-0 xl:max-h-[calc(100vh-165px)] xl:overflow-y-auto xl:pr-1.5 xl:pb-28"
+            >
+              <div id="card-tactical-table" className="scroll-mt-4">
                 <TacticalMasterTable />
               </div>
-              <div id="card-skills" className="w-full scroll-mt-28">
+
+              <div id="card-skills" className="w-full scroll-mt-4">
                 <SkillsetsPanel showPinToTableControls />
+              </div>
+
+              {/* Character Identity & Paths (Left Pane Only) */}
+              <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-4">
+                <div id="card-hero-hub" className="w-full scroll-mt-4 flex flex-col">
+                  <HeroHubCard onOpenApManager={onOpenApManager} className="w-full" />
+                </div>
+                <div id="card-paths" className="w-full scroll-mt-4 flex flex-col">
+                  <PathsCard className="w-full" />
+                </div>
+              </div>
+
+              {/* Commerce & Physical Gear (Left Pane Only) */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch scroll-mt-4">
+                <div id="card-money" className="lg:col-span-7 flex scroll-mt-4">
+                  <MoneyCard className="w-full h-full" />
+                </div>
+                <div id="card-gear" className="lg:col-span-5 flex scroll-mt-4">
+                  <GearCard className="w-full h-full" />
+                </div>
               </div>
             </div>
 
-            {/* Right Zone (4 cols on XL): Live Combat HUDs (Vitality + Monsters + Party Roster) */}
-            <div className="xl:col-span-4 flex flex-col gap-4 min-w-0">
-              <div id="card-vitals" className="scroll-mt-28">
+            {/* Right Pane (4 cols on XL, Independent Vertical Scroll): Live Combat HUDs (Vitality + Monsters + Party Roster) */}
+            <div
+              id="tactical-right-pane"
+              data-scroll-pane="right"
+              className="xl:col-span-4 flex flex-col gap-4 min-w-0 xl:max-h-[calc(100vh-165px)] xl:overflow-y-auto xl:pr-1.5 xl:pb-28"
+            >
+              <div id="card-vitals" className="scroll-mt-4">
                 <VitalsHeader onOpenVitalityManager={onOpenVitalityManager} />
               </div>
-              <div id="card-monsters" className="scroll-mt-28">
+              <div id="card-monsters" className="scroll-mt-4">
                 <GmMonsterTrackerHud />
               </div>
-              <div id="card-party" className="scroll-mt-28">
+              <div id="card-party" className="scroll-mt-4">
                 <PartyRosterHud
                   activeCharacter={activeCharacter}
                   playerEmail={playerEmail}
@@ -190,26 +224,6 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
                   onOpenPartySelector={onOpenPartySelector}
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Below-the-Fold Character Identity & Paths */}
-          <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
-            <div id="card-hero-hub" className="w-full scroll-mt-28 flex flex-col">
-              <HeroHubCard onOpenApManager={onOpenApManager} className="w-full" />
-            </div>
-            <div id="card-paths" className="w-full scroll-mt-28 flex flex-col">
-              <PathsCard className="w-full" />
-            </div>
-          </div>
-
-          {/* Below-the-Fold Commerce & Physical Gear */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch scroll-mt-32">
-            <div id="card-money" className="lg:col-span-7 flex scroll-mt-28">
-              <MoneyCard className="w-full h-full" />
-            </div>
-            <div id="card-gear" className="lg:col-span-5 flex scroll-mt-28">
-              <GearCard className="w-full h-full" />
             </div>
           </div>
 
