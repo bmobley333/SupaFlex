@@ -31,7 +31,7 @@ import {
 } from '../../utils/pathApUtils';
 import { PathBadge } from '../common/PathBadge';
 
-export const ShieldCard: React.FC = () => {
+export const ShieldCard: React.FC<{ headlessModalOnly?: boolean }> = ({ headlessModalOnly = false }) => {
 
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const {
@@ -526,8 +526,10 @@ export const ShieldCard: React.FC = () => {
     isGsUnlocked,
   ]);
 
+  if (headlessModalOnly && !showManageModal) return null;
+
   return (
-    <div className="bg-gradient-to-b from-cyan-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-cyan-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-cyan-950/20">
+    <div className={headlessModalOnly ? "h-0 overflow-hidden" : "bg-gradient-to-b from-cyan-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-cyan-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-cyan-950/20"}>
       {/* Card Header */}
       <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2.5">
         <div className="flex items-center gap-2.5">

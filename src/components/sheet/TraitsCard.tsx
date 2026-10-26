@@ -16,11 +16,12 @@ const ManageTraitsModal = React.lazy(() =>
 export interface TraitsCardProps {
   onTogglePosition?: () => void;
   isAtBottom?: boolean;
+  headlessModalOnly?: boolean;
 }
 
 export type TraitsQuirksCardProps = TraitsCardProps;
 
-export const TraitsCard: React.FC<TraitsCardProps> = ({ onTogglePosition, isAtBottom }) => {
+export const TraitsCard: React.FC<TraitsCardProps> = ({ onTogglePosition, isAtBottom, headlessModalOnly = false }) => {
   const { activeCharacter } = useCharacterStore();
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const [showManageModal, setShowManageModal] = useState<boolean>(false);
@@ -56,6 +57,17 @@ export const TraitsCard: React.FC<TraitsCardProps> = ({ onTogglePosition, isAtBo
     const list = visibilityFilter === 'visible' ? visibleTraits : validTraits;
     return [...list].sort((a, b) => compareMsoItems(a, b, isGsUnlocked));
   }, [visibilityFilter, visibleTraits, validTraits, isGsUnlocked]);
+
+  if (headlessModalOnly) {
+    return showManageModal ? (
+      <Suspense fallback={null}>
+        <ManageTraitsModal
+          isOpen={showManageModal}
+          onClose={() => setShowManageModal(false)}
+        />
+      </Suspense>
+    ) : null;
+  }
 
   return (
     <div className="bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-purple-500/90 p-4 flex flex-col gap-3 shadow-xl backdrop-blur-md relative h-fit">

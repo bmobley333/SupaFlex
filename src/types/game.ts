@@ -836,6 +836,9 @@ export interface CharacterSheetData {
   starred_skillsets?: (number | string)[]; // Starred Skillsets Wishlist IDs/Names
   starred_skills?: (number | string)[]; // Starred Individual Skills Wishlist IDs/Names
   chaos_gauntlet_slots?: ChaosGemSlot[]; // 6 Chaos Gem Slots (1 Wrist Mega Slot + 5 Fingers)
+  master_table_order?: string[]; // Ordered row keys in Primary Tactical Table (including custom 'div:<id>:<label>' dividers & pinned 'skl:<name>' skills)
+  master_table_benched?: string[]; // Row keys demoted to the Secondary / Extras Table
+  rnd_actions_spent?: { am?: boolean; a?: boolean; m?: boolean; p?: boolean }; // Active Round Action (🔷) tracker state
   pity_level?: number; // 0-2 Draft Pity Escalator level
   pity_counters?: Record<string, number>; // Accumulated pity points
   rules_version?: number; // Schema rules version tracker

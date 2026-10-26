@@ -18,6 +18,10 @@ import { ExoticsCard } from './ExoticsCard';
 import { SectionJumpHUD } from './SectionJumpHUD';
 import { GmMonsterTrackerHud } from '../hud/GmMonsterTrackerHud';
 import { PartyRosterHud } from '../hud/PartyRosterHud';
+import { PinnedDefenseRibbon } from './PinnedDefenseRibbon';
+import { TacticalMasterTable } from './TacticalMasterTable';
+
+export type SheetViewMode = 'cards' | 'table';
 
 interface CharacterSheetViewProps {
   onOpenVitalityManager?: () => void;
@@ -34,6 +38,21 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
 }) => {
   const { activeCharacter, playerEmail } = useCharacterStore();
   const heroKey = activeCharacter?.id ? `hero_${activeCharacter.id}` : 'no_hero';
+
+  const [sheetViewMode, setSheetViewMode] = React.useState<SheetViewMode>(() => {
+    try {
+      return localStorage.getItem('supaflex_sheet_view_mode') === 'table' ? 'table' : 'cards';
+    } catch {
+      return 'cards';
+    }
+  });
+
+  const handleSetSheetViewMode = React.useCallback((mode: SheetViewMode) => {
+    setSheetViewMode(mode);
+    try {
+      localStorage.setItem('supaflex_sheet_view_mode', mode);
+    } catch {}
+  }, []);
 
   const [traitsSkillsAtBottom, setTraitsSkillsAtBottom] = React.useState<boolean>(() => {
     try {
@@ -72,88 +91,196 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
 
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-[60vh] relative">
-      {/* Top Section: Character Card (Left) & Paths Card (Right) */}
-      <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
-        <div id="card-hero-hub" className="w-full scroll-mt-28 flex flex-col">
-          <HeroHubCard onOpenApManager={onOpenApManager} className="w-full" />
+      {/* Top View Mode Selector Bar: Dyslexia-Friendly KISS Multi-Option Pill Switch */}
+      <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-900/70 border border-slate-800/80 rounded-2xl px-3.5 py-2 shadow-md">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-outfit font-bold uppercase tracking-wider text-slate-400 select-none">
+            Workspace View:
+          </span>
+          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => handleSetSheetViewMode('cards')}
+              className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                sheetViewMode === 'cards'
+                  ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              🗂️ Card View
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetSheetViewMode('table')}
+              className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                sheetViewMode === 'table'
+                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              ⚔️ Tactical Table
+            </button>
+          </div>
         </div>
-        <div id="card-paths" className="w-full scroll-mt-28 flex flex-col">
-          <PathsCard className="w-full" />
-        </div>
+
+        <span className="text-[11px] font-mono text-slate-400 hidden sm:inline">
+          {sheetViewMode === 'table'
+            ? '⚔️ Scoped Combat Workspace: Pinned Defenses + Tactical Table + Live Vitals & Roster'
+            : '🗂️ Modular Domain Cards: Full visual layout across all 14 character cards'}
+        </span>
       </div>
 
-      {/* Symmetrical 2-Column Capabilities Grid: Skills (Left) and Traits (Right) when at top */}
-      {!traitsSkillsAtBottom && capabilitiesSection}
+      {sheetViewMode === 'cards' ? (
+        <>
+          {/* Top Section: Character Card (Left) & Paths Card (Right) */}
+          <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
+            <div id="card-hero-hub" className="w-full scroll-mt-28 flex flex-col">
+              <HeroHubCard onOpenApManager={onOpenApManager} className="w-full" />
+            </div>
+            <div id="card-paths" className="w-full scroll-mt-28 flex flex-col">
+              <PathsCard className="w-full" />
+            </div>
+          </div>
 
-      {/* Responsive Combat & Protection Matrix: 2-Column (1366px Laptops) vs 3-Column (1920px+ Widescreen) */}
-      <div id="section-combat-vitals" className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 scroll-mt-32">
-        {/* Column 1: Offense (Weapons & GM Monster Stats) */}
-        <div className="flex flex-col gap-4">
-          <div id="card-weapons" className="scroll-mt-28">
-            <WeaponsCard />
-          </div>
-          <div id="card-monsters" className="scroll-mt-28">
-            <GmMonsterTrackerHud />
-          </div>
-        </div>
+          {/* Symmetrical 2-Column Capabilities Grid: Skills (Left) and Traits (Right) when at top */}
+          {!traitsSkillsAtBottom && capabilitiesSection}
 
-        {/* Column 2: Protection & Mobility (Armor, Shield, Movement Rate, & Chaos Gauntlet) */}
-        <div className="flex flex-col gap-4">
-          <div id="card-armor" className="scroll-mt-28">
-            <ArmorCard />
-          </div>
-          <div id="card-shield" className="scroll-mt-28">
-            <ShieldCard />
-          </div>
-          <div id="card-movement" className="scroll-mt-28">
-            <MovementCard />
-          </div>
-          <div id="card-chaos-gauntlet" className="scroll-mt-28">
-            <ChaosGauntletCard />
-          </div>
-        </div>
+          {/* Responsive Combat & Protection Matrix: 2-Column (1366px Laptops) vs 3-Column (1920px+ Widescreen) */}
+          <div id="section-combat-vitals" className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 scroll-mt-32">
+            {/* Column 1: Offense (Weapons & GM Monster Stats) */}
+            <div className="flex flex-col gap-4">
+              <div id="card-weapons" className="scroll-mt-28">
+                <WeaponsCard />
+              </div>
+              <div id="card-monsters" className="scroll-mt-28">
+                <GmMonsterTrackerHud />
+              </div>
+            </div>
 
-        {/* Column 3: Survival (Vitality & Party Roster HUD) */}
-        <div className="lg:col-span-2 xl:col-span-1 flex flex-col gap-4">
-          <div id="card-vitals" className="scroll-mt-28">
-            <VitalsHeader onOpenVitalityManager={onOpenVitalityManager} />
-          </div>
-          <div id="card-party" className="scroll-mt-28">
-            <PartyRosterHud
-              activeCharacter={activeCharacter}
-              playerEmail={playerEmail}
-              tabSessionId={tabSessionId}
-              onOpenPartySelector={onOpenPartySelector}
-            />
-          </div>
-        </div>
-      </div>
+            {/* Column 2: Protection & Mobility (Armor, Shield, Movement Rate, & Chaos Gauntlet) */}
+            <div className="flex flex-col gap-4">
+              <div id="card-armor" className="scroll-mt-28">
+                <ArmorCard />
+              </div>
+              <div id="card-shield" className="scroll-mt-28">
+                <ShieldCard />
+              </div>
+              <div id="card-movement" className="scroll-mt-28">
+                <MovementCard />
+              </div>
+              <div id="card-chaos-gauntlet" className="scroll-mt-28">
+                <ChaosGauntletCard />
+              </div>
+            </div>
 
-      {/* 2-Column Responsive Section: 🧿 EXOTICS & COMMERCE (Left) & 🔥 MY POWERS (Right) */}
-      <div id="section-powers-magic" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
-        {/* Column 1 (Left): Physical Commerce, Inventory & Exotics Combat Impacts */}
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch">
-            <div id="card-money" className="sm:col-span-7 flex scroll-mt-28">
+            {/* Column 3: Survival (Vitality & Party Roster HUD) */}
+            <div className="lg:col-span-2 xl:col-span-1 flex flex-col gap-4">
+              <div id="card-vitals" className="scroll-mt-28">
+                <VitalsHeader onOpenVitalityManager={onOpenVitalityManager} />
+              </div>
+              <div id="card-party" className="scroll-mt-28">
+                <PartyRosterHud
+                  activeCharacter={activeCharacter}
+                  playerEmail={playerEmail}
+                  tabSessionId={tabSessionId}
+                  onOpenPartySelector={onOpenPartySelector}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 2-Column Responsive Section: 🧿 EXOTICS & COMMERCE (Left) & 🔥 MY POWERS (Right) */}
+          <div id="section-powers-magic" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
+            {/* Column 1 (Left): Physical Commerce, Inventory & Exotics Combat Impacts */}
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-stretch">
+                <div id="card-money" className="sm:col-span-7 flex scroll-mt-28">
+                  <MoneyCard className="w-full h-full" />
+                </div>
+                <div id="card-gear" className="sm:col-span-5 flex scroll-mt-28">
+                  <GearCard className="w-full h-full" />
+                </div>
+              </div>
+              <div id="card-exotic-gear" className="scroll-mt-28">
+                <ExoticsCard />
+              </div>
+            </div>
+
+            {/* Column 2 (Right): Powers */}
+            <div id="card-powers" className="scroll-mt-28">
+              <AbilitySlotsGrid title="POWERS" type="powers" />
+            </div>
+          </div>
+
+          {/* Symmetrical 2-Column Capabilities Grid: Skills (Left) and Traits (Right) when relocated to bottom */}
+          {traitsSkillsAtBottom && capabilitiesSection}
+        </>
+      ) : (
+        <>
+          {/* ⚔️ TACTICAL TABLE WORKSPACE: 2-Zone Widescreen Combat Layout */}
+          <div id="section-tactical-workspace" className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start scroll-mt-32">
+            {/* Left/Center Zone (8 cols on XL): Pinned Defenses + Tactical Master Table + Compact Skills Cloud */}
+            <div className="xl:col-span-8 flex flex-col gap-4 min-w-0">
+              <div id="card-defense-ribbon" className="scroll-mt-28">
+                <PinnedDefenseRibbon />
+              </div>
+              <div id="card-tactical-table" className="scroll-mt-28">
+                <TacticalMasterTable />
+              </div>
+              <div id="card-skills" className="w-full scroll-mt-28">
+                <SkillsetsPanel showPinToTableControls />
+              </div>
+            </div>
+
+            {/* Right Zone (4 cols on XL): Live Combat HUDs (Vitality + Monsters + Party Roster) */}
+            <div className="xl:col-span-4 flex flex-col gap-4 min-w-0">
+              <div id="card-vitals" className="scroll-mt-28">
+                <VitalsHeader onOpenVitalityManager={onOpenVitalityManager} />
+              </div>
+              <div id="card-monsters" className="scroll-mt-28">
+                <GmMonsterTrackerHud />
+              </div>
+              <div id="card-party" className="scroll-mt-28">
+                <PartyRosterHud
+                  activeCharacter={activeCharacter}
+                  playerEmail={playerEmail}
+                  tabSessionId={tabSessionId}
+                  onOpenPartySelector={onOpenPartySelector}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Below-the-Fold Character Identity & Paths */}
+          <div id="section-top-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start scroll-mt-32">
+            <div id="card-hero-hub" className="w-full scroll-mt-28 flex flex-col">
+              <HeroHubCard onOpenApManager={onOpenApManager} className="w-full" />
+            </div>
+            <div id="card-paths" className="w-full scroll-mt-28 flex flex-col">
+              <PathsCard className="w-full" />
+            </div>
+          </div>
+
+          {/* Below-the-Fold Commerce & Physical Gear */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch scroll-mt-32">
+            <div id="card-money" className="lg:col-span-7 flex scroll-mt-28">
               <MoneyCard className="w-full h-full" />
             </div>
-            <div id="card-gear" className="sm:col-span-5 flex scroll-mt-28">
+            <div id="card-gear" className="lg:col-span-5 flex scroll-mt-28">
               <GearCard className="w-full h-full" />
             </div>
           </div>
-          <div id="card-exotic-gear" className="scroll-mt-28">
-            <ExoticsCard />
-          </div>
-        </div>
 
-        {/* Column 2 (Right): Powers */}
-        <div id="card-powers" className="scroll-mt-28">
-          <AbilitySlotsGrid title="POWERS" type="powers" />
-        </div>
-      </div>
-
-      {/* Symmetrical 2-Column Capabilities Grid: Skills (Left) and Traits (Right) when relocated to bottom */}
-      {traitsSkillsAtBottom && capabilitiesSection}
+          {/* Headless Manager Modal Listeners for the 7 Consolidated Combat Cards */}
+          <WeaponsCard headlessModalOnly />
+          <ArmorCard headlessModalOnly />
+          <ShieldCard headlessModalOnly />
+          <ChaosGauntletCard headlessModalOnly />
+          <AbilitySlotsGrid title="POWERS" type="powers" headlessModalOnly />
+          <ExoticsCard headlessModalOnly />
+          <TraitsCard headlessModalOnly />
+        </>
+      )}
 
       {/* Quick Section Jump Navigation HUD Pill */}
       <SectionJumpHUD traitsSkillsAtBottom={traitsSkillsAtBottom} />

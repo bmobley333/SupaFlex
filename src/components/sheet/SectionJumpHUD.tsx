@@ -2,6 +2,7 @@
 // Precision 16-Card Navigation Dock with Clustered Capsules, Exact Tooltips & Direct Icon Centering
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useCharacterStore } from '../../store/useCharacterStore';
 
 interface CardNavItem {
   id: string;
@@ -170,8 +171,24 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
   // Precision Scroll to Target Card directly below the two frozen header rows
   const scrollToCard = useCallback((cardId: string, navItemId: string) => {
     setActiveCardId(navItemId);
-    const element = document.getElementById(cardId);
-    if (!element) return;
+    const element = document.getElementById(cardId) || (cardId === 'card-movement' ? document.getElementById('card-defense-ribbon') : null);
+    if (!element) {
+      // In Tactical Table mode, clicking a consolidated domain icon in the bottom dock opens its Manager Modal directly
+      const managerMap: Record<string, string> = {
+        'card-weapons': 'weapons',
+        'card-armor': 'armor',
+        'card-shield': 'shields',
+        'card-chaos-gauntlet': 'chaos_gauntlet',
+        'card-powers': 'powers',
+        'card-traits': 'traits',
+      };
+      if (cardId === 'card-exotic-gear') {
+        useCharacterStore.getState().setExoticGearManagerModalOpen(true);
+      } else if (managerMap[cardId]) {
+        window.dispatchEvent(new CustomEvent('supaflex:open-manager', { detail: managerMap[cardId] }));
+      }
+      return;
+    }
 
     // Dynamically calculate the actual pixel height of the frozen top sticky header
     const header = document.querySelector('header');

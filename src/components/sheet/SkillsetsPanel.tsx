@@ -21,6 +21,7 @@ import { PathBadge } from '../common/PathBadge';
 export interface SkillsetsPanelProps {
   onTogglePosition?: () => void;
   isAtBottom?: boolean;
+  showPinToTableControls?: boolean;
 }
 
 export type SkillCategoryFilter =
@@ -103,7 +104,11 @@ const normalizeSkillsetName = (name?: string): string => {
   return (name || '').replace(/🎓/g, '').trim();
 };
 
-export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition, isAtBottom }) => {
+export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({
+  onTogglePosition,
+  isAtBottom,
+  showPinToTableControls = false,
+}) => {
 
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const {
@@ -1728,6 +1733,37 @@ export const SkillsetsPanel: React.FC<SkillsetsPanelProps> = ({ onTogglePosition
                     <span>{skill.emoji}</span>
                     <span className="font-mono font-black">{skill.dieRating}</span>
                   </span>
+                  {showPinToTableControls && (() => {
+                    const pinKey = `skl:${skill.name.toLowerCase().trim()}`;
+                    const isPinned = (activeCharacter?.sheet_data?.master_table_order || []).includes(pinKey);
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateActiveSheetData((prev) => {
+                            const order = Array.isArray(prev.master_table_order) ? [...prev.master_table_order] : [];
+                            const nextOrder = order.includes(pinKey)
+                              ? order.filter((k) => k !== pinKey)
+                              : [...order, pinKey];
+                            return { ...prev, master_table_order: nextOrder };
+                          });
+                          saveActiveCharacter();
+                        }}
+                        className={`ml-0.5 px-1 py-0.5 rounded text-[10px] transition-all cursor-pointer ${
+                          isPinned
+                            ? 'bg-indigo-500/30 text-indigo-200 border border-indigo-400/50'
+                            : 'opacity-40 hover:opacity-100 text-slate-400 hover:text-indigo-300'
+                        }`}
+                        title={
+                          isPinned
+                            ? `Unpin ${skill.name} from Tactical Table`
+                            : `Pin ${skill.name} to Tactical Table`
+                        }
+                      >
+                        ??
+                      </button>
+                    );
+                  })()}
                 </div>
               );
             })}

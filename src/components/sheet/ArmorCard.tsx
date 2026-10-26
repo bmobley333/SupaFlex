@@ -38,7 +38,7 @@ const getDieNum = (dieRating?: string): number => {
   return isNaN(num) ? 4 : num;
 };
 
-export const ArmorCard: React.FC = () => {
+export const ArmorCard: React.FC<{ headlessModalOnly?: boolean }> = ({ headlessModalOnly = false }) => {
 
   const isGsUnlocked = useCharacterStore((state) => state.isGuildSpaceUnlocked);
   const {
@@ -537,8 +537,10 @@ export const ArmorCard: React.FC = () => {
     isGsUnlocked,
   ]);
 
+  if (headlessModalOnly && !showManageModal) return null;
+
   return (
-    <div className="bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-amber-950/20">
+    <div className={headlessModalOnly ? "h-0 overflow-hidden" : "bg-gradient-to-b from-amber-950/30 via-slate-900/90 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 p-4 flex flex-col gap-3 shadow-lg shadow-amber-950/20"}>
       {/* Card Header */}
       <div className="flex items-center justify-between border-b border-amber-500/20 pb-2.5">
         <div className="flex items-center gap-2.5">

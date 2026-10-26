@@ -50,6 +50,7 @@ const POWER_DISCIPLINES = [
 interface AbilitySlotsGridProps {
   title: string;
   type: 'powers' | 'spells';
+  headlessModalOnly?: boolean;
 }
 
 const ACTION_COLORS: Record<string, string> = {
@@ -129,7 +130,7 @@ export const calculateTotalPowerUnits = (abilitySlots: AbilitySlot[]): number =>
   }, 0);
 };
 
-export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type }) => {
+export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type, headlessModalOnly = false }) => {
 
   const {
     activeCharacter,
@@ -1336,10 +1337,12 @@ export const AbilitySlotsGrid: React.FC<AbilitySlotsGridProps> = ({ title, type 
 
 
 
+  if (headlessModalOnly && !showManageModal) return null;
+
   return (
     <div
       ref={cardContainerRef}
-      className={`rounded-2xl border border-slate-800 border-t-2 p-4 flex flex-col gap-4 shadow-lg ${
+      className={headlessModalOnly ? 'h-0 overflow-hidden' : `rounded-2xl border border-slate-800 border-t-2 p-4 flex flex-col gap-4 shadow-lg ${
       type === 'powers'
         ? 'bg-gradient-to-b from-orange-950/30 via-slate-900/90 to-slate-950/95 border-t-orange-500/90 shadow-orange-950/20'
         : 'bg-gradient-to-b from-pink-950/30 via-slate-900/90 to-slate-950/95 border-t-pink-500/90 shadow-pink-950/20'

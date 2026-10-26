@@ -30,6 +30,7 @@ export type ExpandCollapseMode = 'expand' | 'collapse';
 
 export interface ExoticsCardProps {
   className?: string;
+  headlessModalOnly?: boolean;
 }
 
 export type GearPowersCardProps = ExoticsCardProps;
@@ -42,7 +43,7 @@ const parseUsageCount = (usage?: string): number => {
 
 const cleanName = (name: string) => (name || '').replace(/^[⭕\s]+/, '').trim();
 
-export const ExoticsCard: React.FC<ExoticsCardProps> = ({ className = '' }) => {
+export const ExoticsCard: React.FC<ExoticsCardProps> = ({ className = '', headlessModalOnly = false }) => {
   const [chassisSearch, setChassisSearch] = useState('');
   const [exoticFilter, setExoticFilter] = useState<ExoticFilterMode>('ALL');
   const [expandMode, setExpandMode] = useState<ExpandCollapseMode>('expand');
@@ -291,6 +292,18 @@ export const ExoticsCard: React.FC<ExoticsCardProps> = ({ className = '' }) => {
       </div>
     );
   };
+
+  if (headlessModalOnly) {
+    return isExoticGearManagerModalOpen ? (
+      <Suspense fallback={null}>
+        <ManageExoticsModal
+          isOpen={isExoticGearManagerModalOpen}
+          onClose={() => setExoticGearManagerModalOpen(false)}
+          initialTargetItem={exoticGearManagerTargetItem}
+        />
+      </Suspense>
+    ) : null;
+  }
 
   return (
     <>
