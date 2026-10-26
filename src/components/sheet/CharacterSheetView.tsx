@@ -46,6 +46,23 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
     }
   });
 
+  const [rightPaneOrder, setRightPaneOrder] = React.useState<'party_first' | 'monsters_first'>(() => {
+    try {
+      return localStorage.getItem('supaflex_right_pane_order') === 'monsters_first'
+        ? 'monsters_first'
+        : 'party_first';
+    } catch {
+      return 'party_first';
+    }
+  });
+
+  const handleSetRightPaneOrder = React.useCallback((next: 'party_first' | 'monsters_first') => {
+    setRightPaneOrder(next);
+    try {
+      localStorage.setItem('supaflex_right_pane_order', next);
+    } catch {}
+  }, []);
+
   const handleToggleTraitsSkillsPosition = React.useCallback(() => {
     setTraitsSkillsAtBottom((prev) => {
       const next = !prev;
@@ -207,23 +224,71 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
               </div>
             </div>
 
-            {/* Right Pane (4 cols on XL, Independent Vertical Scroll): Monsters + Party Roster (Vitality lives in Frozen Sub-Header Row 3) */}
+            {/* Right Pane (4 cols on XL, Independent Vertical Scroll): Party Roster & Monster Tracker with Configurable Top/Bottom Order */}
             <div
               id="tactical-right-pane"
               data-scroll-pane="right"
-              className="xl:col-span-4 flex flex-col gap-4 min-w-0 xl:h-full xl:max-h-full xl:overflow-y-auto xl:pr-1.5 xl:pb-24"
+              className="xl:col-span-4 flex flex-col gap-3 min-w-0 xl:h-full xl:max-h-full xl:overflow-y-auto xl:pr-1.5 xl:pb-24"
             >
-              <div id="card-monsters" className="scroll-mt-4">
-                <GmMonsterTrackerHud />
+              {/* Dyslexia-Friendly 2-Option Pill Switch: Party Roster 1st (Default) vs Monster Tracker 1st */}
+              <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => handleSetRightPaneOrder('party_first')}
+                  className={`flex-1 py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    rightPaneOrder === 'party_first'
+                      ? 'bg-sky-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                  title="Place Party Roster on top and Monster Tracker below"
+                >
+                  <span>👥</span>
+                  <span>Party Roster 1st</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetRightPaneOrder('monsters_first')}
+                  className={`flex-1 py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    rightPaneOrder === 'monsters_first'
+                      ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 border border-transparent'
+                  }`}
+                  title="Place Monster Tracker on top and Party Roster below"
+                >
+                  <span>🐉</span>
+                  <span>Monster Tracker 1st</span>
+                </button>
               </div>
-              <div id="card-party" className="scroll-mt-4">
-                <PartyRosterHud
-                  activeCharacter={activeCharacter}
-                  playerEmail={playerEmail}
-                  tabSessionId={tabSessionId}
-                  onOpenPartySelector={onOpenPartySelector}
-                />
-              </div>
+
+              {rightPaneOrder === 'party_first' ? (
+                <>
+                  <div id="card-party" className="scroll-mt-4">
+                    <PartyRosterHud
+                      activeCharacter={activeCharacter}
+                      playerEmail={playerEmail}
+                      tabSessionId={tabSessionId}
+                      onOpenPartySelector={onOpenPartySelector}
+                    />
+                  </div>
+                  <div id="card-monsters" className="scroll-mt-4">
+                    <GmMonsterTrackerHud />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div id="card-monsters" className="scroll-mt-4">
+                    <GmMonsterTrackerHud />
+                  </div>
+                  <div id="card-party" className="scroll-mt-4">
+                    <PartyRosterHud
+                      activeCharacter={activeCharacter}
+                      playerEmail={playerEmail}
+                      tabSessionId={tabSessionId}
+                      onOpenPartySelector={onOpenPartySelector}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

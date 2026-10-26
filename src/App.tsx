@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useMemo, lazy, Suspense } from 'react';
 import { BookOpen, Loader2, ChevronDown, ChevronUp, Crown } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseKey } from './lib/supabase';
 import { gameApi } from './services/api';
-import { Character, TreasureItem, SimpleGearItem, CustomCreationItem, isStartingAttributesUnassigned } from './types/game';
+import { Character, TreasureItem, SimpleGearItem, CustomCreationItem, isStartingAttributesUnassigned, calculateAvailableAp } from './types/game';
 import { reconcileCharacterVaultWithGear } from './utils/gearExoticPowerSync';
 import { useCharacterStore } from './store/useCharacterStore';
 import { useAdventureStore } from './store/useAdventureStore';
@@ -704,29 +704,62 @@ export default function App() {
               />
             </div>
           ) : (
-            activeCharacter && (
-              <div className="flex-1 flex items-center justify-center min-w-0 px-2 py-0.5 animate-fadeIn gap-3">
-                <h2 className="font-outfit text-lg md:text-xl font-black tracking-widest bg-gradient-to-r from-slate-100 via-amber-200 to-amber-400 bg-clip-text text-transparent uppercase drop-shadow-[0_2px_12px_rgba(251,191,36,0.3)] truncate max-w-[320px]">
-                  {activeCharacter?.name || 'Hero'}
-                </h2>
-                {isMasterAccount && activeCharacter.owner_email && activeCharacter.owner_email.toLowerCase().trim() !== playerEmail.toLowerCase().trim() && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold shadow-sm shrink-0 animate-fadeIn">
-                    <span>👑 Inspecting:</span>
-                    <span className="text-slate-200 font-mono text-[11px] truncate max-w-[150px]">{activeCharacter.owner_email}</span>
-                    {myHeroes.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => selectCharacter(myHeroes[0].id)}
-                        className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-amber-600 hover:text-slate-950 text-slate-300 transition cursor-pointer font-extrabold"
-                        title="Return to your own hero"
-                      >
-                        ✕ Return
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
+            activeCharacter && (() => {
+              const charLevel = activeCharacter.sheet_data?.level ?? 1;
+              const charAp = calculateAvailableAp(charLevel, activeCharacter.sheet_data);
+              return (
+                <div className="flex-1 flex items-center justify-center min-w-0 px-2 py-0.5 animate-fadeIn gap-2.5">
+                  <h2 className="font-outfit text-lg md:text-xl font-black tracking-widest bg-gradient-to-r from-slate-100 via-amber-200 to-amber-400 bg-clip-text text-transparent uppercase drop-shadow-[0_2px_12px_rgba(251,191,36,0.3)] truncate max-w-[320px]">
+                    {activeCharacter?.name || 'Hero'}
+                  </h2>
+
+                  {/* Succinct Level & AP Micro-Pill (Click opens Level & AP Manager) */}
+                  <button
+                    type="button"
+                    onClick={() => setShowApManagerModal(true)}
+                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-950/90 hover:bg-slate-900 border border-amber-500/35 hover:border-amber-400/60 text-[11px] font-mono font-bold shadow-sm transition-all cursor-pointer shrink-0 group"
+                    title={`Level ${charLevel} • ${charAp} Available AP — Click to open Level & AP Manager`}
+                  >
+                    <span className="flex items-center gap-0.5 text-amber-200 group-hover:text-white">
+                      <span className="text-[10px] leading-none">⭐</span>
+                      <span className="text-[10px] font-outfit uppercase tracking-wider text-slate-400">Lv</span>
+                      <span className="font-extrabold text-amber-300">{charLevel}</span>
+                    </span>
+                    <span className="text-slate-700">|</span>
+                    <span
+                      className={`flex items-center gap-0.5 ${
+                        charAp > 0
+                          ? 'text-emerald-300 font-extrabold'
+                          : charAp < 0
+                          ? 'text-rose-400 font-extrabold'
+                          : 'text-slate-300'
+                      }`}
+                    >
+                      <span className="text-[10px] leading-none">⚡</span>
+                      <span className="text-[10px] font-outfit uppercase tracking-wider text-slate-400">AP</span>
+                      <span>{charAp}</span>
+                    </span>
+                  </button>
+
+                  {isMasterAccount && activeCharacter.owner_email && activeCharacter.owner_email.toLowerCase().trim() !== playerEmail.toLowerCase().trim() && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold shadow-sm shrink-0 animate-fadeIn">
+                      <span>👑 Inspecting:</span>
+                      <span className="text-slate-200 font-mono text-[11px] truncate max-w-[150px]">{activeCharacter.owner_email}</span>
+                      {myHeroes.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => selectCharacter(myHeroes[0].id)}
+                          className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-800 hover:bg-amber-600 hover:text-slate-950 text-slate-300 transition cursor-pointer font-extrabold"
+                          title="Return to your own hero"
+                        >
+                          ✕ Return
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()
           )}
 
           {/* Right Zone: GM Tools, Resources Popover & Database Indicator */}

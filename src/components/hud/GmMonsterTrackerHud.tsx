@@ -204,7 +204,7 @@ export const GmMonsterTrackerHud: React.FC = () => {
           No active monsters in encounter.
         </div>
       ) : (
-        <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-[1200px] overflow-y-auto pr-1">
           {sortMonstersAlphabetically(monsters).map((m) => {
             const data = mapToMonsterData(m);
             return activeRole === 'gm' ? (

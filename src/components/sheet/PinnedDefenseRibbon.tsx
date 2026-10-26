@@ -298,6 +298,46 @@ export const PinnedDefenseRibbon: React.FC<PinnedDefenseRibbonProps> = ({
     return slots.filter((s) => s && s.gem && s.gem.name && s.gem.name.trim() !== '').length;
   }, [sheetData?.chaos_gauntlet_slots]);
 
+  // Move Action (M) Expenditure & Alert State for 👣 MR Click
+  const [mrActionFeedback, setMrActionFeedback] = useState<{
+    type: 'spent' | 'warning';
+    text: string;
+  } | null>(null);
+
+  const isMoveSpentThisRound = Boolean(
+    sheetData?.rnd_actions_spent?.m || sheetData?.rnd_actions_spent?.am
+  );
+
+  const handleExpendMoveActionFromMr = () => {
+    const current = sheetData?.rnd_actions_spent || { am: false, a: false, m: false, p: false };
+    if (current.m || current.am) {
+      setMrActionFeedback({
+        type: 'warning',
+        text: '⚠️ Move Action (M) is already spent this Round! Use "Reset Rnd" or uncheck M in the Tactical Table to move again.',
+      });
+      setTimeout(() => setMrActionFeedback(null), 4000);
+      return;
+    }
+
+    updateActiveSheetData((prev) => {
+      const cur = prev.rnd_actions_spent || { am: false, a: false, m: false, p: false };
+      return {
+        ...prev,
+        rnd_actions_spent: {
+          ...cur,
+          m: true,
+          am: Boolean(cur.a),
+        },
+      };
+    });
+    saveActiveCharacter();
+    setMrActionFeedback({
+      type: 'spent',
+      text: '👣 Move Action (M) expended for this Round.',
+    });
+    setTimeout(() => setMrActionFeedback(null), 2800);
+  };
+
   const openManager = (key: 'armor' | 'shields' | 'chaos_gauntlet') => {
     window.dispatchEvent(new CustomEvent('supaflex:open-manager', { detail: key }));
   };
@@ -451,26 +491,53 @@ export const PinnedDefenseRibbon: React.FC<PinnedDefenseRibbonProps> = ({
         </button>
       </div>
 
-      {/* 3. MOVEMENT RATE (👣 MR) SEGMENT */}
-      <div className="flex items-center gap-2 bg-slate-950/90 border border-teal-500/30 rounded-xl px-2.5 py-1 shadow-inner">
-        <span className="text-sm" title="Movement Rate (MR)">
-          👣
-        </span>
-        <div className="flex items-center gap-1 text-xs" title="Armored Movement Rate">
-          <span className="text-slate-400 font-semibold text-[11px]">MR</span>
-          <span className="px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded font-mono font-extrabold text-teal-300">
-            {Math.max(1, (mrData.armored ?? 6) + statHooks.mrBonus)}
-          </span>
-        </div>
-
-        {isShieldEquipped && (
-          <div className="flex items-center gap-1 text-xs" title="Shield Drawn Movement Rate">
-            <span className="text-slate-400 font-semibold text-[11px]">Shld👣</span>
-            <span className="px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded font-mono font-extrabold text-teal-300">
-              {derivedShieldDrawn}
+      {/* 3. MOVEMENT RATE (👣 MR) SEGMENT — Clicking "👣 MR" expends the Round M Action or warns if already spent */}
+      <div className="relative flex items-center gap-2 bg-slate-950/90 border border-teal-500/30 rounded-xl px-2.5 py-1 shadow-inner">
+        <button
+          type="button"
+          onClick={handleExpendMoveActionFromMr}
+          className={`flex items-center gap-1.5 rounded-lg px-1 py-0.5 -ml-1 transition-all cursor-pointer group ${
+            isMoveSpentThisRound
+              ? 'bg-indigo-950/50 border border-indigo-500/40 opacity-75 hover:opacity-100'
+              : 'hover:bg-teal-950/50 border border-transparent hover:border-teal-500/40'
+          }`}
+          title={
+            isMoveSpentThisRound
+              ? 'Move Action (M) already spent this Round — Click for status'
+              : 'Click "👣 MR" to expend your Move Action (M) for this Round'
+          }
+        >
+          <span className="text-sm group-hover:scale-110 transition-transform">👣</span>
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-slate-300 group-hover:text-teal-200 font-semibold text-[11px]">
+              MR
+            </span>
+            <span
+              className={`px-1.5 py-0.5 bg-slate-900 border rounded font-mono font-extrabold ${
+                isMoveSpentThisRound
+                  ? 'text-slate-400 border-indigo-500/40 line-through'
+                  : 'text-teal-300 border-slate-800'
+              }`}
+            >
+              {Math.max(1, (mrData.armored ?? 6) + statHooks.mrBonus)}
             </span>
           </div>
-        )}
+
+          {isShieldEquipped && (
+            <div className="flex items-center gap-1 text-xs" title="Shield Drawn Movement Rate">
+              <span className="text-slate-400 font-semibold text-[11px]">Shld👣</span>
+              <span
+                className={`px-1.5 py-0.5 bg-slate-900 border rounded font-mono font-extrabold ${
+                  isMoveSpentThisRound
+                    ? 'text-slate-400 border-indigo-500/40 line-through'
+                    : 'text-teal-300 border-slate-800'
+                }`}
+              >
+                {derivedShieldDrawn}
+              </span>
+            </div>
+          )}
+        </button>
 
         <div className="flex items-center gap-1 text-xs" title="Manual MR Adjustment">
           <span className="text-slate-500 font-semibold text-[10px]">Adj</span>
@@ -486,6 +553,26 @@ export const PinnedDefenseRibbon: React.FC<PinnedDefenseRibbonProps> = ({
           />
         </div>
         <CardHelpButton ruleKey="movement_rate.basics" />
+
+        {/* Floating Feedback / Warning Alert Banner when Clicking 👣 MR */}
+        {mrActionFeedback && (
+          <div
+            className={`absolute top-full left-1/2 -translate-x-1/2 mt-1.5 z-50 px-3 py-1.5 rounded-xl border text-xs font-bold whitespace-nowrap shadow-2xl flex items-center gap-2 animate-fadeIn ${
+              mrActionFeedback.type === 'warning'
+                ? 'bg-rose-950/95 border-rose-500/70 text-rose-200 ring-1 ring-rose-500/40'
+                : 'bg-teal-950/95 border-teal-500/60 text-teal-200'
+            }`}
+          >
+            <span>{mrActionFeedback.text}</span>
+            <button
+              type="button"
+              onClick={() => setMrActionFeedback(null)}
+              className="text-slate-400 hover:text-white cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 4. CHAOS GAUNTLET QUICK LAUNCHER */}

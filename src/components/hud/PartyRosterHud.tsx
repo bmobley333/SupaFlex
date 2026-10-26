@@ -558,7 +558,7 @@ export const PartyRosterHud: React.FC<PartyRosterHudProps> = ({
           No party members in session.
         </div>
       ) : (
-        <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+        <div className="space-y-2.5 max-h-[1600px] overflow-y-auto pr-1">
           {orderedMembers.map((member, idx) => {
             const isSelf = Boolean(
               activeCharacter &&
