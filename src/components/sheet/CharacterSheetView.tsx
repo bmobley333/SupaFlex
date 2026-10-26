@@ -207,18 +207,12 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
               </div>
             </div>
 
-            {/* Right Pane (4 cols on XL, Independent Vertical Scroll): Sticky Vitality + Monsters + Party Roster */}
+            {/* Right Pane (4 cols on XL, Independent Vertical Scroll): Monsters + Party Roster (Vitality lives in Frozen Sub-Header Row 3) */}
             <div
               id="tactical-right-pane"
               data-scroll-pane="right"
               className="xl:col-span-4 flex flex-col gap-4 min-w-0 xl:h-full xl:max-h-full xl:overflow-y-auto xl:pr-1.5 xl:pb-24"
             >
-              <div
-                id="card-vitals"
-                className="sticky top-0 z-20 bg-slate-950/95 backdrop-blur-md pb-1 rounded-2xl scroll-mt-4"
-              >
-                <VitalsHeader onOpenVitalityManager={onOpenVitalityManager} />
-              </div>
               <div id="card-monsters" className="scroll-mt-4">
                 <GmMonsterTrackerHud />
               </div>

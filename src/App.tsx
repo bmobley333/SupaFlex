@@ -86,6 +86,8 @@ export default function App() {
     const handleOpen = (e: any) => {
       if (e?.detail === 'ap') {
         setShowApManagerModal(true);
+      } else if (e?.detail === 'vitality') {
+        setShowVitalityManagerModal(true);
       } else if (e?.detail === 'loot' || e?.detail === 'loot-generator') {
         setShowLootGeneratorModal(true);
       }
@@ -869,7 +871,9 @@ export default function App() {
               id="card-defense-ribbon"
               className="w-full pt-1.5 mt-1.5 border-t border-slate-800/80 animate-fadeIn"
             >
-              <PinnedDefenseRibbon />
+              <PinnedDefenseRibbon
+                onOpenVitalityManager={() => setShowVitalityManagerModal(true)}
+              />
             </div>
           )}
       </header>

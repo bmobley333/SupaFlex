@@ -179,6 +179,7 @@ export const SectionJumpHUD: React.FC<SectionJumpHUDProps> = ({ traitsSkillsAtBo
         'card-armor': 'armor',
         'card-shield': 'shields',
         'card-chaos-gauntlet': 'chaos_gauntlet',
+        'card-vitals': 'vitality',
         'card-powers': 'powers',
         'card-traits': 'traits',
       };
