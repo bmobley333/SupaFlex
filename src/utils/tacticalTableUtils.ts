@@ -261,10 +261,16 @@ const pruneHighestVersionSlots = (abilitySlots: AbilitySlot[]): AbilitySlot[] =>
  */
 export const isTacticalRowDimmed = (
   row: TacticalRowItem,
-  rndActions: RndActionsSpentState
+  rndActions: RndActionsSpentState,
+  hasFullBolt: boolean = false
 ): { dimmed: boolean; reason?: string } => {
   if (row.domain === 'divider') {
     return { dimmed: false };
+  }
+
+  // Rule 0: 1-⚡ (Bolt) abilities are greyed out (unusable) unless the character is at Full Bolt (5 Sparks)
+  if ((row.usage || '').includes('⚡') && !hasFullBolt) {
+    return { dimmed: true, reason: 'Requires Full Bolt (5 Sparks ⚡)' };
   }
 
   // Rule 1: Last usage box checked -> row is exhausted

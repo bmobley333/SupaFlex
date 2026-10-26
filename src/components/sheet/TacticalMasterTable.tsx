@@ -161,6 +161,69 @@ export const TacticalMasterTable: React.FC = () => {
     return sheetData?.rnd_actions_spent || { am: false, a: false, m: false, p: false };
   }, [sheetData?.rnd_actions_spent]);
 
+  const hasFullBolt = useMemo(() => {
+    const charges = sheetData?.charges ?? sheetData?.sparks ?? 0;
+    return charges >= 5;
+  }, [sheetData?.charges, sheetData?.sparks]);
+
+  // Activate a 1-⚡ (Bolt) ability via either its 🔷 Action badge or its 1-⚡ Usage badge:
+  // Expends the indicated Round Action AND exhausts the Bolt (0 Sparks)
+  const handleActivateBoltRow = (row: TacticalRowItem) => {
+    if (!hasFullBolt) {
+      showToast(`⚠️ '${row.name}' requires a Full Bolt (5 Sparks ⚡) to use!`);
+      return;
+    }
+
+    const act = (row.action || '').toUpperCase();
+    const rndKey =
+      act === 'AM'
+        ? 'am'
+        : act === 'A'
+        ? 'a'
+        : act === 'M'
+        ? 'm'
+        : act === 'P'
+        ? 'p'
+        : null;
+
+    if (rndKey) {
+      const amSpent = Boolean(rndActions.am) || (Boolean(rndActions.a) && Boolean(rndActions.m));
+      const aSpent = Boolean(rndActions.a) || Boolean(rndActions.am);
+      const mSpent = Boolean(rndActions.m) || Boolean(rndActions.am);
+      const pSpent = Boolean(rndActions.p);
+
+      if (
+        (rndKey === 'am' && (amSpent || aSpent || mSpent)) ||
+        (rndKey === 'a' && aSpent) ||
+        (rndKey === 'm' && mSpent) ||
+        (rndKey === 'p' && pSpent)
+      ) {
+        showToast(`⚠️ ${act} Action is already spent this Round!`);
+        return;
+      }
+    }
+
+    updateActiveSheetData((prev) => {
+      const currentRnd = prev.rnd_actions_spent || { am: false, a: false, m: false, p: false };
+      return {
+        ...prev,
+        charges: 0,
+        sparks: 0,
+        is_sparked: false,
+        is_charged: false,
+        rnd_actions_spent: rndKey
+          ? applyCoupledRndAction(currentRnd, rndKey, true)
+          : currentRnd,
+      };
+    });
+    saveActiveCharacter();
+    showToast(
+      `⚡ Activated '${row.name}': Exhausted Bolt (0 Sparks)${
+        rndKey ? ` & spent ${act} Action` : ''
+      }.`
+    );
+  };
+
   // Toggle a Round Action (🔷: AM, A, M, P) with AM <-> A+M coupling
   const handleToggleRndAction = (key: 'am' | 'a' | 'm' | 'p', explicitValue?: boolean) => {
     updateActiveSheetData((prev) => {
@@ -567,8 +630,9 @@ export const TacticalMasterTable: React.FC = () => {
   };
 
   const renderTableRow = (row: TacticalRowItem, idx: number, isSecondary: boolean) => {
-    const dimState = isTacticalRowDimmed(row, rndActions);
+    const dimState = isTacticalRowDimmed(row, rndActions, hasFullBolt);
     const dimmed = !isSecondary && !isArrangeMode && dimState.dimmed;
+    const isBoltRow = (row.usage || '').includes('⚡');
     const isMso = isGsUnlocked && isMsoEntry(row.name);
     const totalCols = 4 + (isArrangeMode ? 1 : 0);
 
@@ -694,6 +758,10 @@ export const TacticalMasterTable: React.FC = () => {
             <button
               type="button"
               onClick={() => {
+                if (isBoltRow) {
+                  handleActivateBoltRow(row);
+                  return;
+                }
                 const act = row.action.toLowerCase();
                 if (act === 'am' || act === 'a' || act === 'm' || act === 'p') {
                   handleToggleRndAction(act as 'am' | 'a' | 'm' | 'p');
@@ -703,7 +771,11 @@ export const TacticalMasterTable: React.FC = () => {
                 ACTION_BADGE_STYLES[row.action] || 'bg-slate-800 text-slate-300 border-slate-700'
               }`}
               title={
-                row.action === 'A'
+                isBoltRow
+                  ? hasFullBolt
+                    ? `Click to spend ${row.action} Action & exhaust Full Bolt (0 Sparks)`
+                    : `Requires Full Bolt (5 Sparks ⚡) to activate`
+                  : row.action === 'A'
                   ? 'Attack Action (A) — Click to mark spent this Round'
                   : row.action === 'M'
                   ? 'Move Action (M) — Click to mark spent this Round'
@@ -725,11 +797,31 @@ export const TacticalMasterTable: React.FC = () => {
         <td className="w-28 px-1.5 py-1.5 align-middle whitespace-nowrap">
           {row.usage || row.usageCount > 0 ? (
             <div className="flex items-center gap-1.5">
-              {row.usage && (
-                <span className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-300">
-                  {row.usage}
-                </span>
-              )}
+              {row.usage &&
+                (isBoltRow ? (
+                  <button
+                    type="button"
+                    onClick={() => handleActivateBoltRow(row)}
+                    className={`px-1.5 py-0.5 rounded border text-[10px] font-mono font-extrabold cursor-pointer transition-all active:scale-95 ${
+                      hasFullBolt && !dimmed
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30 shadow-[0_0_8px_rgba(245,158,11,0.25)]'
+                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                    }`}
+                    title={
+                      hasFullBolt
+                        ? `Full Bolt Ready! Click to exhaust Bolt (0 Sparks)${
+                            row.action && row.action !== 'F' ? ` & spend ${row.action} Action` : ''
+                          }`
+                        : 'Requires Full Bolt (5 Sparks ⚡) to use'
+                    }
+                  >
+                    {row.usage}
+                  </button>
+                ) : (
+                  <span className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-300">
+                    {row.usage}
+                  </span>
+                ))}
               {row.usageCount > 0 && (
                 <div className="flex items-center gap-1">
                   {Array.from({ length: row.usageCount }).map((_, bIdx) => {
