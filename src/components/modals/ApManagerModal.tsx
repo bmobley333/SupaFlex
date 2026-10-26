@@ -111,9 +111,11 @@ export const ApManagerModal: React.FC<ApManagerModalProps> = ({
       return;
     }
     if (catId === 'loadoutSlots') {
+      window.dispatchEvent(new CustomEvent('supaflex:from-ap-manager'));
       window.dispatchEvent(new CustomEvent('supaflex:open-manager', { detail: 'spells' }));
       return;
     }
+    window.dispatchEvent(new CustomEvent('supaflex:from-ap-manager'));
     window.dispatchEvent(new CustomEvent('supaflex:open-manager', { detail: catId }));
   };
 

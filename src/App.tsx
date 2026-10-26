@@ -88,9 +88,10 @@ export default function App() {
         setShowApManagerModal(true);
       } else if (e?.detail === 'loot' || e?.detail === 'loot-generator') {
         setShowLootGeneratorModal(true);
-      } else {
-        setOpenedFromApManager(true);
       }
+    };
+    const handleFromApManager = () => {
+      setOpenedFromApManager(true);
     };
     const handleOpenLoot = () => {
       setShowLootGeneratorModal(true);
@@ -105,10 +106,12 @@ export default function App() {
     };
 
     window.addEventListener('supaflex:open-manager' as any, handleOpen);
+    window.addEventListener('supaflex:from-ap-manager' as any, handleFromApManager);
     window.addEventListener('supaflex:close-manager' as any, handleClose);
     window.addEventListener('supaflex:open-loot-generator' as any, handleOpenLoot);
     return () => {
       window.removeEventListener('supaflex:open-manager' as any, handleOpen);
+      window.removeEventListener('supaflex:from-ap-manager' as any, handleFromApManager);
       window.removeEventListener('supaflex:close-manager' as any, handleClose);
       window.removeEventListener('supaflex:open-loot-generator' as any, handleOpenLoot);
     };

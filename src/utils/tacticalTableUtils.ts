@@ -754,7 +754,44 @@ export const projectTacticalTableRows = (
     }
   });
 
-  // Build Primary Rows (respecting savedOrder + custom dividers, then appending any newly acquired un-ordered items)
+  // Build Primary Rows (respecting savedOrder + custom dividers, grouping newly added items into their type section, and auto-creating default TYPE dividers whenever a type is present or added for the 1st time)
+  const DEFAULT_DOMAIN_DIVIDERS: Record<
+    Exclude<TacticalRowDomain, 'divider'>,
+    { id: string; label: string; key: string }
+  > = {
+    weapons: { id: 'default_weapons', label: 'WEAPONS', key: 'div:default_weapons:WEAPONS' },
+    powers: { id: 'default_powers', label: 'POWERS', key: 'div:default_powers:POWERS' },
+    exotics: { id: 'default_exotics', label: 'EXOTICS', key: 'div:default_exotics:EXOTICS' },
+    chaos_gems: { id: 'default_chaos_gems', label: 'CHAOS GEMS', key: 'div:default_chaos_gems:CHAOS GEMS' },
+    traits: { id: 'default_traits', label: 'TRAITS', key: 'div:default_traits:TRAITS' },
+    skills: { id: 'default_skills', label: 'SKILLS', key: 'div:default_skills:SKILLS' },
+  };
+
+  // Count how many active (non-benched) rows exist per domain in the Primary Table
+  const activeCountByDomain = new Map<Exclude<TacticalRowDomain, 'divider'>, number>([
+    ['weapons', 0],
+    ['powers', 0],
+    ['exotics', 0],
+    ['chaos_gems', 0],
+    ['traits', 0],
+    ['skills', 0],
+  ]);
+  candidateMap.forEach((item, key) => {
+    if (!benchedSet.has(key) && item.domain !== 'divider') {
+      activeCountByDomain.set(item.domain, (activeCountByDomain.get(item.domain) || 0) + 1);
+    }
+  });
+
+  // Map default divider IDs back to their domain so we can suppress orphan default dividers when a domain drops to 0 active rows
+  const defaultDivIdToDomain = new Map<string, Exclude<TacticalRowDomain, 'divider'>>([
+    ['default_weapons', 'weapons'],
+    ['default_powers', 'powers'],
+    ['default_exotics', 'exotics'],
+    ['default_chaos_gems', 'chaos_gems'],
+    ['default_traits', 'traits'],
+    ['default_skills', 'skills'],
+  ]);
+
   const primaryRows: TacticalRowItem[] = [];
   const placedKeys = new Set<string>();
 
@@ -768,6 +805,13 @@ export const projectTacticalTableRows = (
       const divId =
         secondColon !== -1 ? key.slice(firstColon + 1, secondColon) : key.slice(firstColon + 1);
       const divLabel = secondColon !== -1 ? key.slice(secondColon + 1) : '';
+
+      // If this is a default domain divider and its domain currently has 0 active rows in the Tactical Table, skip it so it can cleanly re-trigger if added again later
+      const mappedDomain = defaultDivIdToDomain.get(divId);
+      if (mappedDomain && (activeCountByDomain.get(mappedDomain) || 0) === 0) {
+        return;
+      }
+
       primaryRows.push({
         rowKey: key,
         domain: 'divider',
@@ -798,14 +842,76 @@ export const projectTacticalTableRows = (
     }
   });
 
-  // Append any default items not yet in savedOrder and not benched
+  // Insert any newly acquired / un-ordered active items into their domain's section (or append if 1st of its kind)
   defaultOrderKeys.forEach((key) => {
     if (!placedKeys.has(key) && !benchedSet.has(key)) {
       const found = candidateMap.get(key);
       if (found) {
-        primaryRows.push(found);
+        // Find the last existing row of the same domain (or its default domain divider) in primaryRows
+        let lastDomainIdx = -1;
+        const domainDefDivId =
+          found.domain !== 'divider' ? DEFAULT_DOMAIN_DIVIDERS[found.domain].id : '';
+        for (let i = 0; i < primaryRows.length; i++) {
+          if (
+            primaryRows[i].domain === found.domain ||
+            (primaryRows[i].domain === 'divider' && primaryRows[i].dividerId === domainDefDivId)
+          ) {
+            lastDomainIdx = i;
+          }
+        }
+        if (lastDomainIdx !== -1) {
+          primaryRows.splice(lastDomainIdx + 1, 0, found);
+        } else {
+          primaryRows.push(found);
+        }
         placedKeys.add(key);
       }
+    }
+  });
+
+  // Ensure every active domain (>= 1 row in Primary Table) has its default category divider at the beginning of its first element (unless explicitly deleted while active)
+  (
+    ['weapons', 'powers', 'exotics', 'chaos_gems', 'traits', 'skills'] as Exclude<
+      TacticalRowDomain,
+      'divider'
+    >[]
+  ).forEach((domain) => {
+    const count = activeCountByDomain.get(domain) || 0;
+    if (count === 0) return;
+
+    const defDiv = DEFAULT_DOMAIN_DIVIDERS[domain];
+    // If the user explicitly deleted this default divider while the domain remained non-empty, respect dismissal
+    if (benchedSet.has(`div:${defDiv.id}`)) return;
+
+    const alreadyHasDomainDivider = primaryRows.some(
+      (r) =>
+        r.domain === 'divider' &&
+        (r.dividerId === defDiv.id ||
+          (r.dividerLabel || '').trim().toUpperCase() === defDiv.label)
+    );
+    if (alreadyHasDomainDivider) return;
+
+    const firstDomainRowIdx = primaryRows.findIndex((r) => r.domain === domain);
+    if (firstDomainRowIdx !== -1) {
+      primaryRows.splice(firstDomainRowIdx, 0, {
+        rowKey: defDiv.key,
+        domain: 'divider',
+        icon: '➖',
+        name: defDiv.label,
+        action: '',
+        usage: '',
+        usageCount: 0,
+        checked: [],
+        atkDef: '',
+        dmg: '',
+        effect: '',
+        dividerId: defDiv.id,
+        dividerLabel: defDiv.label,
+        origin: {
+          categoryLabel: 'Section Divider',
+          managerEventKey: 'powers',
+        },
+      });
     }
   });
 

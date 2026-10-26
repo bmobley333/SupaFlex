@@ -398,12 +398,65 @@ export const TacticalMasterTable: React.FC = () => {
     saveActiveCharacter();
   };
 
+  // Whenever any domain drops to 0 active rows in the Tactical Table, purge its saved default divider & any prior dismissal so adding an item of that type again triggers fresh as the 1st of its kind
+  useEffect(() => {
+    if (!sheetData) return;
+    const activeDomains = new Set<string>();
+    primaryRows.forEach((r) => {
+      if (r.domain !== 'divider') {
+        activeDomains.add(r.domain);
+      }
+    });
+
+    const allDomains = ['weapons', 'powers', 'exotics', 'chaos_gems', 'traits', 'skills'] as const;
+    const emptyDomains = allDomains.filter((d) => !activeDomains.has(d));
+    if (emptyDomains.length === 0) return;
+
+    const currentOrder = Array.isArray(sheetData.master_table_order) ? sheetData.master_table_order : [];
+    const currentBenched = Array.isArray(sheetData.master_table_benched) ? sheetData.master_table_benched : [];
+
+    const hasStaleOrderDivider = currentOrder.some((k) =>
+      emptyDomains.some((d) => k.startsWith(`div:default_${d}:`))
+    );
+    const hasStaleDismissal = currentBenched.some((k) =>
+      emptyDomains.some((d) => k === `div:default_${d}`)
+    );
+
+    if (hasStaleOrderDivider || hasStaleDismissal) {
+      updateActiveSheetData((prev) => ({
+        ...prev,
+        master_table_order: (prev.master_table_order || []).filter(
+          (k) => !emptyDomains.some((d) => k.startsWith(`div:default_${d}:`))
+        ),
+        master_table_benched: (prev.master_table_benched || []).filter(
+          (k) => !emptyDomains.some((d) => k === `div:default_${d}`)
+        ),
+      }));
+      saveActiveCharacter();
+    }
+  }, [primaryRows, sheetData, updateActiveSheetData, saveActiveCharacter]);
+
   const handleDeleteDivider = (rowKey: string) => {
     const order = getHydratedPrimaryOrder().filter((k) => k !== rowKey);
-    updateActiveSheetData((prev) => ({
-      ...prev,
-      master_table_order: order,
-    }));
+    // If deleting a default domain divider (e.g., "div:default_powers:POWERS"), record "div:default_powers" in benched so it stays dismissed while that domain remains non-empty
+    const firstColon = rowKey.indexOf(':');
+    const secondColon = rowKey.indexOf(':', firstColon + 1);
+    const divId =
+      secondColon !== -1 ? rowKey.slice(firstColon + 1, secondColon) : rowKey.slice(firstColon + 1);
+    const dismissKey = divId.startsWith('default_') ? `div:${divId}` : null;
+
+    updateActiveSheetData((prev) => {
+      const currentBenched = Array.isArray(prev.master_table_benched) ? prev.master_table_benched : [];
+      const nextBenched =
+        dismissKey && !currentBenched.includes(dismissKey)
+          ? [...currentBenched, dismissKey]
+          : currentBenched;
+      return {
+        ...prev,
+        master_table_order: order,
+        master_table_benched: nextBenched,
+      };
+    });
     saveActiveCharacter();
   };
 
@@ -437,9 +490,24 @@ export const TacticalMasterTable: React.FC = () => {
   const handleTogglePinSkill = (skillRowKey: string) => {
     const order = getHydratedPrimaryOrder();
     const isCurrentlyPinned = pinnedSkillKeys.has(skillRowKey);
-    const nextOrder = isCurrentlyPinned
-      ? order.filter((k) => k !== skillRowKey)
-      : [...order, skillRowKey];
+    let nextOrder: string[];
+    if (isCurrentlyPinned) {
+      nextOrder = order.filter((k) => k !== skillRowKey);
+    } else {
+      // Group with existing pinned skills (or after the SKILLS default divider if present), otherwise append at the bottom so projectTacticalTableRows injects the SKILLS divider right above it
+      let lastSkillIdx = -1;
+      for (let i = 0; i < order.length; i++) {
+        if (order[i].startsWith('skl:') || order[i].startsWith('div:default_skills:')) {
+          lastSkillIdx = i;
+        }
+      }
+      if (lastSkillIdx !== -1) {
+        nextOrder = [...order];
+        nextOrder.splice(lastSkillIdx + 1, 0, skillRowKey);
+      } else {
+        nextOrder = [...order, skillRowKey];
+      }
+    }
 
     updateActiveSheetData((prev) => ({
       ...prev,
@@ -449,12 +517,15 @@ export const TacticalMasterTable: React.FC = () => {
   };
 
   const handleResetOrderToDefault = () => {
-    if (!window.confirm('Reset Tactical Table row order to default category order (and clear custom dividers)?')) {
+    if (!window.confirm('Reset Tactical Table row order to default category order (and restore default type dividers)?')) {
       return;
     }
     updateActiveSheetData((prev) => ({
       ...prev,
       master_table_order: [],
+      master_table_benched: (prev.master_table_benched || []).filter(
+        (k) => !k.startsWith('div:default_')
+      ),
     }));
     saveActiveCharacter();
   };
@@ -781,9 +852,9 @@ export const TacticalMasterTable: React.FC = () => {
   };
 
   return (
-    <div className="bg-gradient-to-b from-amber-950/20 via-slate-900/95 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 px-3 pb-3 pt-0 flex flex-col gap-2.5 shadow-xl relative">
-      {/* FROZEN (STICKY) HEADER BLOCK: Image 2 (Top Bar + Column Headers) + Image 3 (Arrange Bar when Open) */}
-      <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-md pt-2.5 -mx-3 px-3 rounded-t-2xl border-b border-slate-800 shadow-lg flex flex-col gap-2">
+    <div className="bg-gradient-to-b from-amber-950/20 via-slate-900/95 to-slate-950/95 rounded-2xl border-x border-b border-slate-800 border-t-0 px-3 pb-3 pt-0 flex flex-col gap-2.5 shadow-xl relative">
+      {/* FROZEN (STICKY) HEADER BLOCK: Image 2 (Top Bar + Column Headers) + Image 3 (Arrange Bar when Open) — Retains top amber border graphic at all scroll depths */}
+      <div className="sticky top-0 z-20 bg-gradient-to-b from-amber-950/35 via-slate-900/98 to-slate-900/98 backdrop-blur-md pt-2.5 -mx-3 px-3 rounded-t-2xl border-t-2 border-t-amber-500/90 border-b border-b-slate-800 shadow-lg flex flex-col gap-2">
         {/* Toast Notification Banner */}
         {toastMsg && (
           <div className="px-3 py-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-200 text-xs font-bold flex items-center justify-between animate-fadeIn">
