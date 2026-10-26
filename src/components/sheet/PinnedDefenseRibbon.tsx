@@ -159,9 +159,9 @@ export const PinnedDefenseRibbon: React.FC = () => {
   };
 
   return (
-    <div className="bg-gradient-to-r from-amber-950/25 via-slate-900/95 to-cyan-950/25 border border-slate-800 border-t-2 border-t-amber-500/80 rounded-2xl px-3.5 py-2.5 shadow-lg flex flex-wrap items-center justify-between gap-2.5">
+    <div className="w-full flex flex-wrap items-center justify-between gap-2">
       {/* 1. ARMOR & DODGE SEGMENT */}
-      <div className="flex items-center gap-2 bg-slate-950/80 border border-amber-500/30 rounded-xl px-2.5 py-1.5 shadow-inner">
+      <div className="flex items-center gap-2 bg-slate-950/90 border border-amber-500/30 rounded-xl px-2.5 py-1 shadow-inner">
         <button
           type="button"
           onClick={() => openManager('armor')}
@@ -184,7 +184,7 @@ export const PinnedDefenseRibbon: React.FC = () => {
             )}
           </div>
           <span
-            className={`text-xs font-bold truncate max-w-[140px] group-hover:text-amber-200 transition-colors ${
+            className={`text-xs font-bold truncate max-w-[150px] group-hover:text-amber-200 transition-colors ${
               isGsUnlocked && isMsoEntry(armor.name) ? 'text-purple-300' : 'text-slate-100'
             }`}
           >
@@ -228,7 +228,7 @@ export const PinnedDefenseRibbon: React.FC = () => {
         <button
           type="button"
           onClick={() => openManager('armor')}
-          className="p-1 rounded-lg bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/30 text-[10px] cursor-pointer transition-colors"
+          className="p-0.5 px-1 rounded-lg bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/30 text-[10px] cursor-pointer transition-colors"
           title="Open Armor Manager"
         >
           ✏️
@@ -236,7 +236,7 @@ export const PinnedDefenseRibbon: React.FC = () => {
       </div>
 
       {/* 2. SHIELD & BLOCK SEGMENT */}
-      <div className="flex items-center gap-2 bg-slate-950/80 border border-cyan-500/30 rounded-xl px-2.5 py-1.5 shadow-inner">
+      <div className="flex items-center gap-2 bg-slate-950/90 border border-cyan-500/30 rounded-xl px-2.5 py-1 shadow-inner">
         <button
           type="button"
           onClick={() => openManager('shields')}
@@ -261,7 +261,7 @@ export const PinnedDefenseRibbon: React.FC = () => {
                 )}
               </div>
               <span
-                className={`text-xs font-bold truncate max-w-[130px] group-hover:text-cyan-200 transition-colors ${
+                className={`text-xs font-bold truncate max-w-[140px] group-hover:text-cyan-200 transition-colors ${
                   isGsUnlocked && isMsoEntry(shield.name) ? 'text-purple-300' : 'text-slate-100'
                 }`}
               >
@@ -300,7 +300,7 @@ export const PinnedDefenseRibbon: React.FC = () => {
         <button
           type="button"
           onClick={() => openManager('shields')}
-          className="p-1 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/30 text-[10px] cursor-pointer transition-colors"
+          className="p-0.5 px-1 rounded-lg bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/30 text-[10px] cursor-pointer transition-colors"
           title="Open Shields Manager"
         >
           ✏️
@@ -308,7 +308,7 @@ export const PinnedDefenseRibbon: React.FC = () => {
       </div>
 
       {/* 3. MOVEMENT RATE (👣 MR) SEGMENT */}
-      <div className="flex items-center gap-2 bg-slate-950/80 border border-teal-500/30 rounded-xl px-2.5 py-1.5 shadow-inner">
+      <div className="flex items-center gap-2 bg-slate-950/90 border border-teal-500/30 rounded-xl px-2.5 py-1 shadow-inner">
         <span className="text-sm" title="Movement Rate (MR)">
           👣
         </span>
@@ -348,7 +348,7 @@ export const PinnedDefenseRibbon: React.FC = () => {
       <button
         type="button"
         onClick={() => openManager('chaos_gauntlet')}
-        className="flex items-center gap-1.5 bg-purple-950/50 hover:bg-purple-900/60 border border-purple-500/40 rounded-xl px-2.5 py-1.5 text-xs font-bold text-purple-200 hover:text-white transition-all cursor-pointer shadow-sm"
+        className="flex items-center gap-1.5 bg-purple-950/50 hover:bg-purple-900/60 border border-purple-500/40 rounded-xl px-2.5 py-1 text-xs font-bold text-purple-200 hover:text-white transition-all cursor-pointer shadow-sm"
         title="Open Chaos Gauntlet & Gems Manager"
       >
         <span>💎</span>

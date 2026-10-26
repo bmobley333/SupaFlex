@@ -7,6 +7,7 @@ import { reconcileCharacterVaultWithGear } from './utils/gearExoticPowerSync';
 import { useCharacterStore } from './store/useCharacterStore';
 import { useAdventureStore } from './store/useAdventureStore';
 import { CharacterSheetView } from './components/sheet/CharacterSheetView';
+import { PinnedDefenseRibbon } from './components/sheet/PinnedDefenseRibbon';
 import { PersistentHeaderHUD } from './components/header/PersistentHeaderHUD';
 import { AccountPillButton } from './components/header/AccountPillButton';
 import { GmHeaderHUD } from './components/header/GmHeaderHUD';
@@ -155,6 +156,8 @@ export default function App() {
     isLoading,
     playerEmail,
     activeRole,
+    sheetViewMode,
+    setSheetViewMode,
     fetchInitialData,
     selectCharacter,
     createNewCharacter,
@@ -663,6 +666,28 @@ export default function App() {
 
             {/* 🏷️ Tri-Part Version & Cache Freshness Badge */}
             <VersionBadge />
+
+            {/* Workspace View Selector Dropdown (Player Mode Only) */}
+            {activeRole !== 'gm' && (
+              <div className="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 hover:border-slate-700 rounded-xl px-2.5 py-1 shadow-inner shrink-0">
+                <span className="text-[11px] font-outfit font-bold text-slate-400 select-none">
+                  View:
+                </span>
+                <select
+                  value={sheetViewMode}
+                  onChange={(e) => setSheetViewMode(e.target.value as 'cards' | 'table')}
+                  className="bg-transparent text-xs font-outfit font-extrabold text-amber-300 focus:outline-none cursor-pointer pr-1"
+                  title="Switch between Card View and Tactical Table"
+                >
+                  <option value="cards" className="bg-slate-950 text-slate-200">
+                    🗂️ Card View
+                  </option>
+                  <option value="table" className="bg-slate-950 text-amber-300">
+                    ⚔️ Tactical Table
+                  </option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Center Zone: S-Tier Glassmorphic GM Screen (GM Mode) vs Prominent Hero Title (Player Mode) */}
@@ -832,6 +857,18 @@ export default function App() {
             />
           </div>
         )}
+
+        {/* Sub-Header Row 3: Frozen Defense & Mobility Ribbon (Both Card & Tactical Views) */}
+        {activeRole !== 'gm' &&
+          activeCharacter &&
+          !isStartingAttributesUnassigned(activeCharacter.sheet_data?.attribute_dice) && (
+            <div
+              id="card-defense-ribbon"
+              className="w-full pt-1.5 mt-1.5 border-t border-slate-800/80 animate-fadeIn"
+            >
+              <PinnedDefenseRibbon />
+            </div>
+          )}
       </header>
 
       {/* 🚀 Main Layout Shell */}

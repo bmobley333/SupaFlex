@@ -18,7 +18,6 @@ import { ExoticsCard } from './ExoticsCard';
 import { SectionJumpHUD } from './SectionJumpHUD';
 import { GmMonsterTrackerHud } from '../hud/GmMonsterTrackerHud';
 import { PartyRosterHud } from '../hud/PartyRosterHud';
-import { PinnedDefenseRibbon } from './PinnedDefenseRibbon';
 import { TacticalMasterTable } from './TacticalMasterTable';
 
 export type SheetViewMode = 'cards' | 'table';
@@ -36,23 +35,8 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
   onOpenApManager,
   tabSessionId,
 }) => {
-  const { activeCharacter, playerEmail } = useCharacterStore();
+  const { activeCharacter, playerEmail, sheetViewMode } = useCharacterStore();
   const heroKey = activeCharacter?.id ? `hero_${activeCharacter.id}` : 'no_hero';
-
-  const [sheetViewMode, setSheetViewMode] = React.useState<SheetViewMode>(() => {
-    try {
-      return localStorage.getItem('supaflex_sheet_view_mode') === 'table' ? 'table' : 'cards';
-    } catch {
-      return 'cards';
-    }
-  });
-
-  const handleSetSheetViewMode = React.useCallback((mode: SheetViewMode) => {
-    setSheetViewMode(mode);
-    try {
-      localStorage.setItem('supaflex_sheet_view_mode', mode);
-    } catch {}
-  }, []);
 
   const [traitsSkillsAtBottom, setTraitsSkillsAtBottom] = React.useState<boolean>(() => {
     try {
@@ -91,45 +75,6 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
 
   return (
     <div key={heroKey} className="flex flex-col gap-4 w-full max-w-[2500px] mx-auto pb-[60vh] relative">
-      {/* Top View Mode Selector Bar: Dyslexia-Friendly KISS Multi-Option Pill Switch */}
-      <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-900/70 border border-slate-800/80 rounded-2xl px-3.5 py-2 shadow-md">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-outfit font-bold uppercase tracking-wider text-slate-400 select-none">
-            Workspace View:
-          </span>
-          <div className="bg-slate-950/80 border border-slate-800/80 p-1 rounded-xl flex items-center gap-1 shadow-inner backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => handleSetSheetViewMode('cards')}
-              className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                sheetViewMode === 'cards'
-                  ? 'bg-indigo-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              🗂️ Card View
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSetSheetViewMode('table')}
-              className={`py-1.5 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                sheetViewMode === 'table'
-                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
-              }`}
-            >
-              ⚔️ Tactical Table
-            </button>
-          </div>
-        </div>
-
-        <span className="text-[11px] font-mono text-slate-400 hidden sm:inline">
-          {sheetViewMode === 'table'
-            ? '⚔️ Scoped Combat Workspace: Pinned Defenses + Tactical Table + Live Vitals & Roster'
-            : '🗂️ Modular Domain Cards: Full visual layout across all 14 character cards'}
-        </span>
-      </div>
-
       {sheetViewMode === 'cards' ? (
         <>
           {/* Top Section: Character Card (Left) & Paths Card (Right) */}
@@ -219,11 +164,8 @@ export const CharacterSheetView: React.FC<CharacterSheetViewProps> = ({
         <>
           {/* ⚔️ TACTICAL TABLE WORKSPACE: 2-Zone Widescreen Combat Layout */}
           <div id="section-tactical-workspace" className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start scroll-mt-32">
-            {/* Left/Center Zone (8 cols on XL): Pinned Defenses + Tactical Master Table + Compact Skills Cloud */}
+            {/* Left/Center Zone (8 cols on XL): Tactical Master Table + Compact Skills Cloud */}
             <div className="xl:col-span-8 flex flex-col gap-4 min-w-0">
-              <div id="card-defense-ribbon" className="scroll-mt-28">
-                <PinnedDefenseRibbon />
-              </div>
               <div id="card-tactical-table" className="scroll-mt-28">
                 <TacticalMasterTable />
               </div>

@@ -200,6 +200,8 @@ interface CharacterStore {
   playerSubscriptions: string[];
   filterMode: 'my_heroes' | 'all_heroes';
   activeRole: 'player' | 'gm';
+  sheetViewMode: 'cards' | 'table';
+  setSheetViewMode: (mode: 'cards' | 'table') => void;
   activePartyId: string | null;
   tabSessionId: string;
 
@@ -345,6 +347,20 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     if (typeof window === 'undefined') return 'player';
     return (sessionStorage.getItem('supaflex_active_role') as 'player' | 'gm') || 'player';
   })(),
+  sheetViewMode: (() => {
+    if (typeof window === 'undefined') return 'cards';
+    try {
+      return localStorage.getItem('supaflex_sheet_view_mode') === 'table' ? 'table' : 'cards';
+    } catch {
+      return 'cards';
+    }
+  })(),
+  setSheetViewMode: (mode: 'cards' | 'table') => {
+    try {
+      localStorage.setItem('supaflex_sheet_view_mode', mode);
+    } catch {}
+    set({ sheetViewMode: mode });
+  },
   activePartyId: (() => {
     if (typeof window === 'undefined') return null;
     return sessionStorage.getItem('supaflex_active_party_id') || null;
