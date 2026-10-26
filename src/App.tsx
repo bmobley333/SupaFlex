@@ -633,7 +633,7 @@ export default function App() {
   };
 
   return (
-    <div className={`bg-slate-950 text-slate-100 flex flex-col font-sans ${activeRole === 'gm' ? 'min-h-screen lg:h-screen lg:overflow-hidden' : 'min-h-screen'}`}>
+    <div className={`bg-slate-950 text-slate-100 flex flex-col font-sans ${activeRole === 'gm' ? 'min-h-screen lg:h-screen lg:overflow-hidden' : sheetViewMode === 'table' ? 'min-h-screen xl:h-screen xl:overflow-hidden' : 'min-h-screen'}`}>
       {/* Persistent Header */}
       <header className="sticky top-0 z-40 w-full bg-slate-900/90 border-b border-slate-800 backdrop-blur-md px-4 py-2.5">
         <div className="max-w-[2500px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
@@ -873,7 +873,7 @@ export default function App() {
 
       {/* 🚀 Main Layout Shell */}
       <main className={`flex-1 w-full max-w-[2500px] mx-auto p-3 md:p-4 flex flex-col gap-4 min-h-0 ${
-        activeRole === 'gm' ? 'lg:h-[calc(100vh-62px)] lg:overflow-hidden' : ''
+        activeRole === 'gm' ? 'lg:h-[calc(100vh-62px)] lg:overflow-hidden' : sheetViewMode === 'table' ? 'xl:overflow-hidden' : ''
       }`}>
         {isLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-2 min-h-[300px]">
@@ -883,7 +883,7 @@ export default function App() {
         ) : (
           <>
             {/* Main View Shell: GM Workspace vs Player Character Sheet */}
-            <div className={`flex-1 min-h-0 ${activeRole === 'gm' ? 'lg:h-full' : ''}`}>
+            <div className={`flex-1 min-h-0 ${activeRole === 'gm' ? 'lg:h-full' : sheetViewMode === 'table' ? 'xl:h-full xl:overflow-hidden' : ''}`}>
               {activeRole === 'gm' ? (
                 <Suspense fallback={
                   <div className="flex-1 flex flex-col items-center justify-center gap-2 min-h-[300px]">

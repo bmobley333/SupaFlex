@@ -3,7 +3,6 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import {
   RotateCcw,
-  Plus,
   ArrowUp,
   ArrowDown,
   Trash2,
@@ -364,13 +363,13 @@ export const TacticalMasterTable: React.FC = () => {
     setDragOverIdx(null);
   };
 
-  const handleInsertDivider = (afterIndex?: number, withLabel?: boolean) => {
-    let label = '';
-    if (withLabel) {
-      const input = window.prompt('Enter section label header (leave blank for a thin rule line):', '⚔️ PRIMARY OFFENSE');
-      if (input === null) return;
-      label = input.trim();
-    }
+  const handleInsertDivider = (afterIndex?: number) => {
+    const input = window.prompt(
+      'Enter a Section Label Header (or leave blank and press OK for a Blank Line):',
+      ''
+    );
+    if (input === null) return;
+    const label = input.trim();
     const divKey = `div:${Date.now().toString(36)}:${label}`;
     const order = getHydratedPrimaryOrder();
     const insertPos = afterIndex !== undefined ? afterIndex + 1 : order.length;
@@ -385,7 +384,10 @@ export const TacticalMasterTable: React.FC = () => {
   };
 
   const handleEditDividerLabel = (row: TacticalRowItem) => {
-    const nextLabel = window.prompt('Edit section label (leave blank for a thin rule line):', row.dividerLabel || '');
+    const nextLabel = window.prompt(
+      'Edit Section Label Header (leave blank for a thin Blank Line):',
+      row.dividerLabel || ''
+    );
     if (nextLabel === null) return;
     const newKey = `div:${row.dividerId || Date.now().toString(36)}:${nextLabel.trim()}`;
     const order = getHydratedPrimaryOrder().map((k) => (k === row.rowKey ? newKey : k));
@@ -494,7 +496,8 @@ export const TacticalMasterTable: React.FC = () => {
   };
 
   const renderTableRow = (row: TacticalRowItem, idx: number, isSecondary: boolean) => {
-    const dimmed = !isSecondary && isTacticalRowDimmed(row, rndActions);
+    const dimState = isTacticalRowDimmed(row, rndActions);
+    const dimmed = !isSecondary && !isArrangeMode && dimState.dimmed;
     const isMso = isGsUnlocked && isMsoEntry(row.name);
     const totalCols = 4 + (isArrangeMode ? 1 : 0);
 
@@ -550,6 +553,14 @@ export const TacticalMasterTable: React.FC = () => {
                     title="Move Down"
                   >
                     <ArrowDown className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInsertDivider(idx)}
+                    className="p-0.5 px-1 rounded bg-slate-900 hover:bg-slate-800 text-[10px] font-bold text-amber-300 border border-slate-700 cursor-pointer"
+                    title="Insert Blank or Label Divider below this row"
+                  >
+                    ➕
                   </button>
                   <button
                     type="button"
@@ -727,7 +738,7 @@ export const TacticalMasterTable: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleInsertDivider(idx, true)}
+                  onClick={() => handleInsertDivider(idx)}
                   className="p-1 rounded bg-slate-950 hover:bg-slate-800 text-[10px] font-bold text-amber-300 border border-slate-800 cursor-pointer"
                   title="Insert Blank or Label Divider below this row"
                 >
@@ -770,244 +781,237 @@ export const TacticalMasterTable: React.FC = () => {
   };
 
   return (
-    <div className="bg-gradient-to-b from-amber-950/20 via-slate-900/95 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 p-3 flex flex-col gap-2.5 shadow-xl relative">
-      {/* Toast Notification Banner */}
-      {toastMsg && (
-        <div className="px-3 py-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-200 text-xs font-bold flex items-center justify-between animate-fadeIn">
-          <span>{toastMsg}</span>
-          <button
-            type="button"
-            onClick={() => setToastMsg(null)}
-            className="text-amber-400 hover:text-white cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* TOP BAR: Title + Coupled Round Action Tracker (🔷 AM / A / M / P) + Arrange Toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
-        {/* Left: Table Title & Help */}
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)]">
-            <span className="text-sm leading-none">⚔️</span>
+    <div className="bg-gradient-to-b from-amber-950/20 via-slate-900/95 to-slate-950/95 rounded-2xl border border-slate-800 border-t-2 border-t-amber-500/90 px-3 pb-3 pt-0 flex flex-col gap-2.5 shadow-xl relative">
+      {/* FROZEN (STICKY) HEADER BLOCK: Image 2 (Top Bar + Column Headers) + Image 3 (Arrange Bar when Open) */}
+      <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-md pt-2.5 -mx-3 px-3 rounded-t-2xl border-b border-slate-800 shadow-lg flex flex-col gap-2">
+        {/* Toast Notification Banner */}
+        {toastMsg && (
+          <div className="px-3 py-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-200 text-xs font-bold flex items-center justify-between animate-fadeIn">
+            <span>{toastMsg}</span>
+            <button
+              type="button"
+              onClick={() => setToastMsg(null)}
+              className="text-amber-400 hover:text-white cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
-          <h3 className="font-outfit font-extrabold text-sm tracking-widest text-amber-200 uppercase">
-            Tactical Table
-          </h3>
-          <span className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 font-mono text-[10px] text-slate-400">
-            {primaryRows.filter((r) => r.domain !== 'divider').length} Active
-          </span>
-          <CardHelpButton ruleKey="powers.basics" />
+        )}
+
+        {/* TOP BAR: Title + Coupled Round Action Tracker (🔷 AM / A / M / P) + Arrange Toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Left: Table Title & Help */}
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-xl bg-amber-950/90 border border-amber-500/50 text-amber-300 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+              <span className="text-sm leading-none">⚔️</span>
+            </div>
+            <h3 className="font-outfit font-extrabold text-sm tracking-widest text-amber-200 uppercase">
+              Tactical Table
+            </h3>
+            <span className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 font-mono text-[10px] text-slate-400">
+              {primaryRows.filter((r) => r.domain !== 'divider').length} Active
+            </span>
+            <CardHelpButton ruleKey="powers.basics" />
+          </div>
+
+          {/* Center: Coupled Round Action Tracker (🔷 AM, A, M, P + Reset Rnd + Clear Enc) */}
+          <div className="flex flex-wrap items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1 shadow-inner">
+            <span
+              className="text-[11px] font-outfit font-bold text-slate-300 mr-0.5 select-none"
+              title="Round Actions Spent — Checking any box dims unavailable actions in the table below"
+            >
+              🔷 Rnd:
+            </span>
+
+            {(
+              [
+                { key: 'am', label: 'AM', title: 'Full-Round Action (AM) — Also checks A & M', color: 'text-amber-300 border-amber-500/40 bg-amber-950/40' },
+                { key: 'a', label: 'A', title: 'Attack Action (A)', color: 'text-rose-300 border-rose-500/40 bg-rose-950/40' },
+                { key: 'm', label: 'M', title: 'Move Action (M)', color: 'text-indigo-300 border-indigo-500/40 bg-indigo-950/40' },
+                { key: 'p', label: 'P', title: 'Partial Action (P, 1/Rnd)', color: 'text-emerald-300 border-emerald-500/40 bg-emerald-950/40' },
+              ] as const
+            ).map((act) => {
+              const isChecked = !!rndActions[act.key];
+              return (
+                <label
+                  key={act.key}
+                  title={act.title}
+                  className={`px-1.5 py-0.5 rounded-lg border text-[11px] font-mono font-extrabold flex items-center gap-1 cursor-pointer select-none transition-all ${
+                    isChecked
+                      ? 'bg-slate-900 text-slate-400 border-slate-700 ring-1 ring-amber-500/40'
+                      : act.color
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => handleToggleRndAction(act.key)}
+                    className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-950 text-amber-500 focus:ring-0 cursor-pointer accent-amber-500"
+                  />
+                  <span>{act.label}</span>
+                </label>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={handleResetRound}
+              className="px-2 py-0.5 rounded-lg bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-500/40 text-[11px] font-bold text-indigo-200 hover:text-white flex items-center gap-1 cursor-pointer transition-colors ml-0.5"
+              title="Reset Round: Unchecks AM/A/M/P and resets all 1-Rnd usage checkboxes"
+            >
+              <RotateCcw className="w-3 h-3 text-indigo-300" />
+              <span>Reset Rnd</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleClearEncounterUses}
+              className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-pointer transition-colors"
+              title="Clear all Encounter (1-Enc, 2-Enc, 3-Enc) and Round checkboxes"
+            >
+              Clear Enc
+            </button>
+          </div>
+
+          {/* Right: Dyslexia-Friendly Lock / Arrange Pill Switch */}
+          <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setIsArrangeMode(false)}
+              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                !isArrangeMode
+                  ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              <Lock className="w-3 h-3" />
+              <span>Play</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsArrangeMode(true)}
+              className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                isArrangeMode
+                  ? 'bg-amber-600 text-white shadow-sm font-extrabold'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              <Unlock className="w-3 h-3" />
+              <span>Arrange</span>
+            </button>
+          </div>
         </div>
 
-        {/* Center: Coupled Round Action Tracker (🔷 AM, A, M, P + Reset Rnd + Clear Enc) */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1 shadow-inner">
-          <span
-            className="text-[11px] font-outfit font-bold text-slate-300 mr-0.5 select-none"
-            title="Round Actions Spent — Checking any box dims unavailable actions in the table below"
-          >
-            🔷 Rnd:
-          </span>
+        {/* ARRANGE MODE TOOLBAR (Streamlined DRY Single-Line Bar) */}
+        {isArrangeMode && (
+          <div className="bg-slate-950/90 border border-amber-500/30 rounded-xl px-2.5 py-1.5 flex flex-wrap items-center justify-between gap-2 animate-fadeIn">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {/* Pin Individual Skill Quick-Selector */}
+              {allDerivedSkills.length > 0 && (
+                <div className="flex items-center gap-1 bg-indigo-950/40 border border-indigo-500/30 rounded-lg px-2 py-0.5">
+                  <Pin className="w-3 h-3 text-indigo-300" />
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleTogglePinSkill(e.target.value);
+                      }
+                    }}
+                    className="bg-transparent text-xs font-bold text-indigo-200 outline-none cursor-pointer"
+                    title="Pin or unpin a derived skill onto the Primary Tactical Table"
+                  >
+                    <option value="" className="bg-slate-950 text-slate-300">
+                      + 📌 Pin Skill ({pinnedSkillKeys.size}/{allDerivedSkills.length})
+                    </option>
+                    {allDerivedSkills.map((sk) => {
+                      const isPinned = pinnedSkillKeys.has(sk.rowKey);
+                      return (
+                        <option key={sk.rowKey} value={sk.rowKey} className="bg-slate-950 text-slate-100">
+                          {isPinned ? '✓ Pinned: ' : '+ Pin: '}
+                          {sk.name} ({sk.emoji}
+                          {sk.dieRating})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
 
-          {(
-            [
-              { key: 'am', label: 'AM', title: 'Full-Round Action (AM) — Also checks A & M', color: 'text-amber-300 border-amber-500/40 bg-amber-950/40' },
-              { key: 'a', label: 'A', title: 'Attack Action (A)', color: 'text-rose-300 border-rose-500/40 bg-rose-950/40' },
-              { key: 'm', label: 'M', title: 'Move Action (M)', color: 'text-indigo-300 border-indigo-500/40 bg-indigo-950/40' },
-              { key: 'p', label: 'P', title: 'Partial Action (P, 1/Rnd)', color: 'text-emerald-300 border-emerald-500/40 bg-emerald-950/40' },
-            ] as const
-          ).map((act) => {
-            const isChecked = !!rndActions[act.key];
-            return (
-              <label
-                key={act.key}
-                title={act.title}
-                className={`px-1.5 py-0.5 rounded-lg border text-[11px] font-mono font-extrabold flex items-center gap-1 cursor-pointer select-none transition-all ${
-                  isChecked
-                    ? 'bg-slate-900 text-slate-400 border-slate-700 ring-1 ring-amber-500/40'
-                    : act.color
-                }`}
+              <button
+                type="button"
+                onClick={handleResetOrderToDefault}
+                className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-rose-950/50 border border-slate-800 hover:border-rose-500/40 text-[11px] font-bold text-slate-400 hover:text-rose-200 cursor-pointer"
+                title="Reset row order to default category order"
               >
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={() => handleToggleRndAction(act.key)}
-                  className="w-3.5 h-3.5 rounded border-slate-600 bg-slate-950 text-amber-500 focus:ring-0 cursor-pointer accent-amber-500"
-                />
-                <span>{act.label}</span>
-              </label>
-            );
-          })}
+                Reset Order
+              </button>
+            </div>
 
-          <button
-            type="button"
-            onClick={handleResetRound}
-            className="px-2 py-0.5 rounded-lg bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-500/40 text-[11px] font-bold text-indigo-200 hover:text-white flex items-center gap-1 cursor-pointer transition-colors ml-0.5"
-            title="Reset Round: Unchecks AM/A/M/P and resets all 1-Rnd usage checkboxes"
-          >
-            <RotateCcw className="w-3 h-3 text-indigo-300" />
-            <span>Reset Rnd</span>
-          </button>
+            {/* Quick Open Domain Managers Bar */}
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mr-1">
+                Open Manager:
+              </span>
+              {(
+                [
+                  { label: '⚔️ Weapons', key: 'weapons' },
+                  { label: '🔥 Powers', key: 'powers' },
+                  { label: '🧿 Exotics', key: 'exotics' },
+                  { label: '💎 Gems', key: 'chaos_gauntlet' },
+                  { label: '🧬 Traits', key: 'traits' },
+                  { label: '🎓 Skills', key: 'skills' },
+                ] as const
+              ).map((m) => (
+                <button
+                  key={m.key}
+                  type="button"
+                  onClick={() => {
+                    if (m.key === 'exotics') {
+                      setExoticGearManagerModalOpen(true);
+                    } else {
+                      window.dispatchEvent(new CustomEvent('supaflex:open-manager', { detail: m.key }));
+                    }
+                  }}
+                  className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-bold text-slate-200 hover:text-white cursor-pointer transition-colors"
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-          <button
-            type="button"
-            onClick={handleClearEncounterUses}
-            className="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-pointer transition-colors"
-            title="Clear all Encounter (1-Enc, 2-Enc, 3-Enc) and Round checkboxes"
+        {/* STICKY COLUMN HEADER BAR (Synchronized with Table Colgroup) */}
+        <div className="bg-slate-950 border-t border-slate-800 rounded-t-xl flex items-center text-[10px] font-outfit font-extrabold uppercase tracking-wider text-slate-400 select-none">
+          <div
+            className="w-7 px-1 py-1.5 text-center shrink-0"
+            title="Domain Type (Click icon for Origin & Manager)"
           >
-            Clear Enc
-          </button>
-        </div>
-
-        {/* Right: Dyslexia-Friendly Lock / Arrange Pill Switch */}
-        <div className="bg-slate-950/80 border border-slate-800/80 p-0.5 rounded-xl flex items-center gap-1 shadow-inner">
-          <button
-            type="button"
-            onClick={() => setIsArrangeMode(false)}
-            className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-              !isArrangeMode
-                ? 'bg-slate-800 text-amber-300 border border-amber-500/40 shadow-sm font-extrabold'
-                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-            }`}
-          >
-            <Lock className="w-3 h-3" />
-            <span>Play</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsArrangeMode(true)}
-            className={`py-1 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
-              isArrangeMode
-                ? 'bg-amber-600 text-white shadow-sm font-extrabold'
-                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-            }`}
-          >
-            <Unlock className="w-3 h-3" />
-            <span>Arrange</span>
-          </button>
+            Type
+          </div>
+          <div className="w-11 px-1 py-1.5 text-center shrink-0" title="Action Economy (AM, A, M, P, F)">
+            🔷
+          </div>
+          <div className="w-28 px-1.5 py-1.5 shrink-0" title="Usage Limit & Coupled Checkboxes">
+            Uses 🔄
+          </div>
+          <div className="flex-1 px-2 py-1.5 min-w-0">Name — Effect</div>
+          {isArrangeMode && (
+            <div className="w-28 px-1.5 py-1.5 text-right shrink-0">Arrange</div>
+          )}
         </div>
       </div>
 
-      {/* ARRANGE MODE TOOLBAR */}
-      {isArrangeMode && (
-        <div className="bg-slate-950/90 border border-amber-500/30 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 animate-fadeIn">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-amber-300/90 mr-1">
-              Drag ⠿ or use arrows to reorder:
-            </span>
-            <button
-              type="button"
-              onClick={() => handleInsertDivider(undefined, false)}
-              className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-bold text-slate-200 flex items-center gap-1 cursor-pointer"
-              title="Insert a thin horizontal blank separator row"
-            >
-              <Plus className="w-3.5 h-3.5 text-amber-400" />
-              <span>➖ Blank Line</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleInsertDivider(undefined, true)}
-              className="px-2.5 py-1 rounded-lg bg-amber-950/60 hover:bg-amber-900/70 border border-amber-500/40 text-xs font-bold text-amber-200 flex items-center gap-1 cursor-pointer"
-              title="Insert a custom named section header row"
-            >
-              <Plus className="w-3.5 h-3.5 text-amber-300" />
-              <span>🏷️ Label Header</span>
-            </button>
-
-            {/* Pin Individual Skill Quick-Selector */}
-            {allDerivedSkills.length > 0 && (
-              <div className="flex items-center gap-1 bg-indigo-950/40 border border-indigo-500/30 rounded-lg px-2 py-0.5">
-                <Pin className="w-3 h-3 text-indigo-300" />
-                <select
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      handleTogglePinSkill(e.target.value);
-                    }
-                  }}
-                  className="bg-transparent text-xs font-bold text-indigo-200 outline-none cursor-pointer"
-                  title="Pin or unpin a derived skill onto the Primary Tactical Table"
-                >
-                  <option value="" className="bg-slate-950 text-slate-300">
-                    + 📌 Pin Skill ({pinnedSkillKeys.size}/{allDerivedSkills.length})
-                  </option>
-                  {allDerivedSkills.map((sk) => {
-                    const isPinned = pinnedSkillKeys.has(sk.rowKey);
-                    return (
-                      <option key={sk.rowKey} value={sk.rowKey} className="bg-slate-950 text-slate-100">
-                        {isPinned ? '✓ Pinned: ' : '+ Pin: '}
-                        {sk.name} ({sk.emoji}
-                        {sk.dieRating})
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleResetOrderToDefault}
-              className="px-2 py-1 rounded-lg bg-slate-900 hover:bg-rose-950/50 border border-slate-800 hover:border-rose-500/40 text-[11px] font-bold text-slate-400 hover:text-rose-200 cursor-pointer"
-              title="Reset row order to default category order"
-            >
-              Reset Order
-            </button>
-          </div>
-
-          {/* Quick Open Domain Managers Bar */}
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mr-1">
-              Open Manager:
-            </span>
-            {(
-              [
-                { label: '⚔️ Weapons', key: 'weapons' },
-                { label: '🔥 Powers', key: 'powers' },
-                { label: '🧿 Exotics', key: 'exotics' },
-                { label: '💎 Gems', key: 'chaos_gauntlet' },
-                { label: '🧬 Traits', key: 'traits' },
-                { label: '🎓 Skills', key: 'skills' },
-              ] as const
-            ).map((m) => (
-              <button
-                key={m.key}
-                type="button"
-                onClick={() => {
-                  if (m.key === 'exotics') {
-                    setExoticGearManagerModalOpen(true);
-                  } else {
-                    window.dispatchEvent(new CustomEvent('supaflex:open-manager', { detail: m.key }));
-                  }
-                }}
-                className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-bold text-slate-200 hover:text-white cursor-pointer transition-colors"
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* PRIMARY TACTICAL TABLE (4 Ultra-Dense Columns) */}
-      <div className="overflow-x-auto rounded-xl border border-slate-800/90 bg-slate-950/60">
-        <table className="w-full border-collapse text-left">
-          <thead>
-            <tr className="bg-slate-950 border-b border-slate-800 text-[10px] font-outfit font-extrabold uppercase tracking-wider text-slate-400 select-none">
-              <th className="w-7 px-1 py-1.5 text-center" title="Domain Type (Click icon for Origin & Manager)">
-                Type
-              </th>
-              <th className="w-11 px-1 py-1.5 text-center" title="Action Economy (AM, A, M, P, F)">
-                🔷
-              </th>
-              <th className="w-28 px-1.5 py-1.5" title="Usage Limit & Coupled Checkboxes">
-                Uses 🔄
-              </th>
-              <th className="px-2 py-1.5">Name — Effect</th>
-              {isArrangeMode && <th className="w-28 px-1.5 py-1.5 text-right">Arrange</th>}
-            </tr>
-          </thead>
+      {/* PRIMARY TACTICAL TABLE BODY (4 Ultra-Dense Columns) */}
+      <div className="overflow-x-auto rounded-b-xl border border-t-0 border-slate-800/90 bg-slate-950/60 -mt-2.5">
+        <table className="w-full border-collapse text-left table-fixed">
+          <colgroup>
+            <col className="w-7" />
+            <col className="w-11" />
+            <col className="w-28" />
+            <col />
+            {isArrangeMode && <col className="w-28" />}
+          </colgroup>
           <tbody>
             {primaryRows.length > 0 ? (
               primaryRows.map((row, idx) => renderTableRow(row, idx, false))
@@ -1049,7 +1053,14 @@ export const TacticalMasterTable: React.FC = () => {
           {isSecondaryOpen && (
             <div className="border-t border-slate-800/80 overflow-x-auto">
               {secondaryRows.length > 0 ? (
-                <table className="w-full border-collapse text-left">
+                <table className="w-full border-collapse text-left table-fixed">
+                  <colgroup>
+                    <col className="w-7" />
+                    <col className="w-11" />
+                    <col className="w-28" />
+                    <col />
+                    {isArrangeMode && <col className="w-28" />}
+                  </colgroup>
                   <tbody>
                     {secondaryRows.map((row, idx) => renderTableRow(row, idx, true))}
                   </tbody>
